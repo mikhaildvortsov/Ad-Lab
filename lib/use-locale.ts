@@ -1,13 +1,18 @@
 "use client"
 
 import { usePathname, useSearchParams, useRouter } from 'next/navigation'
-import { useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { locales, defaultLocale, type Locale } from './i18n'
 
 export function useLocale() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const [mounted, setMounted] = useState(false)
+  
+  useEffect(() => {
+    setMounted(true)
+  }, [])
   
   const getLocaleFromPath = (path: string): Locale => {
     const segments = path.split('/')
@@ -19,6 +24,8 @@ export function useLocale() {
 
   const changeLocale = useCallback(
     (newLocale: Locale) => {
+      if (!mounted) return
+      
       const currentLocale = getLocaleFromPath(pathname)
       let newPath = pathname
       
@@ -37,11 +44,12 @@ export function useLocale() {
       
       router.push(newPath)
     },
-    [router, pathname, searchParams]
+    [router, pathname, searchParams, mounted]
   )
 
   return {
     locale,
     changeLocale,
+    mounted,
   }
 } 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,9 @@ import { useLocale } from "@/lib/use-locale"
 import { useTranslation } from "@/lib/translations"
 import type { Locale } from "@/lib/i18n"
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 interface User {
   id: string
   name: string
@@ -18,7 +21,7 @@ interface User {
   image?: string
 }
 
-export default function HomePage({ params }: { params: { locale: Locale } }) {
+function HomePageContent({ params }: { params: { locale: Locale } }) {
   const [user, setUser] = useState<User | null>(null)
   
   const router = useRouter()
@@ -180,5 +183,20 @@ export default function HomePage({ params }: { params: { locale: Locale } }) {
         </div>
       </footer>
     </div>
+  )
+}
+
+export default function HomePage({ params }: { params: { locale: Locale } }) {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Загрузка...</p>
+        </div>
+      </div>
+    }>
+      <HomePageContent params={params} />
+    </Suspense>
   )
 } 

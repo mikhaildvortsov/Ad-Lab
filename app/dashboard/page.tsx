@@ -10,6 +10,9 @@ import { Badge } from "@/components/ui/badge"
 import { Sparkles, History, CreditCard, Settings, LogOut, FileText, Calendar, TrendingUp, User } from "lucide-react"
 import { MobileNav } from "@/components/ui/mobile-nav"
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 interface User {
   id: string
   name: string
