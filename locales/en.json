@@ -1,0 +1,130 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "copy": "Copy",
+    "new": "New",
+    "select": "Select",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "submit": "Submit",
+    "confirm": "Confirm",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Information"
+  },
+  "navigation": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "login": "Login",
+    "logout": "Logout",
+    "register": "Register",
+    "profile": "Profile",
+    "settings": "Settings"
+  },
+  "header": {
+    "brand": "Ad Lab",
+    "login": "Login",
+    "register": "Register",
+    "dashboard": "Dashboard",
+    "logout": "Logout"
+  },
+  "hero": {
+    "title": "Transform ordinary ad scripts into",
+    "titleHighlight": "powerful selling texts",
+    "subtitle": "Harness the power of professional copywriting to create selling ad texts that actually work.",
+    "cta": "Try"
+  },
+  "features": {
+    "target": {
+      "title": "Precise Targeting",
+      "description": "We analyze your audience and create personalized texts"
+    },
+    "speed": {
+      "title": "Instant Results",
+      "description": "Get an improved script in seconds"
+    },
+    "conversion": {
+      "title": "More Conversions",
+      "description": "Increase sales with proven copywriting techniques"
+    }
+  },
+  "scriptImprover": {
+    "title": "Improve your ad script",
+    "description": "Paste your current ad script, and our professional tools will turn it into a powerful selling text",
+    "placeholder": "Paste your ad text or competitor's script here...",
+    "label": "Your ad script",
+    "minChars": "{count} more characters to activate",
+    "minCharsReached": "✓ Minimum characters reached",
+    "improveButton": "Improve script",
+    "processing": "Processing...",
+    "enterMinChars": "Enter at least 20 characters",
+    "benefits": {
+      "title": "What you'll get:",
+      "structure": "Improved text structure",
+      "arguments": "More convincing arguments",
+      "triggers": "Emotional triggers",
+      "cta": "Calls to action"
+    }
+  },
+  "paywall": {
+    "title": "Choose a plan",
+    "description": "Get access to the improved script",
+    "plans": {
+      "week": {
+        "title": "Week",
+        "price": "$19.90",
+        "features": {
+          "improvements": "10 improvements",
+          "history": "Request history",
+          "analytics": "Basic analytics"
+        },
+        "button": "Choose plan"
+      },
+      "month": {
+        "title": "Month",
+        "oldPrice": "$69.90",
+        "price": "$29.90",
+        "features": {
+          "improvements": "50 improvements",
+          "history": "Request history",
+          "analytics": "Advanced analytics"
+        },
+        "button": "Choose plan"
+      },
+      "quarter": {
+        "title": "Three months",
+        "price": "$99.90",
+        "features": {
+          "improvements": "Unlimited improvements",
+          "analytics": "Advanced analytics",
+          "support": "Priority support"
+        },
+        "button": "Choose plan"
+      }
+    }
+  },
+  "result": {
+    "title": "Your improved script is ready!",
+    "description": "Your text has been processed and enhanced with selling elements",
+    "selectedPlan": "Selected plan: {plan}",
+    "originalScript": "Original script",
+    "improvedScript": "Improved script",
+    "copyButton": "Copy",
+    "newScriptButton": "New script",
+    "copiedMessage": "Script copied to clipboard!"
+  },
+  "footer": {
+    "copyright": "© 2025 Ad Lab. All rights reserved."
+  },
+  "errors": {
+    "improveScript": "An error occurred while improving the script",
+    "requestError": "An error occurred while processing the request"
+  }
+} 
