@@ -62,53 +62,24 @@ const plans: Plan[] = [
 function HomePageContent({ params }: { params: { locale: Locale } }) {
   const [user, setUser] = useState<User | null>(null)
   const [showPricingModal, setShowPricingModal] = useState(false)
-  
-  // Отладка состояния модального окна
-  useEffect(() => {
-    console.log('showPricingModal changed to:', showPricingModal);
-  }, [showPricingModal]);
-
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const { user: authUser, loading, updateUser } = useAuth();
-
-  // Отладка состояния пользователя
-  useEffect(() => {
-    console.log('User state changed - authUser:', authUser, 'user:', user);
-  }, [authUser, user]);
-
-  // Принудительное обновление состояния авторизации
-  useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser && !authUser) {
-      try {
-        const parsedUser = JSON.parse(savedUser);
-        console.log('Force updating auth context with user:', parsedUser);
-        updateUser(parsedUser);
-      } catch (error) {
-        console.error('Error parsing saved user:', error);
-      }
-    }
-  }, [authUser, updateUser]);
-  
   const router = useRouter()
   const searchParams = useSearchParams()
   const { locale } = useLocale()
   const { t } = useTranslation(locale)
-  
+
   useEffect(() => {
     // Проверяем localStorage при загрузке
-    const savedUser = localStorage.getItem('user')
-    console.log('Initial localStorage check:', savedUser);
-    if (savedUser) {
-      try {
-        const parsedUser = JSON.parse(savedUser)
-        setUser(parsedUser)
-        // Также обновляем контекст авторизации
-        updateUser(parsedUser)
-      } catch (error) {
-        console.error('Error parsing saved user data:', error)
-        localStorage.removeItem('user')
+    if (typeof window !== 'undefined') {
+      const savedUser = localStorage.getItem('user')
+      setIsAuthenticated(!!savedUser)
+      if (savedUser) {
+        try {
+          setUser(JSON.parse(savedUser))
+        } catch (error) {
+          localStorage.removeItem('user')
+        }
       }
     }
 
@@ -119,43 +90,31 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
 
     if (logoutParam === 'true') {
       setUser(null)
-      updateUser(null)
+      setIsAuthenticated(false)
       localStorage.removeItem('user')
-      // Очищаем URL
       router.replace('/', { scroll: false })
     } else if (authSuccess === 'success' && userParam) {
       try {
         const userData = JSON.parse(userParam)
         setUser(userData)
-        updateUser(userData)
+        setIsAuthenticated(true)
         localStorage.setItem('user', userParam)
-        // Очищаем URL
         router.replace('/', { scroll: false })
-      } catch (error) {
-        console.error('Error parsing user data from URL:', error)
-      }
+      } catch (error) {}
     }
-  }, [router, searchParams, updateUser])
+  }, [router, searchParams])
 
   const handleLogout = () => {
     setUser(null)
-    updateUser(null)
+    setIsAuthenticated(false)
     localStorage.removeItem('user')
     router.push('/api/auth/logout')
   }
 
   const handleTryClick = () => {
-    console.log('handleTryClick called');
-    
-    // Проверяем localStorage напрямую
-    const savedUser = localStorage.getItem('user');
-    console.log('localStorage user:', savedUser);
-    
-    if (savedUser) {
-      console.log('Redirecting to pricing page');
+    if (isAuthenticated) {
       router.push('/pricing');
     } else {
-      console.log('Redirecting to auth');
       router.push('/auth');
     }
   };
@@ -271,42 +230,14 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
           </div>
 
           {/* CTA */}
-          {(() => {
-            if (typeof window !== 'undefined') {
-              const savedUser = localStorage.getItem('user');
-              const isAuthenticated = !!savedUser;
-              console.log('Rendering CTA - isAuthenticated:', isAuthenticated, 'savedUser:', savedUser);
-              return isAuthenticated;
-            }
-            return false;
-          })() ? (
-            <div className="space-y-4">
-              <Button
-                size="lg"
-                className="group text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transform transition-all duration-300 ease-out hover:scale-105 hover:shadow-xl active:scale-95 focus:scale-105 focus:shadow-lg"
-                onClick={handleTryClick}
-              >
-                Выбрать тариф
-                <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:translate-x-1" />
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setShowPricingModal(true)}
-              >
-                Тест модального окна
-              </Button>
-            </div>
-          ) : (
-            <Button
-              size="lg"
-              className="group text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transform transition-all duration-300 ease-out hover:scale-105 hover:shadow-xl active:scale-95 focus:scale-105 focus:shadow-lg"
-              onClick={handleTryClick}
-            >
-              {t('hero.cta')}
-              <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:translate-x-1" />
-            </Button>
-          )}
+          <Button
+            size="lg"
+            className="group text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transform transition-all duration-300 ease-out hover:scale-105 hover:shadow-xl active:scale-95 focus:scale-105 focus:shadow-lg"
+            onClick={handleTryClick}
+          >
+            {isAuthenticated ? 'Выбрать тариф' : t('hero.cta')}
+            <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:translate-x-1" />
+          </Button>
         </div>
       </section>
 
