@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Sparkles, History, CreditCard, Settings, LogOut, FileText, Calendar, TrendingUp, User } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Sparkles, History, CreditCard, Settings, LogOut, FileText, Calendar, TrendingUp, User, Check, X } from "lucide-react"
 import { MobileNav } from "@/components/ui/mobile-nav"
 
 // Force dynamic rendering
@@ -20,8 +21,46 @@ interface User {
   image?: string
 }
 
+interface Plan {
+  id: string
+  name: string
+  price: number
+  features: string[]
+  improvements: number
+  popular?: boolean
+}
+
+const plans: Plan[] = [
+  {
+    id: 'basic',
+    name: 'Базовый',
+    price: 299,
+    features: ['10 улучшений в месяц', 'История запросов', 'Базовая аналитика'],
+    improvements: 10
+  },
+  {
+    id: 'pro',
+    name: 'Профессиональный',
+    price: 599,
+    features: ['50 улучшений в месяц', 'Расширенная аналитика', 'Приоритетная поддержка', 'Экспорт в PDF'],
+    improvements: 50,
+    popular: true
+  },
+  {
+    id: 'enterprise',
+    name: 'Корпоративный',
+    price: 1499,
+    features: ['Неограниченные улучшения', 'API доступ', 'Персональный менеджер', 'Индивидуальные настройки'],
+    improvements: -1
+  }
+]
+
 export default function Dashboard() {
   const [user, setUser] = useState<User | null>(null)
+  const [showPlanModal, setShowPlanModal] = useState(false)
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [currentPlan, setCurrentPlan] = useState<Plan>(plans[0])
+  const [isLoading, setIsLoading] = useState(false)
   const [requests] = useState([
     {
       id: 1,
@@ -64,6 +103,49 @@ export default function Dashboard() {
     setUser(null)
     localStorage.removeItem('user')
     router.push('/api/auth/logout')
+  }
+
+  const handleChangePlan = async (newPlan: Plan) => {
+    setIsLoading(true)
+    try {
+      // Здесь будет API вызов для смены тарифа
+      console.log('Смена тарифа на:', newPlan.name)
+      
+      // Имитация API вызова
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      setCurrentPlan(newPlan)
+      setShowPlanModal(false)
+      
+      // Показываем уведомление об успешной смене тарифа
+      alert(`Тариф успешно изменен на "${newPlan.name}"`)
+    } catch (error) {
+      console.error('Ошибка при смене тарифа:', error)
+      alert('Произошла ошибка при смене тарифа. Попробуйте позже.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleCancelSubscription = async () => {
+    setIsLoading(true)
+    try {
+      // Здесь будет API вызов для отмены подписки
+      console.log('Отмена подписки')
+      
+      // Имитация API вызова
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      setShowCancelModal(false)
+      
+      // Показываем уведомление об отмене подписки
+      alert('Подписка отменена. Вы сможете возобновить её в любое время.')
+    } catch (error) {
+      console.error('Ошибка при отмене подписки:', error)
+      alert('Произошла ошибка при отмене подписки. Попробуйте позже.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   if (!user) {
@@ -193,20 +275,100 @@ export default function Dashboard() {
               <h2 className="text-lg sm:text-xl font-semibold mb-4">Текущий план</h2>
               <Card className="border-blue-200 bg-blue-50">
                 <CardHeader>
-                  <CardTitle className="text-base sm:text-lg text-blue-900">Базовый план</CardTitle>
+                  <CardTitle className="text-base sm:text-lg text-blue-900">{currentPlan.name} план</CardTitle>
                   <CardDescription className="text-blue-700 text-sm sm:text-base">
-                    ₽299/месяц • Следующее списание: 15 февраля 2024
+                    ₽{currentPlan.price}/месяц • Следующее списание: 15 февраля 2024
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2 text-sm text-blue-800">
-                    <div>✓ 10 улучшений в месяц (использовано: 2/10)</div>
-                    <div>✓ История запросов</div>
-                    <div>✓ Базовая аналитика</div>
+                    <div>✓ {currentPlan.improvements === -1 ? 'Неограниченные' : currentPlan.improvements} улучшений в месяц (использовано: 2/{currentPlan.improvements === -1 ? '∞' : currentPlan.improvements})</div>
+                    {currentPlan.features.map((feature, index) => (
+                      <div key={index}>✓ {feature}</div>
+                    ))}
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 mt-4">
-                    <Button variant="outline" size="sm" className="w-full sm:w-auto">Изменить план</Button>
-                    <Button variant="outline" size="sm" className="w-full sm:w-auto">Отменить подписку</Button>
+                    <Dialog open={showPlanModal} onOpenChange={setShowPlanModal}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                          Изменить план
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>Выберите новый тариф</DialogTitle>
+                          <DialogDescription>
+                            Выберите подходящий план для ваших потребностей
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                          {plans.map((plan) => (
+                            <Card key={plan.id} className={`relative ${plan.popular ? 'ring-2 ring-blue-500' : ''}`}>
+                              {plan.popular && (
+                                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                                  <Badge className="bg-blue-500 text-white">Популярный</Badge>
+                                </div>
+                              )}
+                              <CardHeader className="text-center">
+                                <CardTitle className="text-lg">{plan.name}</CardTitle>
+                                <div className="text-2xl font-bold">₽{plan.price}<span className="text-sm font-normal text-gray-500">/месяц</span></div>
+                              </CardHeader>
+                              <CardContent>
+                                <ul className="space-y-2 mb-4">
+                                  {plan.features.map((feature, index) => (
+                                    <li key={index} className="flex items-center gap-2 text-sm">
+                                      <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                      {feature}
+                                    </li>
+                                  ))}
+                                </ul>
+                                <Button 
+                                  onClick={() => handleChangePlan(plan)}
+                                  disabled={isLoading || currentPlan.id === plan.id}
+                                  className="w-full"
+                                  variant={currentPlan.id === plan.id ? "secondary" : "default"}
+                                >
+                                  {isLoading ? "Загрузка..." : currentPlan.id === plan.id ? "Текущий план" : "Выбрать план"}
+                                </Button>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    
+                    <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:bg-red-50">
+                          Отменить подписку
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Отменить подписку?</DialogTitle>
+                          <DialogDescription>
+                            Вы уверены, что хотите отменить подписку? Вы потеряете доступ к премиум функциям.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="flex gap-2 mt-6">
+                          <Button 
+                            onClick={handleCancelSubscription}
+                            disabled={isLoading}
+                            variant="destructive"
+                            className="flex-1"
+                          >
+                            {isLoading ? "Отмена..." : "Да, отменить"}
+                          </Button>
+                          <Button 
+                            onClick={() => setShowCancelModal(false)}
+                            variant="outline"
+                            className="flex-1"
+                          >
+                            Нет, оставить
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </CardContent>
               </Card>
@@ -219,21 +381,21 @@ export default function Dashboard() {
                   <div className="divide-y">
                     <div className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                       <div>
-                        <div className="font-medium">Базовый план</div>
+                        <div className="font-medium">{currentPlan.name} план</div>
                         <div className="text-sm text-gray-500">15 января 2024</div>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium">₽299</div>
+                        <div className="font-medium">₽{currentPlan.price}</div>
                         <Badge variant="secondary" className="text-xs">Оплачено</Badge>
                       </div>
                     </div>
                     <div className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                       <div>
-                        <div className="font-medium">Базовый план</div>
+                        <div className="font-medium">{currentPlan.name} план</div>
                         <div className="text-sm text-gray-500">15 декабря 2023</div>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium">₽299</div>
+                        <div className="font-medium">₽{currentPlan.price}</div>
                         <Badge variant="secondary" className="text-xs">Оплачено</Badge>
                       </div>
                     </div>
