@@ -15,10 +15,10 @@
    - **Name**: Ad Lab
    - **Authorized JavaScript origins**:
      - `http://localhost:3000` (для разработки)
-     - `https://your-domain.com` (для продакшена)
+     - `https://ad-lab.vercel.app` (для продакшена)
    - **Authorized redirect URIs**:
      - `http://localhost:3000/api/auth/google` (для разработки)
-     - `https://your-domain.com/api/auth/google` (для продакшена)
+     - `https://ad-lab.vercel.app/api/auth/google` (для продакшена)
 
 ## Шаг 3: Получение учетных данных
 
@@ -33,12 +33,12 @@
 
 ```env
 # Google OAuth Configuration
-GOOGLE_CLIENT_ID=your_google_client_id_here
-GOOGLE_CLIENT_SECRET=your_google_client_secret_here
+GOOGLE_CLIENT_ID=38102037146-ikecsi9jgp6e3pdsan4dl88t0qsrbjdi.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=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
 
 # App Configuration
 NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=your_random_secret_here
+NEXTAUTH_SECRET=20aa9c6d279bf2f25489f06eb7ac6382   
 ```
 
 ## Шаг 5: Генерация NEXTAUTH_SECRET
