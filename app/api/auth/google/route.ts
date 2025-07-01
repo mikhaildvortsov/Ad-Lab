@@ -3,12 +3,19 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
+  const error = searchParams.get('error')
+  
+  // Если Google вернул ошибку
+  if (error) {
+    console.error('Google OAuth error:', error)
+    return NextResponse.redirect('/auth?error=google_auth_failed')
+  }
   
   if (!code) {
     // Первый этап - редирект на Google OAuth
     const googleAuthUrl = new URL('https://accounts.google.com/oauth/authorize')
     googleAuthUrl.searchParams.set('client_id', process.env.GOOGLE_CLIENT_ID || '')
-    googleAuthUrl.searchParams.set('redirect_uri', `${process.env.NEXTAUTH_URL || 'http://localhost:3002'}/api/auth/google`)
+    googleAuthUrl.searchParams.set('redirect_uri', `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/auth/google`)
     googleAuthUrl.searchParams.set('response_type', 'code')
     googleAuthUrl.searchParams.set('scope', 'openid email profile')
     googleAuthUrl.searchParams.set('access_type', 'offline')
@@ -29,7 +36,7 @@ export async function GET(request: NextRequest) {
         client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
         code,
         grant_type: 'authorization_code',
-        redirect_uri: `${process.env.NEXTAUTH_URL || 'http://localhost:3002'}/api/auth/google`,
+        redirect_uri: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/auth/google`,
       }),
     })
     
@@ -62,9 +69,8 @@ export async function GET(request: NextRequest) {
       image: userData.picture,
     }
     
-    // Редиректим на главную страницу с данными пользователя
-    const redirectUrl = new URL('/', request.url)
-    redirectUrl.searchParams.set('auth', 'success')
+    // Создаем URL для редиректа с данными пользователя
+    const redirectUrl = new URL('/auth/callback', request.url)
     redirectUrl.searchParams.set('user', JSON.stringify(user))
     
     return NextResponse.redirect(redirectUrl.toString())

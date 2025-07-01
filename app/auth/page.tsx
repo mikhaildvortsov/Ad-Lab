@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Sparkles, Mail, Lock, Eye, EyeOff } from "lucide-react"
+import { useAuth } from "@/lib/auth-context"
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -29,12 +30,17 @@ export default function AuthPage() {
   
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { login: googleLogin } = useAuth()
   
   useEffect(() => {
     // Проверяем параметры URL для обработки ошибок авторизации
     const authError = searchParams.get('error')
     if (authError === 'google_auth_failed') {
       setError('Ошибка авторизации через Google. Попробуйте еще раз.')
+    } else if (authError === 'invalid_user_data') {
+      setError('Ошибка обработки данных пользователя.')
+    } else if (authError === 'no_user_data') {
+      setError('Не удалось получить данные пользователя.')
     }
   }, [searchParams])
 
@@ -70,8 +76,7 @@ export default function AuthPage() {
 
   const handleGoogleAuth = () => {
     setIsLoading(true)
-    // Редиректим на наш Google OAuth роут
-    window.location.href = '/api/auth/google'
+    googleLogin()
   }
 
   return (

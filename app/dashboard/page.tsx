@@ -10,16 +10,10 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Sparkles, History, CreditCard, Settings, LogOut, FileText, Calendar, TrendingUp, User, Check, X } from "lucide-react"
 import { MobileNav } from "@/components/ui/mobile-nav"
+import { useAuth } from "@/lib/auth-context"
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
-
-interface User {
-  id: string
-  name: string
-  email: string
-  image?: string
-}
 
 interface Plan {
   id: string
@@ -56,7 +50,7 @@ const plans: Plan[] = [
 ]
 
 export default function Dashboard() {
-  const [user, setUser] = useState<User | null>(null)
+  const { user, loading, logout } = useAuth()
   const [showPlanModal, setShowPlanModal] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [currentPlan, setCurrentPlan] = useState<Plan>(plans[0])
@@ -83,26 +77,14 @@ export default function Dashboard() {
   const router = useRouter()
   
   useEffect(() => {
-    // Проверяем localStorage при загрузке
-    const savedUser = localStorage.getItem('user')
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser))
-      } catch (error) {
-        console.error('Error parsing saved user data:', error)
-        localStorage.removeItem('user')
-        router.push('/auth')
-      }
-    } else {
-      // Если пользователь не авторизован, перенаправляем на страницу авторизации
+    // Если пользователь не авторизован и загрузка завершена, перенаправляем на авторизацию
+    if (!loading && !user) {
       router.push('/auth')
     }
-  }, [router])
+  }, [user, loading, router])
 
   const handleLogout = () => {
-    setUser(null)
-    localStorage.removeItem('user')
-    router.push('/api/auth/logout')
+    logout()
   }
 
   const handleChangePlan = async (newPlan: Plan) => {
@@ -148,7 +130,7 @@ export default function Dashboard() {
     }
   }
 
-  if (!user) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
@@ -157,6 +139,10 @@ export default function Dashboard() {
         </div>
       </div>
     )
+  }
+
+  if (!user) {
+    return null // Компонент будет редиректить на /auth
   }
 
   return (

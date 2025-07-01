@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { Toaster } from "@/components/ui/toaster"
 import { LocaleProvider } from '@/components/locale-provider'
+import { AuthProvider } from '@/lib/auth-context'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -26,9 +27,11 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <body className="antialiased">
-        <LocaleProvider>
-          {children}
-        </LocaleProvider>
+        <AuthProvider>
+          <LocaleProvider>
+            {children}
+          </LocaleProvider>
+        </AuthProvider>
         <Toaster />
       </body>
     </html>
