@@ -61,16 +61,14 @@ const plans: Plan[] = [
 
 function HomePageContent({ params }: { params: { locale: Locale } }) {
   const [user, setUser] = useState<User | null>(null)
-  const [showPricingModal, setShowPricingModal] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const { user: authUser, loading, updateUser } = useAuth();
+  const { user: authUser, loading } = useAuth();
   const router = useRouter()
   const searchParams = useSearchParams()
   const { locale } = useLocale()
   const { t } = useTranslation(locale)
 
   useEffect(() => {
-    // Проверяем localStorage при загрузке
     if (typeof window !== 'undefined') {
       const savedUser = localStorage.getItem('user')
       setIsAuthenticated(!!savedUser)
@@ -82,12 +80,9 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
         }
       }
     }
-
-    // Обрабатываем параметры URL для авторизации
     const authSuccess = searchParams.get('auth')
     const logoutParam = searchParams.get('logout')
     const userParam = searchParams.get('user')
-
     if (logoutParam === 'true') {
       setUser(null)
       setIsAuthenticated(false)
@@ -118,24 +113,6 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
       router.push('/auth');
     }
   };
-
-  const handleSelectPlan = async (plan: Plan) => {
-    setIsLoading(true)
-    setSelectedPlan(plan)
-    
-    try {
-      // Здесь будет логика для обработки выбора тарифа
-      // Пока что просто имитируем задержку
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Перенаправляем в дашборд после выбора тарифа
-      router.push('/dashboard')
-    } catch (error) {
-      console.error('Ошибка при выборе тарифа:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -253,10 +230,8 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
       </footer>
 
       {/* Pricing Modal */}
-      {showPricingModal && <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'red', zIndex: 9999}}>МОДАЛЬНОЕ ОКНО ОТКРЫТО!</div>}
-      <Dialog open={showPricingModal} onOpenChange={(open) => {
+      <Dialog open={false} onOpenChange={(open) => {
         console.log('Pricing modal onOpenChange:', open);
-        setShowPricingModal(open);
       }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -293,15 +268,9 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
                     ))}
                   </ul>
                   <Button 
-                    onClick={() => handleSelectPlan(plan)}
-                    disabled={isLoading}
                     className={`w-full h-12 text-base ${plan.popular ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
                   >
-                    {isLoading && selectedPlan?.id === plan.id ? (
-                      "Обработка..."
-                    ) : (
-                      "Выбрать план"
-                    )}
+                    Выбрать план
                   </Button>
                 </CardContent>
               </Card>
