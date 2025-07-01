@@ -69,9 +69,13 @@ export async function GET(request: NextRequest) {
       image: userData.picture,
     }
     
+    console.log('Google OAuth: created user:', user)
+    
     // Создаем URL для редиректа с данными пользователя
     const redirectUrl = new URL('/auth/callback', request.url)
     redirectUrl.searchParams.set('user', JSON.stringify(user))
+    
+    console.log('Google OAuth: redirecting to:', redirectUrl.toString())
     
     return NextResponse.redirect(redirectUrl.toString())
     

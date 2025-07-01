@@ -33,13 +33,14 @@
     "login": "Login",
     "register": "Register",
     "dashboard": "Dashboard",
-    "logout": "Logout"
+    "logout": "Logout",
+    "pricing": "Pricing"
   },
   "hero": {
     "title": "Transform ordinary ad scripts into",
     "titleHighlight": "powerful selling texts",
     "subtitle": "Harness the power of professional copywriting to create selling ad texts that actually work.",
-    "cta": "Try"
+    "cta": "Try for free"
   },
   "features": {
     "target": {

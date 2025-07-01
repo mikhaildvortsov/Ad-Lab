@@ -63,7 +63,7 @@ export default function AuthPage() {
       if (data.success) {
         // Сохраняем пользователя в localStorage
         localStorage.setItem('user', JSON.stringify(data.user))
-        router.push('/dashboard')
+        router.push('/')
       } else {
         setError(data.error || 'Ошибка авторизации')
       }

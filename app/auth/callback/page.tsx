@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Sparkles, CheckCircle, Loader2 } from "lucide-react"
+import { useAuth } from "@/lib/auth-context"
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -19,20 +20,26 @@ interface User {
 export default function AuthCallbackPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { updateUser } = useAuth()
   
   useEffect(() => {
     const userParam = searchParams.get('user')
+    console.log('AuthCallback: userParam from URL:', userParam)
     
     if (userParam) {
       try {
         const user: User = JSON.parse(userParam)
+        console.log('AuthCallback: parsed user:', user)
         
-        // Сохраняем пользователя в localStorage
-        localStorage.setItem('user', JSON.stringify(user))
+        // Обновляем пользователя в контексте и localStorage
+        updateUser(user)
+        console.log('AuthCallback: user updated in context')
         
-        // Небольшая задержка для показа успешного состояния
+        // Проверяем, что пользователь сохранился
         setTimeout(() => {
-          router.push('/dashboard')
+          const savedUser = localStorage.getItem('user')
+          console.log('AuthCallback: checking localStorage after update:', savedUser)
+          router.push('/')
         }, 1500)
         
       } catch (error) {
@@ -40,10 +47,11 @@ export default function AuthCallbackPage() {
         router.push('/auth?error=invalid_user_data')
       }
     } else {
+      console.log('AuthCallback: no user data in URL')
       // Если нет данных пользователя, редиректим на страницу авторизации
       router.push('/auth?error=no_user_data')
     }
-  }, [searchParams, router])
+  }, [searchParams, router, updateUser])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
@@ -72,7 +80,7 @@ export default function AuthCallbackPage() {
           </p>
           
           <Button 
-            onClick={() => router.push('/dashboard')}
+            onClick={() => router.push('/')}
             variant="outline"
             className="w-full"
           >

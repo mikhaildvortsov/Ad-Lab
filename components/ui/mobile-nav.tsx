@@ -57,6 +57,14 @@ export function MobileNav({ user, onLogout, t }: MobileNavProps) {
                   <User className="h-4 w-4" />
                   Личный кабинет
                 </Link>
+                <Link 
+                  href="/pricing" 
+                  className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <Sparkles className="h-4 w-4" />
+                  {t('header.pricing')}
+                </Link>
                 <div className="border-t pt-4">
                   <div className="flex items-center gap-3 px-3 py-2 mb-2">
                     {user.image ? (
