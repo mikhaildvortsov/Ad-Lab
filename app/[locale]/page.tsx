@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Sparkles, Zap, Target, TrendingUp, ArrowRight, User, LogOut, Check } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { Sparkles, Zap, Target, TrendingUp, ArrowRight, User, LogOut, Check, Wand2 } from "lucide-react"
 import { LanguageSelector } from "@/components/language-selector"
 import { MobileNav } from "@/components/ui/mobile-nav"
 import { useLocale } from "@/lib/use-locale"
@@ -62,12 +63,15 @@ const plans: Plan[] = [
 function HomePageContent({ params }: { params: { locale: Locale } }) {
   const [user, setUser] = useState<User | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [improvementModalOpen, setImprovementModalOpen] = useState(false)
+  const [initialText, setInitialText] = useState("")
   const { user: authUser, loading } = useAuth();
   const router = useRouter()
   const searchParams = useSearchParams()
   const { locale } = useLocale()
   const { t } = useTranslation(locale)
 
+  // 1. Загружаем пользователя из localStorage только при первом рендере
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedUser = localStorage.getItem('user')
@@ -80,21 +84,41 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
         }
       }
     }
-    const authSuccess = searchParams.get('auth')
-    const logoutParam = searchParams.get('logout')
-    const userParam = searchParams.get('user')
+  }, [])
+
+  // 2. Обрабатываем query-параметры только если они есть
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let logoutParam, userParam;
+    if (searchParams) {
+      logoutParam = searchParams.get('logout');
+      userParam = searchParams.get('user');
+    }
+    // fallback на window.location.search
+    if ((!userParam && !logoutParam) && typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      userParam = params.get('user')
+      logoutParam = params.get('logout')
+    }
+    if (!userParam && !logoutParam) return; // ничего не делаем, если нет параметров
+
+    const currentPath = window.location.pathname;
     if (logoutParam === 'true') {
       setUser(null)
       setIsAuthenticated(false)
       localStorage.removeItem('user')
-      router.replace('/', { scroll: false })
-    } else if (authSuccess === 'success' && userParam) {
+      if (currentPath !== '/') {
+        router.replace('/', { scroll: false })
+      }
+    } else if (userParam) {
       try {
         const userData = JSON.parse(userParam)
         setUser(userData)
         setIsAuthenticated(true)
         localStorage.setItem('user', userParam)
-        router.replace('/', { scroll: false })
+        if (currentPath !== '/' && !currentPath.startsWith('/auth/callback')) {
+          router.replace('/', { scroll: false })
+        }
       } catch (error) {}
     }
   }, [router, searchParams])
@@ -108,10 +132,18 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
 
   const handleTryClick = () => {
     if (isAuthenticated) {
-      router.push('/pricing');
+      setImprovementModalOpen(true);
     } else {
       router.push('/auth');
     }
+  };
+
+  const handleImproveText = () => {
+    // Here you can add the logic to process the text
+    console.log('Improving text:', initialText);
+    // TODO: Add API call to improve the text
+    setImprovementModalOpen(false);
+    setInitialText("");
   };
 
   return (
@@ -142,10 +174,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
                   <span className="text-sm font-medium text-gray-700">{user.name}</span>
                 </div>
                 <Link href="/dashboard">
-                  <Button variant="ghost" size="sm">{t('header.dashboard')}</Button>
-                </Link>
-                <Link href="/pricing">
-                  <Button variant="ghost" size="sm">{t('header.pricing')}</Button>
+                  <Button variant="ghost" size="sm">Личный кабинет</Button>
                 </Link>
                 <Button variant="outline" onClick={handleLogout} size="sm">
                   <LogOut className="h-4 w-4 mr-2" />
@@ -212,7 +241,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
             className="group text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transform transition-all duration-300 ease-out hover:scale-105 hover:shadow-xl active:scale-95 focus:scale-105 focus:shadow-lg"
             onClick={handleTryClick}
           >
-            {isAuthenticated ? 'Выбрать тариф' : t('hero.cta')}
+            {isAuthenticated ? 'Прокачать' : t('hero.cta')}
             <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:translate-x-1" />
           </Button>
         </div>
@@ -228,6 +257,55 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
           <p className="text-sm sm:text-base text-gray-400">{t('footer.copyright')}</p>
         </div>
       </footer>
+
+      {/* Improvement Modal */}
+      <Dialog open={improvementModalOpen} onOpenChange={setImprovementModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-center flex items-center justify-center gap-2">
+              <Wand2 className="h-6 w-6 text-blue-600" />
+              Прокачать текст
+            </DialogTitle>
+            <DialogDescription className="text-center text-base">
+              Введите текст, который хотите улучшить. Наши алгоритмы помогут сделать его более эффективным и привлекательным.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-6">
+            <div>
+              <label htmlFor="initial-text" className="block text-sm font-medium text-gray-700 mb-2">
+                Исходный текст
+              </label>
+              <Textarea
+                id="initial-text"
+                placeholder="Введите текст для улучшения..."
+                value={initialText}
+                onChange={(e) => setInitialText(e.target.value)}
+                className="min-h-[200px] resize-none"
+              />
+            </div>
+            <div className="flex gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setImprovementModalOpen(false);
+                  setInitialText("");
+                }}
+                className="flex-1"
+              >
+                Отмена
+              </Button>
+              <Button
+                onClick={handleImproveText}
+                disabled={!initialText.trim()}
+                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              >
+                <Wand2 className="h-4 w-4 mr-2" />
+                Прокачать
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Pricing Modal */}
       <Dialog open={false} onOpenChange={(open) => {
