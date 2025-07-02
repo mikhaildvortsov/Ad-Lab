@@ -127,5 +127,9 @@
   "errors": {
     "improveScript": "An error occurred while improving the script",
     "requestError": "An error occurred while processing the request"
-  }
+  },
+  "upgrade": "Upgrade",
+  "dashboardBtn": "Dashboard",
+  "upgradeTextTitle": "Upgrade text",
+  "upgradeTextDesc": "Enter the text you want to improve. Our algorithms will help make it more effective and appealing."
 } 

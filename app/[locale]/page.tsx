@@ -123,6 +123,26 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
     }
   }, [router, searchParams])
 
+  useEffect(() => {
+    const userParam = searchParams.get('user')
+    console.log('userParam', userParam)
+    if (userParam) {
+      try {
+        const decoded = decodeURIComponent(userParam)
+        const user: User = JSON.parse(decoded)
+        setUser(user)
+        setIsAuthenticated(true)
+        localStorage.setItem('user', decoded)
+        router.push('/dashboard')
+      } catch (error) {
+        console.log('AuthCallback: error', error)
+        router.push('/auth?error=invalid_user_data')
+      }
+    } else {
+      router.push('/auth?error=no_user_data')
+    }
+  }, [searchParams, router])
+
   const handleLogout = () => {
     setUser(null)
     setIsAuthenticated(false)
@@ -174,7 +194,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
                   <span className="text-sm font-medium text-gray-700">{user.name}</span>
                 </div>
                 <Link href="/dashboard">
-                  <Button variant="ghost" size="sm">Личный кабинет</Button>
+                  <Button variant="ghost" size="sm">{t('dashboardBtn')}</Button>
                 </Link>
                 <Button variant="outline" onClick={handleLogout} size="sm">
                   <LogOut className="h-4 w-4 mr-2" />
@@ -241,7 +261,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
             className="group text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transform transition-all duration-300 ease-out hover:scale-105 hover:shadow-xl active:scale-95 focus:scale-105 focus:shadow-lg"
             onClick={handleTryClick}
           >
-            {isAuthenticated ? 'Прокачать' : t('hero.cta')}
+            {isAuthenticated ? t('upgrade') : t('hero.cta')}
             <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:translate-x-1" />
           </Button>
         </div>
@@ -264,10 +284,10 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-center flex items-center justify-center gap-2">
               <Wand2 className="h-6 w-6 text-blue-600" />
-              Прокачать текст
+              {t('upgradeTextTitle')}
             </DialogTitle>
             <DialogDescription className="text-center text-base">
-              Введите текст, который хотите улучшить. Наши алгоритмы помогут сделать его более эффективным и привлекательным.
+              {t('upgradeTextDesc')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-6">
@@ -300,7 +320,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
                 className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
               >
                 <Wand2 className="h-4 w-4 mr-2" />
-                Прокачать
+                {t('upgrade')}
               </Button>
             </div>
           </div>
