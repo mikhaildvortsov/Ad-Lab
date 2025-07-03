@@ -101,7 +101,7 @@ export const ChatInterface = forwardRef(function ChatInterface(props: { open: bo
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent className="max-w-2xl w-full p-0">
         <DialogTitle asChild>
-          <span style={{ display: 'none' }}>Чат</span>
+          <span style={{ display: 'none' }}>Чат с Cypher Alpha</span>
         </DialogTitle>
         <Card className="w-full h-[600px] flex flex-col border-none shadow-none">
           <CardContent className="flex-1 p-0">
@@ -109,7 +109,8 @@ export const ChatInterface = forwardRef(function ChatInterface(props: { open: bo
               {messages.length === 0 ? (
                 <div className="text-center text-muted-foreground py-8">
                   <Bot className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Начните диалог</p>
+                  <p>Чат с Cypher Alpha</p>
+                  <p className="text-sm mt-2">Задайте любой вопрос AI-ассистенту</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -150,7 +151,7 @@ export const ChatInterface = forwardRef(function ChatInterface(props: { open: bo
                       <div className="bg-gray-100 rounded-lg px-4 py-2">
                         <div className="flex items-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Думаю...</span>
+                          <span>Cypher Alpha думает...</span>
                         </div>
                       </div>
                     </div>
@@ -164,7 +165,7 @@ export const ChatInterface = forwardRef(function ChatInterface(props: { open: bo
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Введите сообщение..."
+                  placeholder="Задайте вопрос Cypher Alpha..."
                   disabled={isLoading}
                   className="flex-1"
                 />

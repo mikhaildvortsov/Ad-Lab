@@ -1,23 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
 
-// Only initialize OpenAI client if API key is available
-const openai = process.env.OPENAI_API_KEY 
-  ? new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    })
-  : null;
+const OPENROUTER_API_KEY = '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';
+const SITE_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+const SITE_NAME = 'Ad Lab';
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if OpenAI client is available
-    if (!openai) {
-      return NextResponse.json(
-        { error: 'OpenAI API key is not configured' },
-        { status: 500 }
-      );
-    }
-
     const { message } = await request.json();
 
     if (!message) {
@@ -27,29 +15,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a helpful assistant. Provide clear, concise, and accurate responses.'
-        },
-        {
-          role: 'user',
-          content: message
-        }
-      ],
-      max_tokens: 1000,
-      temperature: 0.7,
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+        "HTTP-Referer": SITE_URL,
+        "X-Title": SITE_NAME,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        "model": "openrouter/cypher-alpha:free",
+        "messages": [
+          {
+            "role": "user",
+            "content": message
+          }
+        ],
+        "max_tokens": 1000,
+        "temperature": 0.7
+      })
     });
 
-    const response = completion.choices[0]?.message?.content || 'No response generated';
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Cypher Alpha API Error:', errorData);
+      return NextResponse.json(
+        { error: 'Failed to get response from Cypher Alpha' },
+        { status: 500 }
+      );
+    }
 
-    return NextResponse.json({ response });
+    const data = await response.json();
+    const responseContent = data.choices?.[0]?.message?.content || 'No response generated';
+
+    return NextResponse.json({ response: responseContent });
   } catch (error) {
-    console.error('ChatGPT API Error:', error);
+    console.error('Cypher Alpha API Error:', error);
     return NextResponse.json(
-      { error: 'Failed to get response from ChatGPT' },
+      { error: 'Failed to get response from Cypher Alpha' },
       { status: 500 }
     );
   }

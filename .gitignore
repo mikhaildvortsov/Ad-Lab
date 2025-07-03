@@ -26,5 +26,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# cursor rules
 .cursorrules
 
+# cursor ignore
+.cursorignore
+
+    

@@ -6,8 +6,7 @@ This guide explains how to deploy this Next.js application to Vercel and configu
 
 1. A Vercel account
 2. Your project pushed to a GitHub repository
-3. OpenAI API key (for chat functionality)
-4. Google OAuth credentials (for authentication)
+3. Google OAuth credentials (for authentication)
 
 ## Step 1: Connect to Vercel
 
@@ -22,18 +21,14 @@ Before deploying, you need to set up the following environment variables in your
 
 ### Required Environment Variables
 
-1. **OpenAI API Key** (for chat functionality)
-   - Variable name: `OPENAI_API_KEY`
-   - Value: Your OpenAI API key from [OpenAI Platform](https://platform.openai.com/api-keys)
-
-2. **Google OAuth Configuration** (for authentication)
+1. **Google OAuth Configuration** (for authentication)
    - Variable name: `GOOGLE_CLIENT_ID`
    - Value: Your Google OAuth Client ID from Google Cloud Console
    
    - Variable name: `GOOGLE_CLIENT_SECRET`
    - Value: Your Google OAuth Client Secret from Google Cloud Console
 
-3. **NextAuth Configuration**
+2. **NextAuth Configuration**
    - Variable name: `NEXTAUTH_URL`
    - Value: Your production URL (e.g., `https://your-app.vercel.app`)
    
@@ -56,16 +51,10 @@ Before deploying, you need to set up the following environment variables in your
 ## Step 4: Verify Deployment
 
 1. Check that your app loads without errors
-2. Test the chat functionality (should work if OpenAI API key is set)
-3. Test Google OAuth login (should work if Google credentials are set)
+2. Test Google OAuth login (should work if Google credentials are set)
+3. Test the chat functionality with Cypher Alpha AI
 
 ## Troubleshooting
-
-### Build Fails with "OPENAI_API_KEY environment variable is missing"
-
-- Make sure you've added the `OPENAI_API_KEY` environment variable in Vercel
-- Verify the variable name is exactly `OPENAI_API_KEY` (case-sensitive)
-- Redeploy after adding the environment variable
 
 ### Google OAuth Not Working
 
@@ -91,11 +80,36 @@ Before deploying, you need to set up the following environment variables in your
 For local development, create a `.env.local` file in your project root with the same environment variables:
 
 ```env
-OPENAI_API_KEY=your_openai_api_key_here
 GOOGLE_CLIENT_ID=your_google_client_id_here
 GOOGLE_CLIENT_SECRET=your_google_client_secret_here
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=your_nextauth_secret_here
 ```
 
-Make sure `.env.local` is in your `.gitignore` file to prevent accidentally committing secrets. 
+Make sure `.env.local` is in your `.gitignore` file to prevent accidentally committing secrets.
+
+## AI Integration
+
+This application is integrated with **Cypher Alpha** through OpenRouter API:
+
+### Features
+- Real-time chat with Cypher Alpha AI model
+- Professional chat interface with message history
+- Loading states and error handling
+- Responsive design for all devices
+
+### Technical Details
+- **AI Model**: `openrouter/cypher-alpha:free`
+- **API Provider**: OpenRouter
+- **Endpoint**: `/api/chat`
+- **Max Tokens**: 1000
+- **Temperature**: 0.7
+
+### Customization
+You can easily modify the AI integration by:
+1. Changing the model in `app/api/chat/route.ts`
+2. Adjusting parameters like `max_tokens` and `temperature`
+3. Adding system prompts or conversation context
+4. Implementing different AI providers
+
+The chat interface is fully functional and ready for production use with Cypher Alpha. 
