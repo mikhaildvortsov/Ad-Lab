@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getInstruction } from '@/lib/ai-instructions';
 
-const OPENROUTER_API_KEY = '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';
+const OPENROUTER_API_KEY = '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';
 const SITE_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
 const SITE_NAME = 'Ad Lab';
 
