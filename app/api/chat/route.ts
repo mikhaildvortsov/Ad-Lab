@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const OPENROUTER_API_KEY = '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';
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const SITE_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
 const SITE_NAME = 'Ad Lab';
 
 export async function POST(request: NextRequest) {
   try {
+    if (!OPENROUTER_API_KEY) {
+      return NextResponse.json(
+        { error: 'OpenRouter API key is not configured' },
+        { status: 500 }
+      );
+    }
+
     const { message } = await request.json();
 
     if (!message) {
@@ -37,10 +44,10 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({}));
       console.error('Cypher Alpha API Error:', errorData);
       return NextResponse.json(
-        { error: 'Failed to get response from Cypher Alpha' },
+        { error: 'Failed to get response from Cypher Alpha', details: errorData },
         { status: 500 }
       );
     }
@@ -52,7 +59,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Cypher Alpha API Error:', error);
     return NextResponse.json(
-      { error: 'Failed to get response from Cypher Alpha' },
+      { error: 'Failed to get response from Cypher Alpha', details: String(error) },
       { status: 500 }
     );
   }
