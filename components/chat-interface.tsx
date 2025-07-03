@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Bot, User, Loader2 } from 'lucide-react';
+import { Send, Bot, User, Loader2, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
 interface Message {
@@ -97,12 +97,21 @@ export const ChatInterface = forwardRef(function ChatInterface(props: { open: bo
     }
   };
 
+  const handleClear = () => setMessages([]);
+
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent className="max-w-2xl w-full p-0">
-        <DialogTitle asChild>
-          <span style={{ display: 'none' }}>Чат с Cypher Alpha</span>
-        </DialogTitle>
+        <div className="flex items-center justify-between px-6 pt-4 pb-2">
+          <DialogTitle asChild>
+            <span style={{ display: 'none' }}>Чат с Cypher Alpha</span>
+          </DialogTitle>
+          {messages.length > 0 && (
+            <Button variant="ghost" size="icon" onClick={handleClear} title="Удалить диалог">
+              <Trash2 className="h-5 w-5 text-red-500" />
+            </Button>
+          )}
+        </div>
         <Card className="w-full h-[600px] flex flex-col border-none shadow-none">
           <CardContent className="flex-1 p-0">
             <ScrollArea className="h-[500px] p-4" ref={scrollAreaRef}>
