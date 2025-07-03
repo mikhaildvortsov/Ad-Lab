@@ -5,6 +5,16 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code')
   const error = searchParams.get('error')
   
+  // Check if required environment variables are configured
+  const googleClientId = process.env.GOOGLE_CLIENT_ID
+  const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
+  const nextAuthUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+  
+  if (!googleClientId || !googleClientSecret) {
+    console.error('Google OAuth: Missing required environment variables')
+    return NextResponse.redirect('/auth?error=oauth_not_configured')
+  }
+  
   // Если Google вернул ошибку
   if (error) {
     console.error('Google OAuth error:', error)
@@ -14,8 +24,8 @@ export async function GET(request: NextRequest) {
   if (!code) {
     // Первый этап - редирект на Google OAuth
     const googleAuthUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth')
-    googleAuthUrl.searchParams.set('client_id', process.env.GOOGLE_CLIENT_ID || '')
-    googleAuthUrl.searchParams.set('redirect_uri', `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/auth/google`)
+    googleAuthUrl.searchParams.set('client_id', googleClientId)
+    googleAuthUrl.searchParams.set('redirect_uri', `${nextAuthUrl}/api/auth/google`)
     googleAuthUrl.searchParams.set('response_type', 'code')
     googleAuthUrl.searchParams.set('scope', 'openid email profile')
     googleAuthUrl.searchParams.set('access_type', 'offline')
@@ -32,11 +42,11 @@ export async function GET(request: NextRequest) {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({
-        client_id: process.env.GOOGLE_CLIENT_ID || '',
-        client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
+        client_id: googleClientId,
+        client_secret: googleClientSecret,
         code,
         grant_type: 'authorization_code',
-        redirect_uri: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/auth/google`,
+        redirect_uri: `${nextAuthUrl}/api/auth/google`,
       }),
     })
     
