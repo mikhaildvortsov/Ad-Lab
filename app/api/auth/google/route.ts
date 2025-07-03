@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     
     // Создаем URL для редиректа с данными пользователя
     const redirectUrl = new URL('/auth/callback', request.url)
-    redirectUrl.searchParams.set('user', JSON.stringify(user))
+    redirectUrl.searchParams.set('user', encodeURIComponent(JSON.stringify(user)))
     
     console.log('Google OAuth: redirecting to:', redirectUrl.toString())
     

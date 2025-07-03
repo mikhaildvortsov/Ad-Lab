@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Menu, X, User, LogOut, Home, Sparkles } from "lucide-react"
+import { Menu, X, User, LogOut, Home, Sparkles, Bot } from "lucide-react"
 
 interface User {
   id: string

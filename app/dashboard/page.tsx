@@ -141,8 +141,12 @@ export default function Dashboard() {
     )
   }
 
+  if (!user && typeof window !== 'undefined') {
+    window.location.replace('/');
+    return <div>Перенаправление на главную страницу...</div>;
+  }
   if (!user) {
-    return null // Компонент будет редиректить на /auth
+    return <div>Для доступа к этой странице требуется авторизация.</div>;
   }
 
   return (

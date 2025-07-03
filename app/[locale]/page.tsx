@@ -15,6 +15,7 @@ import { useLocale } from "@/lib/use-locale"
 import { useTranslation } from "@/lib/translations"
 import type { Locale } from "@/lib/i18n"
 import { useAuth } from "@/lib/auth-context"
+import { ChatInterface } from '@/components/chat-interface'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -70,6 +71,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
   const searchParams = useSearchParams()
   const { locale } = useLocale()
   const { t } = useTranslation(locale)
+  const [chatOpen, setChatOpen] = useState(false);
 
   // 1. Загружаем пользователя из localStorage только при первом рендере
   useEffect(() => {
@@ -123,26 +125,6 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
     }
   }, [router, searchParams])
 
-  useEffect(() => {
-    const userParam = searchParams.get('user')
-    console.log('userParam', userParam)
-    if (userParam) {
-      try {
-        const decoded = decodeURIComponent(userParam)
-        const user: User = JSON.parse(decoded)
-        setUser(user)
-        setIsAuthenticated(true)
-        localStorage.setItem('user', decoded)
-        router.push('/dashboard')
-      } catch (error) {
-        console.log('AuthCallback: error', error)
-        router.push('/auth?error=invalid_user_data')
-      }
-    } else {
-      router.push('/auth?error=no_user_data')
-    }
-  }, [searchParams, router])
-
   const handleLogout = () => {
     setUser(null)
     setIsAuthenticated(false)
@@ -152,7 +134,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
 
   const handleTryClick = () => {
     if (isAuthenticated) {
-      setImprovementModalOpen(true);
+      setChatOpen(true);
     } else {
       router.push('/auth');
     }
@@ -278,54 +260,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
         </div>
       </footer>
 
-      {/* Improvement Modal */}
-      <Dialog open={improvementModalOpen} onOpenChange={setImprovementModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-center flex items-center justify-center gap-2">
-              <Wand2 className="h-6 w-6 text-blue-600" />
-              {t('upgradeTextTitle')}
-            </DialogTitle>
-            <DialogDescription className="text-center text-base">
-              {t('upgradeTextDesc')}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 mt-6">
-            <div>
-              <label htmlFor="initial-text" className="block text-sm font-medium text-gray-700 mb-2">
-                Исходный текст
-              </label>
-              <Textarea
-                id="initial-text"
-                placeholder="Введите текст для улучшения..."
-                value={initialText}
-                onChange={(e) => setInitialText(e.target.value)}
-                className="min-h-[200px] resize-none"
-              />
-            </div>
-            <div className="flex gap-3 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setImprovementModalOpen(false);
-                  setInitialText("");
-                }}
-                className="flex-1"
-              >
-                Отмена
-              </Button>
-              <Button
-                onClick={handleImproveText}
-                disabled={!initialText.trim()}
-                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-              >
-                <Wand2 className="h-4 w-4 mr-2" />
-                {t('upgrade')}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ChatInterface open={chatOpen} onOpenChange={setChatOpen} />
 
       {/* Pricing Modal */}
       <Dialog open={false} onOpenChange={(open) => {
