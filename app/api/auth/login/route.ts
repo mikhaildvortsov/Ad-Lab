@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createSession, SessionData } from '@/lib/session'
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,11 +9,24 @@ export async function POST(request: NextRequest) {
     if (email && password) {
       // Создаем демо-пользователя
       const user = {
-        id: '1',
+        id: Date.now().toString(), // Используем timestamp для уникальности
         name: email.split('@')[0], // Используем часть email как имя
         email: email,
         image: null
       }
+      
+      // Создаем сессию с демо-токенами
+      const sessionData: SessionData = {
+        user,
+        accessToken: 'demo-access-token-' + user.id,
+        refreshToken: 'demo-refresh-token-' + user.id,
+        expiresAt: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60) // 30 дней
+      }
+      
+      // Создаем защищенную сессию
+      await createSession(sessionData)
+      
+      console.log('Email auth: created session for user:', user)
       
       return NextResponse.json({ 
         success: true, 
@@ -25,6 +39,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
   } catch (error) {
+    console.error('Email auth error:', error)
     return NextResponse.json({ 
       success: false, 
       error: 'Внутренняя ошибка сервера' 

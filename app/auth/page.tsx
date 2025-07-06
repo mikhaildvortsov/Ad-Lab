@@ -9,16 +9,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Sparkles, Mail, Lock, Eye, EyeOff } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
+import { getClientSession } from "@/lib/client-session"
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
-
-interface User {
-  id: string
-  name: string
-  email: string
-  image?: string
-}
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true)
@@ -30,7 +24,7 @@ export default function AuthPage() {
   
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { login: googleLogin } = useAuth()
+  const { login: googleLogin, updateUser } = useAuth()
   
   useEffect(() => {
     // Проверяем параметры URL для обработки ошибок авторизации
@@ -61,13 +55,23 @@ export default function AuthPage() {
       const data = await response.json()
 
       if (data.success) {
-        // Сохраняем пользователя в localStorage
-        localStorage.setItem('user', JSON.stringify(data.user))
-        router.push('/')
+        // Получаем сессию из cookies (она была создана API роутом)
+        const session = await getClientSession()
+        if (session) {
+          // Обновляем AuthContext с новыми данными пользователя
+          updateUser(session.user)
+          console.log('Email auth: updated AuthContext with user:', session.user)
+          
+          // Перенаправляем на dashboard
+          router.push('/dashboard')
+        } else {
+          setError('Не удалось получить данные сессии')
+        }
       } else {
         setError(data.error || 'Ошибка авторизации')
       }
     } catch (error) {
+      console.error('Email auth error:', error)
       setError("Произошла ошибка при авторизации")
     } finally {
       setIsLoading(false)
