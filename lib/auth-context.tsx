@@ -1,13 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
-
-interface User {
-  id: string
-  name: string
-  email: string
-  image?: string
-}
+import { getClientSession, clientLogout, refreshToken, User } from '@/lib/client-session'
 
 interface AuthContextType {
   user: User | null
@@ -25,65 +19,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Проверяем, есть ли пользователь в localStorage при загрузке
-    const savedUser = localStorage.getItem('user')
-    console.log('AuthContext: checking localStorage, savedUser:', savedUser)
-    if (savedUser) {
+    // Проверяем сессию при загрузке
+    const checkSession = async () => {
       try {
-        const parsedUser = JSON.parse(savedUser)
-        console.log('AuthContext: setting user from localStorage:', parsedUser)
-        setUser(parsedUser)
-      } catch (error) {
-        console.error('Error parsing saved user:', error)
-        localStorage.removeItem('user')
-      }
-    }
-    setLoading(false)
-  }, [])
-
-  // Слушаем изменения в localStorage
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const savedUser = localStorage.getItem('user')
-      if (savedUser) {
-        try {
-          setUser(JSON.parse(savedUser))
-        } catch (error) {
-          console.error('Error parsing saved user:', error)
-          localStorage.removeItem('user')
-          setUser(null)
+        const session = await getClientSession()
+        if (session) {
+          setUser(session.user)
+          console.log('AuthContext: setting user from session:', session.user)
         }
-      } else {
-        setUser(null)
+      } catch (error) {
+        console.error('Error checking session:', error)
+      } finally {
+        setLoading(false)
       }
     }
 
-    window.addEventListener('storage', handleStorageChange)
-    return () => window.removeEventListener('storage', handleStorageChange)
+    checkSession()
   }, [])
+
+  // Автоматическое обновление токена каждые 5 минут
+  useEffect(() => {
+    if (!user) return
+
+    const interval = setInterval(async () => {
+      try {
+        const success = await refreshToken()
+        if (!success) {
+          console.log('Token refresh failed, logging out')
+          setUser(null)
+          window.location.href = '/auth'
+        }
+      } catch (error) {
+        console.error('Token refresh error:', error)
+      }
+    }, 5 * 60 * 1000) // 5 минут
+
+    return () => clearInterval(interval)
+  }, [user])
 
   const login = () => {
     // Редиректим на Google OAuth
     window.location.href = '/api/auth/google'
   }
 
-  const logout = () => {
+  const logout = async () => {
     setUser(null)
-    localStorage.removeItem('user')
-    // Редиректим на главную страницу
-    window.location.href = '/'
+    await clientLogout()
   }
 
   const updateUser = (newUser: User | null) => {
     console.log('AuthContext: updateUser called with:', newUser)
     setUser(newUser)
-    if (newUser) {
-      localStorage.setItem('user', JSON.stringify(newUser))
-      console.log('AuthContext: user saved to localStorage')
-    } else {
-      localStorage.removeItem('user')
-      console.log('AuthContext: user removed from localStorage')
-    }
   }
 
   const value = {

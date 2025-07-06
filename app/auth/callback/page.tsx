@@ -3,16 +3,10 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from "@/lib/auth-context"
+import { getClientSession } from "@/lib/client-session"
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
-
-interface User {
-  id: string
-  name: string
-  email: string
-  image?: string
-}
 
 export default function AuthCallbackPage() {
   const router = useRouter()
@@ -21,22 +15,32 @@ export default function AuthCallbackPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const userParam = searchParams.get('user')
-    if (userParam) {
+    const handleCallback = async () => {
+      const errorParam = searchParams.get('error')
+      
+      if (errorParam) {
+        setError('Ошибка авторизации: ' + errorParam)
+        setTimeout(() => router.push('/auth?error=' + errorParam), 2000)
+        return
+      }
+
       try {
-        const decoded = decodeURIComponent(userParam)
-        const user: User = JSON.parse(decoded)
-        updateUser(user)
-        localStorage.setItem('user', JSON.stringify(user))
-        router.push('/dashboard')
+        // Проверяем сессию из cookies
+        const session = await getClientSession()
+        if (session) {
+          updateUser(session.user)
+          router.push('/dashboard')
+        } else {
+          setError('Не удалось получить данные пользователя.')
+          setTimeout(() => router.push('/auth?error=no_session'), 2000)
+        }
       } catch (e) {
         setError('Ошибка обработки данных пользователя: ' + (e as Error).message)
-        setTimeout(() => router.push('/auth?error=invalid_user_data'), 2000)
+        setTimeout(() => router.push('/auth?error=session_error'), 2000)
       }
-    } else {
-      setError('Не удалось получить данные пользователя.')
-      setTimeout(() => router.push('/auth?error=no_user_data'), 2000)
     }
+
+    handleCallback()
   }, [searchParams, router, updateUser])
 
   if (error) {

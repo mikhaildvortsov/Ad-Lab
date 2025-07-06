@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Sparkles, History, CreditCard, Settings, LogOut, FileText, Calendar, TrendingUp, User, Check, X } from "lucide-react"
 import { MobileNav } from "@/components/ui/mobile-nav"
 import { useAuth } from "@/lib/auth-context"
+import { ChatInterface } from "@/components/chat-interface"
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -55,6 +56,7 @@ export default function Dashboard() {
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [currentPlan, setCurrentPlan] = useState<Plan>(plans[0])
   const [isLoading, setIsLoading] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
   const [requests] = useState([
     {
       id: 1,
@@ -214,12 +216,14 @@ export default function Dashboard() {
           <TabsContent value="history" className="space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <h2 className="text-lg sm:text-xl font-semibold">История запросов</h2>
-              <Link href="/">
-                <Button size="sm" className="w-full sm:w-auto">
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Новый скрипт
-                </Button>
-              </Link>
+              <Button 
+                size="sm" 
+                className="w-full sm:w-auto"
+                onClick={() => setChatOpen(true)}
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                Новый скрипт
+              </Button>
             </div>
 
             <div className="space-y-4">
@@ -452,6 +456,8 @@ export default function Dashboard() {
           </TabsContent>
         </Tabs>
       </div>
+      
+      <ChatInterface open={chatOpen} onOpenChange={setChatOpen} />
     </div>
   )
 }

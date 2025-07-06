@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createSession, createResponseWithSession, SessionData } from '@/lib/session'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -81,9 +82,19 @@ export async function GET(request: NextRequest) {
     
     console.log('Google OAuth: created user:', user)
     
-    // Создаем URL для редиректа с данными пользователя
-    const redirectUrl = new URL('/auth/callback', request.url)
-    redirectUrl.searchParams.set('user', encodeURIComponent(JSON.stringify(user)))
+    // Создаем сессию с токенами
+    const sessionData: SessionData = {
+      user,
+      accessToken: tokenData.access_token,
+      refreshToken: tokenData.refresh_token,
+      expiresAt: Math.floor(Date.now() / 1000) + tokenData.expires_in
+    }
+    
+    // Создаем защищенную сессию
+    await createSession(sessionData)
+    
+    // Редиректим на dashboard
+    const redirectUrl = new URL('/dashboard', request.url)
     
     console.log('Google OAuth: redirecting to:', redirectUrl.toString())
     

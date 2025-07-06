@@ -22,13 +22,6 @@ import { getAvailableNiches, type NicheType } from '@/lib/ai-instructions'
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
 
-interface User {
-  id: string
-  name: string
-  email: string
-  image?: string
-}
-
 interface Plan {
   id: string
   name: string
@@ -77,11 +70,9 @@ const nicheIcons = {
 };
 
 function HomePageContent({ params }: { params: { locale: Locale } }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [improvementModalOpen, setImprovementModalOpen] = useState(false)
   const [initialText, setInitialText] = useState("")
-  const { user: authUser, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const router = useRouter()
   const searchParams = useSearchParams()
   const { locale } = useLocale()
@@ -89,67 +80,12 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
   const [chatOpen, setChatOpen] = useState(false);
 
 
-  // 1. Загружаем пользователя из localStorage только при первом рендере
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedUser = localStorage.getItem('user')
-      setIsAuthenticated(!!savedUser)
-      if (savedUser) {
-        try {
-          setUser(JSON.parse(savedUser))
-        } catch (error) {
-          localStorage.removeItem('user')
-        }
-      }
-    }
-  }, [])
-
-  // 2. Обрабатываем query-параметры только если они есть
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    let logoutParam, userParam;
-    if (searchParams) {
-      logoutParam = searchParams.get('logout');
-      userParam = searchParams.get('user');
-    }
-    // fallback на window.location.search
-    if ((!userParam && !logoutParam) && typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search)
-      userParam = params.get('user')
-      logoutParam = params.get('logout')
-    }
-    if (!userParam && !logoutParam) return; // ничего не делаем, если нет параметров
-
-    const currentPath = window.location.pathname;
-    if (logoutParam === 'true') {
-      setUser(null)
-      setIsAuthenticated(false)
-      localStorage.removeItem('user')
-      if (currentPath !== '/') {
-        router.replace('/', { scroll: false })
-      }
-    } else if (userParam) {
-      try {
-        const userData = JSON.parse(userParam)
-        setUser(userData)
-        setIsAuthenticated(true)
-        localStorage.setItem('user', userParam)
-        if (currentPath !== '/' && !currentPath.startsWith('/auth/callback')) {
-          router.replace('/', { scroll: false })
-        }
-      } catch (error) {}
-    }
-  }, [router, searchParams])
-
   const handleLogout = () => {
-    setUser(null)
-    setIsAuthenticated(false)
-    localStorage.removeItem('user')
-    router.push('/api/auth/logout')
+    logout()
   }
 
   const handleTryClick = () => {
-    if (isAuthenticated) {
+    if (user) {
       setChatOpen(true);
     } else {
       router.push('/auth');
@@ -163,6 +99,18 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
     setImprovementModalOpen(false);
     setInitialText("");
   };
+
+  // Show loading while authentication is being checked
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Загрузка...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -237,7 +185,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
             className="group text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transform transition-all duration-300 ease-out hover:scale-105 hover:shadow-xl active:scale-95 focus:scale-105 focus:shadow-lg"
             onClick={handleTryClick}
           >
-            {isAuthenticated ? t('upgrade') : t('hero.cta')}
+            {user ? t('upgrade') : t('hero.cta')}
             <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:translate-x-1" />
           </Button>
         </div>
