@@ -17,7 +17,7 @@ import type { Locale } from "@/lib/i18n"
 import { useAuth } from "@/lib/auth-context"
 import { ChatInterface } from '@/components/chat-interface'
 
-import { getAvailableNiches, type NicheType } from '@/lib/ai-instructions'
+import { getAvailableNiches, getAvailableNichesWithTranslation, type NicheType } from '@/lib/ai-instructions'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -227,15 +227,15 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
       <section className="container mx-auto px-4 py-12 sm:py-16">
         <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-            Специализация под вашу нишу
+            {t('niche.title')}
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            AI-ассистент адаптируется под специфику вашего бизнеса для более точных рекомендаций
+            {t('niche.subtitle')}
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {getAvailableNiches().slice(0, 6).map((niche) => {
+          {getAvailableNichesWithTranslation(t).slice(0, 6).map((niche) => {
             const IconComponent = nicheIcons[niche.value as keyof typeof nicheIcons] || Building2;
             return (
               <Card key={niche.value} className="hover:shadow-lg transition-shadow cursor-pointer">
@@ -245,7 +245,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
                     <h3 className="font-semibold text-lg">{niche.label}</h3>
                   </div>
                   <p className="text-gray-600 text-sm">
-                    Специализированные рекомендации для {niche.label.toLowerCase()}
+                    {t('niche.recommendationsFor')} {niche.label.toLowerCase()}
                   </p>
                 </CardContent>
               </Card>
@@ -273,9 +273,9 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
       <Dialog open={improvementModalOpen} onOpenChange={setImprovementModalOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-center">Выберите подходящий тариф</DialogTitle>
+            <DialogTitle className="text-2xl font-bold text-center">{t('pricingModal.title')}</DialogTitle>
             <DialogDescription className="text-center text-base">
-              Начните с бесплатного пробного периода и выберите план, который лучше всего подходит для ваших потребностей
+              {t('pricingModal.description')}
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
@@ -283,7 +283,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
               <Card key={plan.id} className={`relative ${plan.popular ? 'ring-2 ring-blue-500 scale-105' : ''}`}>
                 {plan.popular && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <Badge className="bg-blue-500 text-white">Популярный</Badge>
+                    <Badge className="bg-blue-500 text-white">{t('pricingModal.popular')}</Badge>
                   </div>
                 )}
                 <CardHeader className="text-center pb-6">
@@ -293,7 +293,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
                     <span className="text-sm sm:text-base font-normal text-gray-500">/месяц</span>
                   </div>
                   <CardDescription className="text-sm sm:text-base">
-                    {plan.improvements === -1 ? 'Неограниченные улучшения' : `${plan.improvements} улучшений в месяц`}
+                    {plan.improvements === -1 ? t('pricingModal.unlimitedImprovements') : `${plan.improvements} ${t('pricingModal.improvementsPerMonth')}`}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="text-center">
@@ -308,7 +308,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
                   <Button 
                     className={`w-full h-12 text-base ${plan.popular ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
                   >
-                    Выбрать план
+                    {t('pricingModal.choosePlan')}
                   </Button>
                 </CardContent>
               </Card>
@@ -318,23 +318,23 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
           {/* Additional Info */}
           <div className="mt-8">
             <div className="bg-gray-50 rounded-xl p-6 max-w-2xl mx-auto">
-              <h3 className="text-lg sm:text-xl font-semibold mb-4">Что включено во все планы:</h3>
+              <h3 className="text-lg sm:text-xl font-semibold mb-4">{t('pricingModal.whatsIncluded')}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm sm:text-base text-gray-600">
                 <div className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-500" />
-                  Профессиональные алгоритмы
+                  {t('pricingModal.features.professionalAlgorithms')}
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-500" />
-                  Безопасность данных
+                  {t('pricingModal.features.dataSecurity')}
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-500" />
-                  Поддержка клиентов
+                  {t('pricingModal.features.customerSupport')}
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-500" />
-                  Регулярные обновления
+                  {t('pricingModal.features.regularUpdates')}
                 </div>
               </div>
             </div>

@@ -65,6 +65,7 @@
     "all": "All niches",
     "specialization": "Specialization",
     "tryWithNiche": "Try with selected niche",
+    "recommendationsFor": "Specialized recommendations for",
     "types": {
       "ecommerce": "E-commerce",
       "saas": "SaaS",
@@ -153,5 +154,20 @@
   "upgrade": "Create text",
   "dashboardBtn": "Dashboard",
   "upgradeTextTitle": "Upgrade text",
-  "upgradeTextDesc": "Enter the text you want to improve. Our algorithms will help make it more effective and appealing."
+  "upgradeTextDesc": "Enter the text you want to improve. Our algorithms will help make it more effective and appealing.",
+  "pricingModal": {
+    "title": "Choose the right plan",
+    "description": "Start with a free trial and choose the plan that best suits your needs",
+    "whatsIncluded": "What's included in all plans:",
+    "unlimitedImprovements": "Unlimited improvements",
+    "improvementsPerMonth": "improvements per month",
+    "choosePlan": "Choose plan",
+    "popular": "Popular",
+    "features": {
+      "professionalAlgorithms": "Professional algorithms",
+      "dataSecurity": "Data security",
+      "customerSupport": "Customer support",
+      "regularUpdates": "Regular updates"
+    }
+  }
 } 

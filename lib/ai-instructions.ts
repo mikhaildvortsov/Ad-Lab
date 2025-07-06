@@ -221,4 +221,20 @@ export function getAvailableNiches(): Array<{value: NicheType, label: string}> {
     { value: 'real_estate', label: 'Недвижимость' },
     { value: 'consulting', label: 'Консалтинг' }
   ];
+}
+
+// Функция для получения всех доступных ниш с переводами
+export function getAvailableNichesWithTranslation(t: (key: string) => string): Array<{value: NicheType, label: string}> {
+  return [
+    { value: 'ecommerce', label: t('niche.types.ecommerce') },
+    { value: 'saas', label: t('niche.types.saas') },
+    { value: 'infoproducts', label: t('niche.types.infoproducts') },
+    { value: 'b2b', label: t('niche.types.b2b') },
+    { value: 'local_business', label: t('niche.types.local_business') },
+    { value: 'healthcare', label: t('niche.types.healthcare') },
+    { value: 'education', label: t('niche.types.education') },
+    { value: 'finance', label: t('niche.types.finance') },
+    { value: 'real_estate', label: t('niche.types.real_estate') },
+    { value: 'consulting', label: t('niche.types.consulting') }
+  ];
 } 
