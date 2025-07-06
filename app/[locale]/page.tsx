@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
-import { Sparkles, Zap, Target, TrendingUp, ArrowRight, User, LogOut, Check, Wand2 } from "lucide-react"
+import { Sparkles, Zap, Target, TrendingUp, ArrowRight, User, LogOut, Check, Wand2, Building2, ShoppingCart, GraduationCap, Heart } from "lucide-react"
 import { LanguageSelector } from "@/components/language-selector"
 import { MobileNav } from "@/components/ui/mobile-nav"
 import { useLocale } from "@/lib/use-locale"
@@ -16,6 +16,8 @@ import { useTranslation } from "@/lib/translations"
 import type { Locale } from "@/lib/i18n"
 import { useAuth } from "@/lib/auth-context"
 import { ChatInterface } from '@/components/chat-interface'
+
+import { getAvailableNiches, type NicheType } from '@/lib/ai-instructions'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -61,6 +63,19 @@ const plans: Plan[] = [
   }
 ]
 
+const nicheIcons = {
+  ecommerce: ShoppingCart,
+  saas: Building2,
+  infoproducts: GraduationCap,
+  b2b: Building2,
+  local_business: Building2,
+  healthcare: Heart,
+  education: GraduationCap,
+  finance: Building2,
+  real_estate: Building2,
+  consulting: Building2
+};
+
 function HomePageContent({ params }: { params: { locale: Locale } }) {
   const [user, setUser] = useState<User | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -72,6 +87,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
   const { locale } = useLocale()
   const { t } = useTranslation(locale)
   const [chatOpen, setChatOpen] = useState(false);
+
 
   // 1. Загружаем пользователя из localStorage только при первом рендере
   useEffect(() => {
@@ -204,41 +220,19 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
       </header>
 
       {/* Hero Section */}
-      <section className="py-12 sm:py-16 lg:py-20 px-4">
-        <div className="container mx-auto max-w-4xl text-center">
-          <div className="mb-8 sm:mb-12">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight">
-              {t('hero.title')}{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-                {t('hero.titleHighlight')}
-              </span>
-            </h1>
-            <p className="text-lg sm:text-xl text-gray-600 mb-6 sm:mb-8 max-w-2xl mx-auto px-4">
-              {t('hero.subtitle')}
-            </p>
-          </div>
-
-          {/* Features */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12 px-4">
-            <div className="flex flex-col items-center p-4 sm:p-6 bg-white rounded-xl shadow-sm border">
-              <Target className="h-10 w-10 sm:h-12 sm:w-12 text-blue-600 mb-3 sm:mb-4" />
-              <h3 className="font-semibold text-base sm:text-lg mb-2">{t('features.target.title')}</h3>
-              <p className="text-gray-600 text-sm text-center">{t('features.target.description')}</p>
-            </div>
-            <div className="flex flex-col items-center p-4 sm:p-6 bg-white rounded-xl shadow-sm border">
-              <Zap className="h-10 w-10 sm:h-12 sm:w-12 text-purple-600 mb-3 sm:mb-4" />
-              <h3 className="font-semibold text-base sm:text-lg mb-2">{t('features.speed.title')}</h3>
-              <p className="text-gray-600 text-sm text-center">{t('features.speed.description')}</p>
-            </div>
-            <div className="flex flex-col items-center p-4 sm:p-6 bg-white rounded-xl shadow-sm border sm:col-span-2 lg:col-span-1">
-              <TrendingUp className="h-10 w-10 sm:h-12 sm:w-12 text-green-600 mb-3 sm:mb-4" />
-              <h3 className="font-semibold text-base sm:text-lg mb-2">{t('features.conversion.title')}</h3>
-              <p className="text-gray-600 text-sm text-center">{t('features.conversion.description')}</p>
-            </div>
-          </div>
-
-          {/* CTA */}
-          <Button
+      <section className="container mx-auto px-4 py-12 sm:py-16 lg:py-20">
+        <div className="text-center max-w-4xl mx-auto">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 sm:mb-8">
+            {t('hero.title')}{' '}
+            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              {t('hero.titleHighlight')}
+            </span>
+          </h1>
+          <p className="text-lg sm:text-xl text-gray-600 mb-8 sm:mb-12 max-w-2xl mx-auto">
+            {t('hero.subtitle')}
+          </p>
+          
+          <Button 
             size="lg"
             className="group text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transform transition-all duration-300 ease-out hover:scale-105 hover:shadow-xl active:scale-95 focus:scale-105 focus:shadow-lg"
             onClick={handleTryClick}
@@ -247,6 +241,71 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
             <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:translate-x-1" />
           </Button>
         </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="container mx-auto px-4 py-12 sm:py-16">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+            {t('features.title')}
+          </h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            {t('features.subtitle')}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12 px-4">
+          <div className="flex flex-col items-center p-4 sm:p-6 bg-white rounded-xl shadow-sm border">
+            <Target className="h-10 w-10 sm:h-12 sm:w-12 text-blue-600 mb-3 sm:mb-4" />
+            <h3 className="font-semibold text-base sm:text-lg mb-2">{t('features.target.title')}</h3>
+            <p className="text-gray-600 text-sm text-center">{t('features.target.description')}</p>
+          </div>
+          <div className="flex flex-col items-center p-4 sm:p-6 bg-white rounded-xl shadow-sm border">
+            <Zap className="h-10 w-10 sm:h-12 sm:w-12 text-purple-600 mb-3 sm:mb-4" />
+            <h3 className="font-semibold text-base sm:text-lg mb-2">{t('features.speed.title')}</h3>
+            <p className="text-gray-600 text-sm text-center">{t('features.speed.description')}</p>
+          </div>
+          <div className="flex flex-col items-center p-4 sm:p-6 bg-white rounded-xl shadow-sm border sm:col-span-2 lg:col-span-1">
+            <TrendingUp className="h-10 w-10 sm:h-12 sm:w-12 text-green-600 mb-3 sm:mb-4" />
+            <h3 className="font-semibold text-base sm:text-lg mb-2">{t('features.conversion.title')}</h3>
+            <p className="text-gray-600 text-sm text-center">{t('features.conversion.description')}</p>
+          </div>
+        </div>
+
+
+      </section>
+
+      {/* Niche Customization Section */}
+      <section className="container mx-auto px-4 py-12 sm:py-16">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+            Специализация под вашу нишу
+          </h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            AI-ассистент адаптируется под специфику вашего бизнеса для более точных рекомендаций
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {getAvailableNiches().slice(0, 6).map((niche) => {
+            const IconComponent = nicheIcons[niche.value as keyof typeof nicheIcons] || Building2;
+            return (
+              <Card key={niche.value} className="hover:shadow-lg transition-shadow cursor-pointer">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <IconComponent className="h-8 w-8 text-blue-600" />
+                    <h3 className="font-semibold text-lg">{niche.label}</h3>
+                  </div>
+                  <p className="text-gray-600 text-sm">
+                    Специализированные рекомендации для {niche.label.toLowerCase()}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+
       </section>
 
       {/* Footer */}
@@ -263,9 +322,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
       <ChatInterface open={chatOpen} onOpenChange={setChatOpen} />
 
       {/* Pricing Modal */}
-      <Dialog open={false} onOpenChange={(open) => {
-        console.log('Pricing modal onOpenChange:', open);
-      }}>
+      <Dialog open={improvementModalOpen} onOpenChange={setImprovementModalOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-center">Выберите подходящий тариф</DialogTitle>
@@ -291,7 +348,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
                     {plan.improvements === -1 ? 'Неограниченные улучшения' : `${plan.improvements} улучшений в месяц`}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="text-center">
                   <ul className="space-y-3">
                     {plan.features.map((feature, index) => (
                       <li key={index} className="flex items-center gap-3 text-sm sm:text-base">
@@ -311,7 +368,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
           </div>
           
           {/* Additional Info */}
-          <div className="mt-8 text-center">
+          <div className="mt-8">
             <div className="bg-gray-50 rounded-xl p-6 max-w-2xl mx-auto">
               <h3 className="text-lg sm:text-xl font-semibold mb-4">Что включено во все планы:</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm sm:text-base text-gray-600">

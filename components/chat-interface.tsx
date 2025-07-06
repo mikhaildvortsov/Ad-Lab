@@ -5,11 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Bot, User, Loader2, Trash2, Copy, Settings } from 'lucide-react';
+import { Send, Bot, User, Loader2, Trash2, Copy, Settings, Target } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getInstruction } from '@/lib/ai-instructions';
+import { getInstruction, getAvailableNiches, type NicheType } from '@/lib/ai-instructions';
 
 interface Message {
   id: string;
@@ -23,7 +23,10 @@ export const ChatInterface = forwardRef(function ChatInterface(props: { open: bo
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [instructionType, setInstructionType] = useState<'marketing' | 'copywriting' | 'audience' | 'creative' | 'analytics' | 'dkcp' | 'creative_script'>('marketing');
+  const [selectedNiche, setSelectedNiche] = useState<NicheType | 'all'>('all');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  const availableNiches = getAvailableNiches();
 
   useImperativeHandle(ref, () => ({
     clearMessages: () => setMessages([]),
@@ -61,7 +64,8 @@ export const ChatInterface = forwardRef(function ChatInterface(props: { open: bo
         },
         body: JSON.stringify({ 
           message: input.trim(),
-          instructionType: instructionType
+          instructionType: instructionType,
+          niche: selectedNiche !== 'all' ? selectedNiche : undefined
         }),
       });
 
@@ -115,7 +119,7 @@ export const ChatInterface = forwardRef(function ChatInterface(props: { open: bo
       <DialogContent className="max-w-4xl w-full p-0">
         <div className="flex items-center justify-between px-6 pt-4 pb-2">
           <DialogTitle asChild>
-            <span style={{ display: 'none' }}>Чат с Gemini Flash</span>
+            <span style={{ display: 'none' }}>Чат с ChatGPT</span>
           </DialogTitle>
           <div className="flex items-center gap-2">
             <Select value={instructionType} onValueChange={(value: any) => setInstructionType(value)}>
@@ -132,6 +136,21 @@ export const ChatInterface = forwardRef(function ChatInterface(props: { open: bo
                 <SelectItem value="creative_script">Создание Креативов</SelectItem>
               </SelectContent>
             </Select>
+            
+            <Select value={selectedNiche} onValueChange={(value: NicheType | 'all') => setSelectedNiche(value)}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Выберите нишу" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все ниши</SelectItem>
+                {availableNiches.map((niche) => (
+                  <SelectItem key={niche.value} value={niche.value}>
+                    {niche.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
             {messages.length > 0 && (
               <Button variant="ghost" size="icon" onClick={handleClear} title="Удалить диалог">
                 <Trash2 className="h-5 w-5 text-red-500" />
@@ -145,22 +164,35 @@ export const ChatInterface = forwardRef(function ChatInterface(props: { open: bo
               {messages.length === 0 ? (
                 <div className="text-center text-muted-foreground py-8">
                   <Bot className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Чат с Gemini Flash</p>
+                  <p>Чат с ChatGPT</p>
                   <p className="text-sm mt-2">Задайте любой вопрос AI-ассистенту</p>
-                                      <div className="mt-4 space-y-2">
-                      <p className="text-xs">Попробуйте:</p>
-                      <div className="flex flex-wrap gap-2 justify-center">
-                        <Badge variant="outline" className="text-xs">
-                          "Анализируй рекламный скрипт"
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          "Помоги с ДКЦП анализом"
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          "Создай креатив"
-                        </Badge>
+                  {selectedNiche !== 'all' && (
+                    <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Target className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm font-medium text-blue-800">
+                          Специализация: {availableNiches.find(n => n.value === selectedNiche)?.label}
+                        </span>
                       </div>
+                      <p className="text-xs text-blue-700">
+                        AI настроен под вашу нишу для более точных рекомендаций
+                      </p>
                     </div>
+                  )}
+                  <div className="mt-4 space-y-2">
+                    <p className="text-xs">Попробуйте:</p>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      <Badge variant="outline" className="text-xs">
+                        "Анализируй рекламный скрипт"
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        "Помоги с ДКЦП анализом"
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        "Создай креатив"
+                      </Badge>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -204,18 +236,20 @@ export const ChatInterface = forwardRef(function ChatInterface(props: { open: bo
                       </div>
                       {message.role === 'user' && (
                         <div className="flex-shrink-0">
-                          <User className="h-6 w-6 text-blue-500" />
+                          <User className="h-6 w-6 text-gray-500" />
                         </div>
                       )}
                     </div>
                   ))}
                   {isLoading && (
                     <div className="flex gap-3 justify-start">
-                      <Bot className="h-6 w-6 text-blue-500" />
+                      <div className="flex-shrink-0">
+                        <Bot className="h-6 w-6 text-blue-500" />
+                      </div>
                       <div className="bg-gray-100 rounded-lg px-4 py-2">
                         <div className="flex items-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Gemini Flash думает...</span>
+                          <span className="text-sm">Генерирую ответ...</span>
                         </div>
                       </div>
                     </div>
@@ -223,21 +257,17 @@ export const ChatInterface = forwardRef(function ChatInterface(props: { open: bo
                 </div>
               )}
             </ScrollArea>
-            <div className="p-4 border-t">
+            <div className="border-t p-4">
               <div className="flex gap-2">
                 <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Задайте вопрос Gemini Flash..."
-                  disabled={isLoading}
+                  placeholder="Введите ваш вопрос..."
                   className="flex-1"
+                  disabled={isLoading}
                 />
-                <Button
-                  onClick={sendMessage}
-                  disabled={!input.trim() || isLoading}
-                  size="icon"
-                >
+                <Button onClick={sendMessage} disabled={isLoading || !input.trim()}>
                   <Send className="h-4 w-4" />
                 </Button>
               </div>

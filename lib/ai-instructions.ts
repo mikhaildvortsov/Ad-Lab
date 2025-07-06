@@ -1,5 +1,79 @@
 // Инструкции для различных типов задач AI на основе Ad Lab June 26
 
+export type NicheType = 'ecommerce' | 'saas' | 'infoproducts' | 'b2b' | 'local_business' | 'healthcare' | 'education' | 'finance' | 'real_estate' | 'consulting';
+
+export const NICHE_SPECIFIC_INSTRUCTIONS = {
+  ecommerce: `Специализация: E-commerce и розничная торговля
+- Фокус на конверсии и увеличении среднего чека
+- Работа с товарными категориями и сезонностью
+- Использование триггеров срочности и дефицита
+- Оптимизация для мобильных покупок
+- Работа с отзывами и социальными доказательствами`,
+
+  saas: `Специализация: SaaS и программное обеспечение
+- Фокус на решении проблем и ROI
+- Работа с freemium моделью и trial периодами
+- Подчеркивание автоматизации и экономии времени
+- Техническая экспертиза и интеграции
+- B2B продажи и enterprise решения`,
+
+  infoproducts: `Специализация: Инфопродукты и онлайн-курсы
+- Фокус на трансформации и результатах
+- Работа с экспертностью и авторитетом
+- Создание срочности и ограниченных предложений
+- Социальные доказательства и кейсы
+- Работа с возражениями о цене`,
+
+  b2b: `Специализация: B2B и корпоративные продажи
+- Фокус на ROI и бизнес-выгодах
+- Работа с decision makers и stakeholders
+- Подчеркивание надежности и поддержки
+- Case studies и референсы
+- Долгий цикл продаж и nurture campaigns`,
+
+  local_business: `Специализация: Локальный бизнес и услуги
+- Фокус на местном сообществе и доверии
+- Работа с отзывами и рекомендациями
+- Подчеркивание качества и персонализированного подхода
+- Создание срочности для местных предложений
+- Работа с сезонностью и местными событиями`,
+
+  healthcare: `Специализация: Здравоохранение и медицина
+- Фокус на безопасности и экспертизе
+- Работа с доверием и авторитетом врачей
+- Подчеркивание качества лечения и результатов
+- Соблюдение медицинской этики
+- Работа с страхами и надеждами пациентов`,
+
+  education: `Специализация: Образование и обучение
+- Фокус на развитии навыков и карьерном росте
+- Работа с мотивацией и целями обучения
+- Подчеркивание практической применимости
+- Социальные доказательства успехов студентов
+- Работа с инвестициями в будущее`,
+
+  finance: `Специализация: Финансы и инвестиции
+- Фокус на безопасности и стабильности
+- Работа с доверием и репутацией
+- Подчеркивание экспертизы и опыта
+- Соблюдение финансового регулирования
+- Работа с рисками и возможностями`,
+
+  real_estate: `Специализация: Недвижимость
+- Фокус на инвестиционной привлекательности
+- Работа с локацией и инфраструктурой
+- Подчеркивание уникальных преимуществ
+- Создание срочности для хороших предложений
+- Работа с эмоциональными аспектами покупки`,
+
+  consulting: `Специализация: Консалтинг и услуги
+- Фокус на решении проблем и результатах
+- Работа с экспертностью и опытом
+- Подчеркивание персонализированного подхода
+- Case studies и ROI проектов
+- Работа с долгосрочными отношениями`
+};
+
 export const AI_INSTRUCTIONS = {
   // Основная инструкция для рекламного помощника
   marketing: `Ты - профессиональный помощник по рекламе и маркетингу на основе ДКЦП (DKCP) фреймворка. 
@@ -109,7 +183,42 @@ export function getInstruction(type: keyof typeof AI_INSTRUCTIONS = 'marketing')
   return AI_INSTRUCTIONS[type];
 }
 
-// Функция для создания кастомной инструкции
-export function createCustomInstruction(baseType: keyof typeof AI_INSTRUCTIONS, additionalContext: string): string {
-  return `${AI_INSTRUCTIONS[baseType]}\n\nДополнительный контекст: ${additionalContext}`;
+// Функция для получения нишевой инструкции
+export function getNicheInstruction(niche: NicheType): string {
+  return NICHE_SPECIFIC_INSTRUCTIONS[niche] || '';
+}
+
+// Функция для создания кастомной инструкции с нишей
+export function createCustomInstruction(
+  baseType: keyof typeof AI_INSTRUCTIONS, 
+  niche?: NicheType,
+  additionalContext?: string
+): string {
+  let instruction = AI_INSTRUCTIONS[baseType];
+  
+  if (niche && NICHE_SPECIFIC_INSTRUCTIONS[niche]) {
+    instruction += `\n\n**Специализация по нише:**\n${NICHE_SPECIFIC_INSTRUCTIONS[niche]}`;
+  }
+  
+  if (additionalContext) {
+    instruction += `\n\n**Дополнительный контекст:** ${additionalContext}`;
+  }
+  
+  return instruction;
+}
+
+// Функция для получения всех доступных ниш
+export function getAvailableNiches(): Array<{value: NicheType, label: string}> {
+  return [
+    { value: 'ecommerce', label: 'E-commerce' },
+    { value: 'saas', label: 'SaaS' },
+    { value: 'infoproducts', label: 'Инфопродукты' },
+    { value: 'b2b', label: 'B2B' },
+    { value: 'local_business', label: 'Локальный бизнес' },
+    { value: 'healthcare', label: 'Здравоохранение' },
+    { value: 'education', label: 'Образование' },
+    { value: 'finance', label: 'Финансы' },
+    { value: 'real_estate', label: 'Недвижимость' },
+    { value: 'consulting', label: 'Консалтинг' }
+  ];
 } 

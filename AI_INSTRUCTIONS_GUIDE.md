@@ -138,7 +138,7 @@ const customInstruction = createCustomInstruction('marketing', 'Дополнит
 
 ```typescript
 {
-  "model": "google/gemini-flash-1.5",
+  "model": "gpt-4o",
   "messages": [
     {
       "role": "system",

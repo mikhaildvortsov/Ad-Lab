@@ -52,7 +52,7 @@ Before deploying, you need to set up the following environment variables in your
 
 1. Check that your app loads without errors
 2. Test Google OAuth login (should work if Google credentials are set)
-3. Test the chat functionality with Gemini 1.5 Flash AI
+3. Test the chat functionality with ChatGPT 4o AI
 
 ## Troubleshooting
 
@@ -90,17 +90,17 @@ Make sure `.env.local` is in your `.gitignore` file to prevent accidentally comm
 
 ## AI Integration
 
-This application is integrated with **Gemini 1.5 Flash** through OpenRouter API:
+This application is integrated with **ChatGPT 4o** through OpenAI API:
 
 ### Features
-- Real-time chat with Gemini 1.5 Flash AI model
+- Real-time chat with ChatGPT 4o AI model
 - Professional chat interface with message history
 - Loading states and error handling
 - Responsive design for all devices
 
 ### Technical Details
-- **AI Model**: `google/gemini-flash-1.5`
-- **API Provider**: OpenRouter
+- **AI Model**: `gpt-4o`
+- **API Provider**: OpenAI
 - **Endpoint**: `/api/chat`
 - **Max Tokens**: 1000
 - **Temperature**: 0.7
@@ -112,4 +112,4 @@ You can easily modify the AI integration by:
 3. Adding system prompts or conversation context
 4. Implementing different AI providers
 
-The chat interface is fully functional and ready for production use with Gemini 1.5 Flash. 
+The chat interface is fully functional and ready for production use with ChatGPT 4o. 

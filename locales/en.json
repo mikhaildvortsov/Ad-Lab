@@ -43,6 +43,8 @@
     "cta": "Try for free"
   },
   "features": {
+    "title": "Features",
+    "subtitle": "Everything you need to create effective advertising",
     "target": {
       "title": "Precise Targeting",
       "description": "We analyze your audience and create personalized texts"
@@ -54,6 +56,26 @@
     "conversion": {
       "title": "More Conversions",
       "description": "Increase sales with proven copywriting techniques"
+    }
+  },
+  "niche": {
+    "title": "Specialization for your niche",
+    "subtitle": "AI assistant adapts to your business specifics for more accurate recommendations",
+    "select": "Select niche",
+    "all": "All niches",
+    "specialization": "Specialization",
+    "tryWithNiche": "Try with selected niche",
+    "types": {
+      "ecommerce": "E-commerce",
+      "saas": "SaaS",
+      "infoproducts": "Info products",
+      "b2b": "B2B",
+      "local_business": "Local business",
+      "healthcare": "Healthcare",
+      "education": "Education",
+      "finance": "Finance",
+      "real_estate": "Real estate",
+      "consulting": "Consulting"
     }
   },
   "scriptImprover": {
@@ -122,13 +144,13 @@
     "copiedMessage": "Script copied to clipboard!"
   },
   "footer": {
-    "copyright": "© 2025 Ad Lab. All rights reserved."
+    "copyright": "© 2024 Ad Lab. All rights reserved."
   },
   "errors": {
     "improveScript": "An error occurred while improving the script",
     "requestError": "An error occurred while processing the request"
   },
-  "upgrade": "Upgrade",
+  "upgrade": "Upgrade plan",
   "dashboardBtn": "Dashboard",
   "upgradeTextTitle": "Upgrade text",
   "upgradeTextDesc": "Enter the text you want to improve. Our algorithms will help make it more effective and appealing."
