@@ -49,7 +49,7 @@ export default function AuthPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, isRegistration: !isLogin }),
       })
 
       const data = await response.json()

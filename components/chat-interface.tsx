@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Bot, User, Loader2, Trash2, Copy, Settings, Target } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getInstruction, getAvailableNiches, type NicheType } from '@/lib/ai-instructions';
 
@@ -182,15 +182,30 @@ export const ChatInterface = forwardRef(function ChatInterface(props: { open: bo
                   <div className="mt-4 space-y-2">
                     <p className="text-xs">Попробуйте:</p>
                     <div className="flex flex-wrap gap-2 justify-center">
-                      <Badge variant="outline" className="text-xs">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-7"
+                        onClick={() => setInput("Анализируй рекламный скрипт")}
+                      >
                         "Анализируй рекламный скрипт"
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-7"
+                        onClick={() => setInput("Помоги с ДКЦП анализом")}
+                      >
                         "Помоги с ДКЦП анализом"
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-7"
+                        onClick={() => setInput("Создай креатив")}
+                      >
                         "Создай креатив"
-                      </Badge>
+                      </Button>
                     </div>
                   </div>
                 </div>
