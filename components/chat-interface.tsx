@@ -116,14 +116,14 @@ export const ChatInterface = forwardRef(function ChatInterface(props: { open: bo
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-w-4xl w-full p-0">
-        <div className="flex items-center justify-between px-6 pt-4 pb-2">
+      <DialogContent className="max-w-4xl w-full p-0 h-[90vh] sm:h-auto">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 sm:px-6 pt-4 pb-2 gap-2">
           <DialogTitle asChild>
             <span style={{ display: 'none' }}>Чат с ChatGPT</span>
           </DialogTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
             <Select value={instructionType} onValueChange={(value: any) => setInstructionType(value)}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="Выберите режим" />
               </SelectTrigger>
               <SelectContent>
@@ -138,7 +138,7 @@ export const ChatInterface = forwardRef(function ChatInterface(props: { open: bo
             </Select>
             
             <Select value={selectedNiche} onValueChange={(value: NicheType | 'all') => setSelectedNiche(value)}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="Выберите нишу" />
               </SelectTrigger>
               <SelectContent>
@@ -158,9 +158,9 @@ export const ChatInterface = forwardRef(function ChatInterface(props: { open: bo
             )}
           </div>
         </div>
-        <Card className="w-full h-[600px] flex flex-col border-none shadow-none">
+        <Card className="w-full h-[calc(90vh-120px)] sm:h-[600px] flex flex-col border-none shadow-none">
           <CardContent className="flex-1 p-0">
-            <ScrollArea className="h-[500px] p-4" ref={scrollAreaRef}>
+            <ScrollArea className="h-[calc(90vh-200px)] sm:h-[500px] p-4" ref={scrollAreaRef}>
               {messages.length === 0 ? (
                 <div className="text-center text-muted-foreground py-8">
                   <Bot className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -185,7 +185,7 @@ export const ChatInterface = forwardRef(function ChatInterface(props: { open: bo
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-xs h-7"
+                        className="text-xs h-8 sm:h-7 px-3 sm:px-2"
                         onClick={() => setInput("Анализируй рекламный скрипт")}
                       >
                         "Анализируй рекламный скрипт"
@@ -193,7 +193,7 @@ export const ChatInterface = forwardRef(function ChatInterface(props: { open: bo
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-xs h-7"
+                        className="text-xs h-8 sm:h-7 px-3 sm:px-2"
                         onClick={() => setInput("Помоги с ДКЦП анализом")}
                       >
                         "Помоги с ДКЦП анализом"
@@ -201,7 +201,7 @@ export const ChatInterface = forwardRef(function ChatInterface(props: { open: bo
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-xs h-7"
+                        className="text-xs h-8 sm:h-7 px-3 sm:px-2"
                         onClick={() => setInput("Создай креатив")}
                       >
                         "Создай креатив"
@@ -272,18 +272,24 @@ export const ChatInterface = forwardRef(function ChatInterface(props: { open: bo
                 </div>
               )}
             </ScrollArea>
-            <div className="border-t p-4">
+            <div className="border-t p-3 sm:p-4">
               <div className="flex gap-2">
                 <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Введите ваш вопрос..."
-                  className="flex-1"
+                  className="flex-1 h-10 text-sm sm:text-base"
                   disabled={isLoading}
                 />
-                <Button onClick={sendMessage} disabled={isLoading || !input.trim()}>
-                  <Send className="h-4 w-4" />
+                <Button 
+                  onClick={sendMessage} 
+                  disabled={isLoading || !input.trim()}
+                  className="h-10 w-10 sm:h-auto sm:w-auto sm:px-4 flex-shrink-0"
+                  size="icon"
+                >
+                  <Send className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Отправить</span>
                 </Button>
               </div>
             </div>
