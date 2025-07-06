@@ -93,10 +93,10 @@ export async function GET(request: NextRequest) {
     // Создаем защищенную сессию
     await createSession(sessionData)
     
-    // Редиректим на dashboard
-    const redirectUrl = new URL('/dashboard', request.url)
+    // Редиректим на callback страницу для обновления AuthContext
+    const redirectUrl = new URL('/auth/callback', request.url)
     
-    console.log('Google OAuth: redirecting to:', redirectUrl.toString())
+    console.log('Google OAuth: redirecting to callback:', redirectUrl.toString())
     
     return NextResponse.redirect(redirectUrl.toString())
     

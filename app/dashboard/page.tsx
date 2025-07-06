@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Sparkles, History, CreditCard, Settings, LogOut, FileText, Calendar, TrendingUp, User, Check, X } from "lucide-react"
 import { MobileNav } from "@/components/ui/mobile-nav"
 import { useAuth } from "@/lib/auth-context"
+import { getClientSession } from "@/lib/client-session"
 import { ChatInterface } from "@/components/chat-interface"
 
 // Force dynamic rendering
@@ -51,12 +52,31 @@ const plans: Plan[] = [
 ]
 
 export default function Dashboard() {
-  const { user, loading, logout } = useAuth()
+  const { user, loading, logout, updateUser } = useAuth()
   const [showPlanModal, setShowPlanModal] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [currentPlan, setCurrentPlan] = useState<Plan>(plans[0])
   const [isLoading, setIsLoading] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
+
+  // Fallback: если AuthContext не загрузился, но сессия есть, обновляем контекст
+  useEffect(() => {
+    const checkAndUpdateSession = async () => {
+      if (!loading && !user) {
+        try {
+          const session = await getClientSession()
+          if (session) {
+            console.log('Dashboard: Found session, updating AuthContext:', session.user)
+            updateUser(session.user)
+          }
+        } catch (error) {
+          console.error('Dashboard: Error checking session:', error)
+        }
+      }
+    }
+
+    checkAndUpdateSession()
+  }, [loading, user, updateUser])
   const [requests] = useState([
     {
       id: 1,
