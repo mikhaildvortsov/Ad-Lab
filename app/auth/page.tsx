@@ -31,10 +31,14 @@ export default function AuthPage() {
     const authError = searchParams.get('error')
     if (authError === 'google_auth_failed') {
       setError('Ошибка авторизации через Google. Попробуйте еще раз.')
+    } else if (authError === 'oauth_not_configured') {
+      setError('OAuth не настроен. Обратитесь к администратору.')
     } else if (authError === 'invalid_user_data') {
       setError('Ошибка обработки данных пользователя.')
     } else if (authError === 'no_user_data') {
       setError('Не удалось получить данные пользователя.')
+    } else if (authError === 'redirect_uri_mismatch') {
+      setError('Ошибка настройки OAuth. Проверьте redirect URI в Google Console.')
     }
   }, [searchParams])
 
