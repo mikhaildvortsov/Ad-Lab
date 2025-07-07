@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from "@/lib/auth-context"
 import { getClientSession } from "@/lib/client-session"
@@ -13,9 +13,14 @@ export default function AuthCallbackPage() {
   const searchParams = useSearchParams()
   const { updateUser } = useAuth()
   const [error, setError] = useState<string | null>(null)
+  const isProcessingRef = useRef(false)
 
-  useEffect(() => {
-    const handleCallback = async () => {
+  const handleCallback = useCallback(async () => {
+    // Prevent multiple simultaneous processing
+    if (isProcessingRef.current) return
+    isProcessingRef.current = true
+
+    try {
       const errorParam = searchParams.get('error')
       
       if (errorParam) {
@@ -24,24 +29,35 @@ export default function AuthCallbackPage() {
         return
       }
 
-      try {
-        // Проверяем сессию из cookies
-        const session = await getClientSession()
-        if (session) {
-          updateUser(session.user)
+      // Проверяем сессию из cookies
+      const session = await getClientSession()
+      if (session) {
+        updateUser(session.user)
+        router.push('/dashboard')
+      } else {
+        // Wait a bit and try again before showing error
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        const retrySession = await getClientSession()
+        
+        if (retrySession) {
+          updateUser(retrySession.user)
           router.push('/dashboard')
         } else {
           setError('Не удалось получить данные пользователя.')
           setTimeout(() => router.push('/auth?error=no_session'), 2000)
         }
-      } catch (e) {
-        setError('Ошибка обработки данных пользователя: ' + (e as Error).message)
-        setTimeout(() => router.push('/auth?error=session_error'), 2000)
       }
+    } catch (e) {
+      setError('Ошибка обработки данных пользователя: ' + (e as Error).message)
+      setTimeout(() => router.push('/auth?error=session_error'), 2000)
+    } finally {
+      isProcessingRef.current = false
     }
-
-    handleCallback()
   }, [searchParams, router, updateUser])
+
+  useEffect(() => {
+    handleCallback()
+  }, []) // Empty dependency array - only run once on mount
 
   if (error) {
     return <div style={{ color: 'red', padding: 32 }}>{error}</div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getInstruction, createCustomInstruction, type NicheType } from '@/lib/ai-instructions';
+import { checkRateLimit } from '@/lib/rate-limiter';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const SITE_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
@@ -9,10 +10,60 @@ export async function POST(request: NextRequest) {
   try {
     const { message, instructions, instructionType, niche } = await request.json();
 
-    if (!message) {
+    // Input validation
+    if (!message || typeof message !== 'string') {
       return NextResponse.json(
-        { error: 'Message is required' },
+        { error: 'Message is required and must be a string' },
         { status: 400 }
+      );
+    }
+
+    if (message.length > 10000) {
+      return NextResponse.json(
+        { error: 'Message too long. Maximum 10,000 characters allowed.' },
+        { status: 400 }
+      );
+    }
+
+    if (instructions && typeof instructions !== 'string') {
+      return NextResponse.json(
+        { error: 'Instructions must be a string' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize inputs (basic HTML entity encoding)
+    const sanitizedMessage = message.replace(/[<>&"']/g, (match) => {
+      const entities: Record<string, string> = {
+        '<': '&lt;',
+        '>': '&gt;',
+        '&': '&amp;',
+        '"': '&quot;',
+        "'": '&#39;'
+      };
+      return entities[match];
+    });
+
+    // Оценка количества токенов (примерно 4 символа = 1 токен)
+    const estimatedTokens = Math.ceil((sanitizedMessage.length + (instructions || '').length) / 4) + 1000; // +1000 для ответа
+
+    // Проверка rate limit
+    const rateLimitResult = await checkRateLimit(request, estimatedTokens);
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { 
+          error: rateLimitResult.error,
+          type: 'rate_limit',
+          resetTime: rateLimitResult.resetTime,
+          remaining: rateLimitResult.remaining
+        },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': rateLimitResult.resetTime.toString()
+          }
+        }
       );
     }
 
@@ -35,13 +86,16 @@ export async function POST(request: NextRequest) {
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: message }
+        { role: 'user', content: sanitizedMessage }
       ],
       max_tokens: 1000,
       temperature: 0.7
     };
 
-    console.log('[OpenAI] Request body:', JSON.stringify(body, null, 2));
+    // Only log in development mode for security
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[OpenAI] Request body:', JSON.stringify(body, null, 2));
+    }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -79,7 +133,12 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
-    console.log('[OpenAI] Response:', JSON.stringify(data, null, 2));
+    
+    // Only log in development mode for security
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[OpenAI] Response:', JSON.stringify(data, null, 2));
+    }
+    
     const responseContent = data.choices?.[0]?.message?.content || 'No response generated';
 
     return NextResponse.json({ response: responseContent });

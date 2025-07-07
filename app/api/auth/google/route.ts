@@ -13,13 +13,13 @@ export async function GET(request: NextRequest) {
   
   if (!googleClientId || !googleClientSecret) {
     console.error('Google OAuth: Missing required environment variables')
-    return NextResponse.redirect('/auth?error=oauth_not_configured')
+    return NextResponse.redirect(new URL('/auth?error=oauth_not_configured', request.url))
   }
   
   // Если Google вернул ошибку
   if (error) {
     console.error('Google OAuth error:', error)
-    return NextResponse.redirect('/auth?error=google_auth_failed')
+    return NextResponse.redirect(new URL('/auth?error=google_auth_failed', request.url))
   }
   
   if (!code) {
@@ -102,6 +102,6 @@ export async function GET(request: NextRequest) {
     
   } catch (error) {
     console.error('Google auth error:', error)
-    return NextResponse.redirect('/auth?error=google_auth_failed')
+    return NextResponse.redirect(new URL('/auth?error=google_auth_failed', request.url))
   }
 } 

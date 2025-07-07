@@ -2,10 +2,24 @@ import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
-// JWT secret key - in production, use a proper secret
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'your-secret-key-at-least-32-characters-long'
-)
+// JWT secret key - lazy initialization for build compatibility
+let JWT_SECRET: Uint8Array | null = null;
+
+function getJWTSecret(): Uint8Array {
+  if (!JWT_SECRET) {
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET environment variable is required for security!')
+    }
+    
+    // Validate JWT_SECRET length (minimum 32 characters for security)
+    if (process.env.JWT_SECRET.length < 32) {
+      throw new Error('JWT_SECRET must be at least 32 characters long for security!')
+    }
+    
+    JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
+  }
+  return JWT_SECRET;
+}
 
 // Session configuration
 const SESSION_CONFIG = {
@@ -43,7 +57,7 @@ export async function createSession(sessionData: SessionData) {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(payload.exp)
-    .sign(JWT_SECRET)
+    .sign(getJWTSecret())
   
   const cookieStore = await cookies()
   cookieStore.set(SESSION_CONFIG.cookieName, token, SESSION_CONFIG.cookieOptions)
@@ -59,7 +73,7 @@ export async function getSession(): Promise<SessionData | null> {
     
     if (!token) return null
     
-    const { payload } = await jwtVerify(token, JWT_SECRET)
+    const { payload } = await jwtVerify(token, getJWTSecret())
     
     return {
       user: payload.user as SessionData['user'],
@@ -68,7 +82,19 @@ export async function getSession(): Promise<SessionData | null> {
       expiresAt: payload.expiresAt as number
     }
   } catch (error) {
-    console.error('Session verification failed:', error)
+    if (error instanceof Error && 'code' in error && error.code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED') {
+      console.warn('JWT signature verification failed. This usually means:')
+      console.warn('1. JWT_SECRET environment variable changed')
+      console.warn('2. Session was created with different JWT_SECRET')
+      console.warn('3. Session cookie is corrupted')
+      console.warn('Solution: Clear browser cookies or restart with same JWT_SECRET')
+      
+      // Clear the invalid session cookie
+      const cookieStore = await cookies()
+      cookieStore.delete(SESSION_CONFIG.cookieName)
+    } else {
+      console.error('Session verification failed:', error)
+    }
     return null
   }
 }
@@ -143,7 +169,7 @@ export async function validateSession(request: NextRequest) {
   }
   
   try {
-    const { payload } = await jwtVerify(sessionCookie, JWT_SECRET)
+    const { payload } = await jwtVerify(sessionCookie, getJWTSecret())
     
     const session: SessionData = {
       user: payload.user as SessionData['user'],
@@ -154,7 +180,15 @@ export async function validateSession(request: NextRequest) {
     
     return session
   } catch (error) {
-    console.error('Session validation failed:', error)
+    if (error instanceof Error && 'code' in error && error.code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED') {
+      console.warn('JWT signature verification failed in middleware. This usually means:')
+      console.warn('1. JWT_SECRET environment variable changed')
+      console.warn('2. Session was created with different JWT_SECRET')
+      console.warn('3. Session cookie is corrupted')
+      console.warn('Solution: Clear browser cookies or restart with same JWT_SECRET')
+    } else {
+      console.error('Session validation failed:', error)
+    }
     return null
   }
 }
@@ -173,7 +207,7 @@ export async function createResponseWithSession(
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(payload.exp)
-    .sign(JWT_SECRET)
+    .sign(getJWTSecret())
   
   response.cookies.set(SESSION_CONFIG.cookieName, token, SESSION_CONFIG.cookieOptions)
   

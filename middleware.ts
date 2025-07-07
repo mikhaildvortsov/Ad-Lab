@@ -12,6 +12,7 @@ const protectedRoutes = [
 const publicRoutes = [
   '/',
   '/auth',
+  '/auth/callback',
   '/api/auth/google',
   '/api/auth/login',
   '/api/auth/logout'

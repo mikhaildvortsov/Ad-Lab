@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { getClientSession, clientLogout, refreshToken, User } from '@/lib/client-session'
 
 interface AuthContextType {
@@ -17,6 +17,21 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+
+  const updateUser = useCallback((newUser: User | null) => {
+    console.log('AuthContext: updateUser called with:', newUser)
+    setUser(newUser)
+  }, [])
+
+  const login = useCallback(() => {
+    // Редиректим на Google OAuth
+    window.location.href = '/api/auth/google'
+  }, [])
+
+  const logout = useCallback(async () => {
+    setUser(null)
+    await clientLogout()
+  }, [])
 
   useEffect(() => {
     // Проверяем сессию при загрузке
@@ -56,21 +71,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => clearInterval(interval)
   }, [user])
-
-  const login = () => {
-    // Редиректим на Google OAuth
-    window.location.href = '/api/auth/google'
-  }
-
-  const logout = async () => {
-    setUser(null)
-    await clientLogout()
-  }
-
-  const updateUser = (newUser: User | null) => {
-    console.log('AuthContext: updateUser called with:', newUser)
-    setUser(newUser)
-  }
 
   const value = {
     user,

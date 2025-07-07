@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSession, SessionData } from '@/lib/session'
+import bcrypt from 'bcryptjs'
 
 // Simple in-memory storage for demo purposes
 // In production, this would be a database
-const registeredUsers = new Map<string, { email: string, password: string, name: string }>()
+const registeredUsers = new Map<string, { email: string, hashedPassword: string, name: string }>()
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,6 +26,14 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    // Проверка минимальной длины пароля
+    if (password.length < 6) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Пароль должен содержать минимум 6 символов' 
+      }, { status: 400 })
+    }
+
     if (isRegistration) {
       // Регистрация нового пользователя
       if (registeredUsers.has(email)) {
@@ -34,11 +43,15 @@ export async function POST(request: NextRequest) {
         }, { status: 409 })
       }
 
+      // Хешируем пароль перед сохранением
+      const saltRounds = 12;
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+
       // Регистрируем нового пользователя
       const userName = email.split('@')[0]
       registeredUsers.set(email, { 
         email, 
-        password, 
+        hashedPassword, 
         name: userName 
       })
 
@@ -47,7 +60,7 @@ export async function POST(request: NextRequest) {
         id: Date.now().toString(),
         name: userName,
         email: email,
-        image: null
+        image: undefined
       }
       
       // Создаем сессию с демо-токенами
@@ -60,7 +73,10 @@ export async function POST(request: NextRequest) {
       
       await createSession(sessionData)
       
-      console.log('Email registration: created session for user:', user)
+      // Безопасное логирование только в dev режиме
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Email registration: created session for user:', user.email)
+      }
       
       return NextResponse.json({ 
         success: true, 
@@ -78,7 +94,9 @@ export async function POST(request: NextRequest) {
         }, { status: 404 })
       }
 
-      if (existingUser.password !== password) {
+      // Проверяем хешированный пароль
+      const isValidPassword = await bcrypt.compare(password, existingUser.hashedPassword);
+      if (!isValidPassword) {
         return NextResponse.json({ 
           success: false, 
           error: 'Неверный пароль' 
@@ -90,7 +108,7 @@ export async function POST(request: NextRequest) {
         id: Date.now().toString(),
         name: existingUser.name,
         email: existingUser.email,
-        image: null
+        image: undefined
       }
       
       // Создаем сессию с демо-токенами
@@ -103,7 +121,10 @@ export async function POST(request: NextRequest) {
       
       await createSession(sessionData)
       
-      console.log('Email login: created session for user:', user)
+      // Безопасное логирование только в dev режиме
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Email login: created session for user:', user.email)
+      }
       
       return NextResponse.json({ 
         success: true, 

@@ -80,9 +80,18 @@ export const ChatInterface = forwardRef(function ChatInterface(props: { open: bo
         };
         setMessages(prev => [...prev, assistantMessage]);
       } else {
+        let errorContent = 'Произошла ошибка. Попробуйте ещё раз.';
+        
+        // Специальная обработка для rate limit ошибок
+        if (response.status === 429 && data.type === 'rate_limit') {
+          errorContent = `⚠️ ${data.error}\n\nЛимиты защищают от злоупотребления API и экономят ваши токены.`;
+        } else if (data.error) {
+          errorContent = data.error;
+        }
+
         const errorMessage: Message = {
           id: (Date.now() + 1).toString(),
-          content: 'Произошла ошибка. Попробуйте ещё раз.',
+          content: errorContent,
           role: 'assistant',
           timestamp: new Date(),
         };
