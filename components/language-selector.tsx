@@ -12,6 +12,8 @@ import { Globe } from "lucide-react"
 import { useLocale } from "@/lib/use-locale"
 import { useRouter, usePathname } from "next/navigation"
 import type { Locale } from "@/lib/i18n"
+import { setStoredLocale } from "@/lib/locale-storage"
+import { locales, defaultLocale } from "@/lib/i18n"
 
 const languages = [
   { code: "ru", name: "Русский", flag: "🇷🇺" },
@@ -26,10 +28,34 @@ export function LanguageSelector() {
 
   const currentLanguage = languages.find(lang => lang.code === locale) || languages[0]
 
+  const removeLocaleFromPath = (path: string): string => {
+    const segments = path.split('/').filter(Boolean)
+    const firstSegment = segments[0]
+    
+    if (locales.includes(firstSegment as Locale)) {
+      // Remove the locale segment
+      const pathWithoutLocale = '/' + segments.slice(1).join('/')
+      return pathWithoutLocale === '/' ? '/' : pathWithoutLocale
+    }
+    
+    return path
+  }
+
   const handleLanguageChange = (newLocale: Locale) => {
-    // Remove current locale from pathname and add new one
-    const pathWithoutLocale = pathname.replace(`/${locale}`, '') || '/'
-    const newPath = `/${newLocale}${pathWithoutLocale}`
+    // Save the language preference immediately
+    setStoredLocale(newLocale)
+    
+    // Get the path without any locale
+    const pathWithoutLocale = removeLocaleFromPath(pathname)
+    
+    // Build new path with the new locale
+    let newPath: string
+    if (newLocale === defaultLocale) {
+      newPath = pathWithoutLocale
+    } else {
+      newPath = `/${newLocale}${pathWithoutLocale}`
+    }
+    
     router.push(newPath)
     setIsOpen(false)
   }
@@ -55,6 +81,7 @@ export function LanguageSelector() {
           >
             <span className="text-base">{language.flag}</span>
             <span className="text-sm">{language.name}</span>
+            {language.code === locale && <span className="ml-auto text-xs text-muted-foreground">✓</span>}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Check, Sparkles, ArrowLeft } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
+import { useLocale } from "@/lib/use-locale"
 
 interface Plan {
   id: string
@@ -19,31 +20,33 @@ interface Plan {
 
 const plans: Plan[] = [
   {
-    id: 'basic',
-    name: 'Базовый',
-    price: 299,
-    features: ['10 улучшений в месяц', 'История запросов', 'Базовая аналитика'],
-    improvements: 10
+    id: 'week',
+    name: 'Неделя',
+    price: 1990,
+    features: ['Полный доступ на 7 дней', 'Неограниченные улучшения', 'Все функции приложения', 'Поддержка 24/7'],
+    improvements: -1
   },
   {
-    id: 'pro',
-    name: 'Профессиональный',
-    price: 599,
-    features: ['50 улучшений в месяц', 'Расширенная аналитика', 'Приоритетная поддержка', 'Экспорт в PDF'],
-    improvements: 50,
+    id: 'month',
+    name: 'Месяц',
+    price: 2990,
+    originalPrice: 6990,
+    features: ['Полный доступ на 30 дней', 'Неограниченные улучшения', 'Все функции приложения', 'Приоритетная поддержка', 'Экономия 57%'],
+    improvements: -1,
     popular: true
   },
   {
-    id: 'enterprise',
-    name: 'Корпоративный',
-    price: 1499,
-    features: ['Неограниченные улучшения', 'API доступ', 'Персональный менеджер', 'Индивидуальные настройки'],
+    id: 'quarter',
+    name: 'Три месяца',
+    price: 9990,
+    features: ['Полный доступ на 90 дней', 'Неограниченные улучшения', 'Все функции приложения', 'VIP поддержка', 'Максимальная экономия'],
     improvements: -1
   }
 ]
 
 export default function PricingPage() {
   const { user, loading } = useAuth()
+  const { locale } = useLocale()
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -58,7 +61,7 @@ export default function PricingPage() {
       
       // Если пользователь авторизован, перенаправляем в дашборд
       if (user) {
-        window.location.href = '/dashboard'
+        window.location.href = `/${locale}/dashboard`
       } else {
         // Если не авторизован, перенаправляем на авторизацию
         window.location.href = '/auth'
@@ -86,20 +89,20 @@ export default function PricingPage() {
       {/* Header */}
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <Link href={`/${locale}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
             <span className="text-lg sm:text-xl font-bold text-gray-900">Ad Lab</span>
           </Link>
           
           <div className="flex items-center gap-4">
-            <Link href="/">
+            <Link href={`/${locale}`}>
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 На главную
               </Button>
             </Link>
             {user ? (
-              <Link href="/dashboard">
+              <Link href={`/${locale}/dashboard`}>
                 <Button size="sm">Личный кабинет</Button>
               </Link>
             ) : (

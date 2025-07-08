@@ -8,7 +8,7 @@ const SITE_NAME = 'Ad Lab';
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, instructions, instructionType, niche } = await request.json();
+    const { message, instructions, instructionType, niche, locale } = await request.json();
 
     // Input validation
     if (!message || typeof message !== 'string') {
@@ -79,8 +79,8 @@ export async function POST(request: NextRequest) {
 
     // Create custom instruction with niche if provided
     const systemPrompt = instructions || 
-      createCustomInstruction(instructionType as any, niche as NicheType) || 
-      createCustomInstruction('marketing', niche as NicheType);
+      createCustomInstruction(instructionType as any, niche as NicheType, undefined, locale || 'ru') || 
+      createCustomInstruction('marketing', niche as NicheType, undefined, locale || 'ru');
 
     const body = {
       model: 'gpt-4o',

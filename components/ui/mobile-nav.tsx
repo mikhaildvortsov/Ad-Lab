@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Menu, X, User, LogOut, Home, Sparkles, Bot } from "lucide-react"
+import { useLocale } from "@/lib/use-locale"
 
 interface User {
   id: string
@@ -21,6 +22,7 @@ interface MobileNavProps {
 
 export function MobileNav({ user, onLogout, t }: MobileNavProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const { locale } = useLocale()
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -39,7 +41,7 @@ export function MobileNav({ user, onLogout, t }: MobileNavProps) {
           
           <nav className="flex-1 space-y-4">
             <Link 
-              href="/" 
+              href={`/${locale}`}
               className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               onClick={() => setIsOpen(false)}
             >
@@ -50,7 +52,7 @@ export function MobileNav({ user, onLogout, t }: MobileNavProps) {
             {user ? (
               <>
                 <Link 
-                  href="/dashboard" 
+                  href={`/${locale}/dashboard`}
                   className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                   onClick={() => setIsOpen(false)}
                 >

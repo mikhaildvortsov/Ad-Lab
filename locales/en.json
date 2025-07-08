@@ -169,5 +169,209 @@
       "customerSupport": "Customer support",
       "regularUpdates": "Regular updates"
     }
+  },
+  "goalReformulation": {
+    "buttonText": "Goal Reformulation",
+    "modalTitle": "Business Goal Reformulation",
+    "modalDescription": "Transform vague goals into concrete, measurable and motivating formulations using the SMART-PAIN-GAIN framework",
+    "currentGoalLabel": "Current goal formulation",
+    "currentGoalPlaceholder": "For example: Increase sales, attract more customers, improve conversion...",
+    "analysisTitle": "🎯 What the analysis includes:",
+    "analysisItems": {
+      "smart": "SMART criteria (Specificity, Measurability, Achievability)",
+      "pain": "PAIN analysis (What happens if goal is not achieved)",
+      "gain": "GAIN analysis (Benefits from achieving the goal)",
+      "cta": "CTA plan (Concrete steps to implementation)"
+    },
+    "exampleTitle": "Reformulation example",
+    "exampleBefore": "Before:",
+    "exampleAfter": "After:",
+    "exampleBeforeText": "Increase sales",
+    "exampleAfterText": "Increase landing page conversion from 2% to 5% in 2 months, bringing an additional $50,000 in revenue...",
+    "reformulateButton": "Reformulate goal",
+    "reformulateProcessing": "Reformulating...",
+    "cancel": "Cancel"
+  },
+  "chatInterface": {
+    "goalReformulationMode": "🎯 Goal Reformulation",
+    "goalReformulationExample": "Reformulate goal",
+    "welcomeTitle": "Welcome to AI chat!",
+    "welcomeDescription": "I'll help you with advertising campaign analysis, creative creation and DKCP methodology application.",
+    "tryExamples": "Try:",
+    "placeholder": "Write your question...",
+    "processing": "Typing..."
+  },
+  "paywallModal": {
+    "plans": {
+      "week": {
+        "name": "Week",
+        "features": {
+          "0": "Full access for 7 days",
+          "1": "Unlimited improvements", 
+          "2": "All app features",
+          "3": "24/7 support"
+        }
+      },
+      "month": {
+        "name": "Month",
+        "features": {
+          "0": "Full access for 30 days",
+          "1": "Unlimited improvements",
+          "2": "All app features", 
+          "3": "Priority support",
+          "4": "Save 57%"
+        }
+      },
+      "quarter": {
+        "name": "Three months",
+        "features": {
+          "0": "Full access for 90 days",
+          "1": "Unlimited improvements",
+          "2": "All app features",
+          "3": "VIP support", 
+          "4": "Maximum savings"
+        }
+      }
+    },
+    "payment": {
+      "title": "Payment: {planName}",
+      "discount": "Save {percent}%",
+      "error": {
+        "authRequired": "Login required to create payment",
+        "checking": "Checking authorization...",
+        "paymentCreation": "Error creating payment. Please try later.",
+        "sbpPayment": "Error creating SBP payment",
+        "cardPayment": "Card payment temporarily unavailable. Use SBP.",
+        "paymentFailed": "Payment failed. Please try again.",
+        "paymentTimeout": "Payment timeout exceeded. Check payment status later.",
+        "statusCheck": "Error checking payment status. Contact support."
+      },
+      "sbp": {
+        "title": "SBP Payment",
+        "description": "Fast and secure payment via Fast Payment System",
+        "amount": "Amount: ${amount}",
+        "createPayment": "Create SBP payment",
+        "creating": "Creating payment...",
+        "qrCodeAlt": "QR code for SBP payment",
+        "qrCodeDescription": "Scan the code in your banking app",
+        "orderNumber": "Order: ...{orderId}",
+        "timeRemaining": "Time remaining: {time}",
+        "openInBank": "Open in banking app",
+        "createNew": "Create new payment",
+        "afterCreation": "After creating payment you will receive QR code",
+        "status": {
+          "checking": "Checking status...",
+          "waiting": "Waiting for payment...",
+          "error": "Payment error"
+        },
+        "success": {
+          "title": "Payment successful!",
+          "description": "Subscription \"{planName}\" activated",
+          "autoClose": "Modal will close automatically..."
+        }
+      },
+      "card": {
+        "title": "Card Payment",
+        "unavailable": "Card payment will be available soon",
+        "useSbp": "Use SBP for instant payment for now"
+      },
+      "security": "🔒 Secure payment. Your data is protected."
+    },
+    "main": {
+      "titleWithResult": "🎉 Your improved text is ready!",
+      "titleDefault": "🚀 Start creating texts with AI",
+      "descriptionWithResult": "Choose a suitable plan to get the full result",
+      "descriptionDefault": "Choose a suitable plan and get access to all Ad Lab features",
+      "authWarning": "Login required to create payment.",
+      "originalText": "Original text:",
+      "improvedText": "Improved text:",
+      "availableAfterPayment": "Available after payment",
+      "whatsIncluded": "What's included in all plans:",
+      "features": {
+        "algorithms": "DKCP algorithms",
+        "security": "Data security", 
+        "support": "Customer support",
+        "updates": "Regular updates"
+      },
+      "unlimitedImprovements": "Unlimited improvements",
+      "improvementsPerMonth": "{count} improvements per month",
+      "savings": "Save ${amount}",
+      "popular": "Popular",
+      "selectPlan": "Select plan",
+      "loginToPay": "Login to pay",
+      "checking": "Checking..."
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Manage your scripts and subscription",
+    "tabs": {
+      "history": "History",
+      "billing": "Billing", 
+      "analytics": "Analytics"
+    },
+    "header": {
+      "home": "Home",
+      "logout": "Logout"
+    },
+    "history": {
+      "title": "Request History",
+      "requestNumber": "Request #{id}",
+      "completed": "Completed",
+      "inProgress": "In Progress", 
+      "download": "Download",
+      "regenerate": "Regenerate",
+      "copy": "Copy",
+      "copied": "Copied",
+      "export": "Export",
+      "originalText": "Original text:",
+      "improvedText": "Improved text:"
+    },
+    "billing": {
+      "currentPlan": "Current Plan",
+      "plan": "{name} plan",
+      "nextBilling": "Next billing: {date}",
+      "improvements": "improvements",
+      "unlimited": "Unlimited",
+      "used": "used",
+      "changePlan": "Change Plan",
+      "cancelSubscription": "Cancel Subscription",
+      "paymentHistory": "Payment History",
+      "paid": "Paid",
+      "selectNewPlan": "Select New Plan",
+      "selectPlanDescription": "Choose a plan that suits your needs",
+      "popular": "Popular",
+      "currentPlanButton": "Current Plan",
+      "selectPlanButton": "Select Plan",
+      "loading": "Loading...",
+      "cancelModal": {
+        "title": "Cancel subscription?",
+        "description": "Are you sure you want to cancel your subscription? You will lose access to premium features.",
+        "confirm": "Yes, cancel",
+        "cancel": "No, keep it",
+        "canceling": "Canceling..."
+      }
+    },
+    "analytics": {
+      "totalRequests": "Total Requests",
+      "averageLength": "Average Text Length",
+      "characters": "characters",
+      "qualityImprovement": "Quality Improvement",
+      "average": "on average",
+      "monthlyGrowth": "+{percent}% this month",
+      "dailyActivity": "Daily Activity",
+      "days": {
+        "mon": "Mon",
+        "tue": "Tue", 
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat",
+        "sun": "Sun"
+      }
+    },
+    "loading": "Loading...",
+    "authRequired": "Authorization required to access this page.",
+    "redirecting": "Redirecting to home page..."
   }
 } 

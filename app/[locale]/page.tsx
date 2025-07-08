@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
-import { Sparkles, Zap, Target, TrendingUp, ArrowRight, User, LogOut, Check, Wand2, Building2, ShoppingCart, GraduationCap, Heart } from "lucide-react"
+import { Label } from "@/components/ui/label"
+import { Sparkles, Zap, Target, TrendingUp, ArrowRight, User, LogOut, Check, Wand2, Building2, ShoppingCart, GraduationCap, Heart, Loader2 } from "lucide-react"
 import { LanguageSelector } from "@/components/language-selector"
 import { MobileNav } from "@/components/ui/mobile-nav"
 import { useLocale } from "@/lib/use-locale"
@@ -16,6 +17,9 @@ import { useTranslation } from "@/lib/translations"
 import type { Locale } from "@/lib/i18n"
 import { useAuth } from "@/lib/auth-context"
 import { ChatInterface } from '@/components/chat-interface'
+import { NicheSelector } from "@/components/niche-selector"
+import { PaywallModal } from "@/components/paywall-modal"
+import { TextValidator } from '@/components/text-validator'
 
 import { getAvailableNiches, getAvailableNichesWithTranslation, type NicheType } from '@/lib/ai-instructions'
 
@@ -26,6 +30,7 @@ interface Plan {
   id: string
   name: string
   price: number
+  originalPrice?: number
   features: string[]
   improvements: number
   popular?: boolean
@@ -33,25 +38,26 @@ interface Plan {
 
 const plans: Plan[] = [
   {
-    id: 'basic',
-    name: 'Базовый',
-    price: 299,
-    features: ['10 улучшений в месяц', 'История запросов', 'Базовая аналитика'],
-    improvements: 10
+    id: 'week',
+    name: 'Неделя',
+    price: 1990,
+    features: ['Полный доступ на 7 дней', 'Неограниченные улучшения', 'Все функции приложения', 'Поддержка 24/7'],
+    improvements: -1
   },
   {
-    id: 'pro',
-    name: 'Профессиональный',
-    price: 599,
-    features: ['50 улучшений в месяц', 'Расширенная аналитика', 'Приоритетная поддержка', 'Экспорт в PDF'],
-    improvements: 50,
+    id: 'month',
+    name: 'Месяц',
+    price: 2990,
+    originalPrice: 6990,
+    features: ['Полный доступ на 30 дней', 'Неограниченные улучшения', 'Все функции приложения', 'Приоритетная поддержка', 'Экономия 57%'],
+    improvements: -1,
     popular: true
   },
   {
-    id: 'enterprise',
-    name: 'Корпоративный',
-    price: 1499,
-    features: ['Неограниченные улучшения', 'API доступ', 'Персональный менеджер', 'Индивидуальные настройки'],
+    id: 'quarter',
+    name: 'Три месяца',
+    price: 9990,
+    features: ['Полный доступ на 90 дней', 'Неограниченные улучшения', 'Все функции приложения', 'VIP поддержка', 'Максимальная экономия'],
     improvements: -1
   }
 ]
@@ -71,7 +77,14 @@ const nicheIcons = {
 
 function HomePageContent({ params }: { params: { locale: Locale } }) {
   const [improvementModalOpen, setImprovementModalOpen] = useState(false)
+  const [goalModalOpen, setGoalModalOpen] = useState(false)
   const [initialText, setInitialText] = useState("")
+  const [goalText, setGoalText] = useState("")
+  const [improvedText, setImprovedText] = useState("")
+  const [reformulatedGoal, setReformulatedGoal] = useState("")
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [isProcessingGoal, setIsProcessingGoal] = useState(false)
+  const [showPaywall, setShowPaywall] = useState(false)
   const { user, loading, logout } = useAuth();
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -79,25 +92,143 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
   const { t } = useTranslation(locale)
   const [chatOpen, setChatOpen] = useState(false);
 
+  // Пока что простая проверка подписки (в реальном приложении это будет API call)
+  const hasActiveSubscription = () => {
+    // В реальном приложении здесь будет проверка через API
+    // Пока что считаем, что у пользователя нет активной подписки
+    return false;
+  };
 
   const handleLogout = () => {
     logout()
   }
 
   const handleTryClick = () => {
-    if (user) {
-      setChatOpen(true);
-    } else {
+    if (!user) {
+      // Если пользователь не авторизован - перенаправляем на авторизацию
       router.push('/auth');
+    } else if (!hasActiveSubscription()) {
+      // Если авторизован, но нет подписки - показываем paywall
+      setShowPaywall(true);
+    } else {
+      // Если авторизован и есть подписка - открываем чат
+      setChatOpen(true);
     }
   };
 
-  const handleImproveText = () => {
-    // Here you can add the logic to process the text
-    console.log('Improving text:', initialText);
-    // TODO: Add API call to improve the text
-    setImprovementModalOpen(false);
-    setInitialText("");
+  const handleImproveText = async () => {
+    if (!initialText.trim() || initialText.length < 20) {
+      return;
+    }
+
+    setIsProcessing(true);
+    
+    try {
+      // Сначала анализируем конверсионность, затем улучшаем
+      const analysisResponse = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          message: `Проанализируй конверсионные элементы этого текста и предложи улучшения: ${initialText}`,
+          instructionType: 'conversion_analysis',
+          locale: locale
+        }),
+      });
+
+      const analysisData = await analysisResponse.json();
+      
+      if (!analysisResponse.ok) {
+        throw new Error(analysisData.error || 'Ошибка анализа');
+      }
+
+      // Затем улучшаем текст с учетом анализа
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          message: `На основе анализа конверсии улучши этот рекламный текст, добавив боли, преимущества и сильные CTA: ${initialText}
+          
+Анализ конверсии: ${analysisData.response}`,
+          instructionType: 'copywriting',
+          locale: locale
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setImprovedText(data.response);
+        setImprovementModalOpen(false);
+        
+        // Показываем paywall после получения улучшенного текста
+        setTimeout(() => {
+          setShowPaywall(true);
+        }, 1000);
+      } else {
+        console.error('Error improving text:', data.error);
+        // Можно показать уведомление об ошибке
+      }
+    } catch (error) {
+      console.error('Error improving text:', error);
+      // Можно показать уведомление об ошибке
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleGoalReformulation = async () => {
+    if (!goalText.trim() || goalText.length < 10) {
+      return;
+    }
+
+    setIsProcessingGoal(true);
+    
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          message: locale === 'en' 
+            ? `Reformulate this business goal using the SMART-PAIN-GAIN framework: ${goalText}`
+            : `Переформулируй эту бизнес-цель по фреймворку SMART-PAIN-GAIN: ${goalText}`,
+          instructionType: 'goal_reformulation',
+          locale: locale
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setReformulatedGoal(data.response);
+        setGoalModalOpen(false);
+        
+        // Показываем paywall после получения переформулированной цели
+        setTimeout(() => {
+          setShowPaywall(true);
+        }, 1000);
+      } else {
+        console.error('Error reformulating goal:', data.error);
+      }
+    } catch (error) {
+      console.error('Error reformulating goal:', error);
+    } finally {
+      setIsProcessingGoal(false);
+    }
+  };
+
+  const handlePaymentSuccess = () => {
+    // После успешной оплаты закрываем paywall и открываем чат
+    setShowPaywall(false);
+    
+    // В реальном приложении здесь бы обновился статус подписки
+    // После оплаты открываем чат для создания текста
+    setChatOpen(true);
   };
 
   // Show loading while authentication is being checked
@@ -139,7 +270,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
                   )}
                   <span className="text-sm font-medium text-gray-700">{user.name}</span>
                 </div>
-                <Link href="/dashboard">
+                <Link href={`/${locale}/dashboard`}>
                   <Button variant="ghost" size="sm">{t('dashboardBtn')}</Button>
                 </Link>
                 <Button variant="outline" onClick={handleLogout} size="sm">
@@ -180,14 +311,26 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
             {t('hero.subtitle')}
           </p>
           
-          <Button 
-            size="lg"
-            className="group text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transform transition-all duration-300 ease-out hover:scale-105 hover:shadow-xl active:scale-95 focus:scale-105 focus:shadow-lg"
-            onClick={handleTryClick}
-          >
-            {user ? t('upgrade') : t('hero.cta')}
-            <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:translate-x-1" />
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Button 
+              size="lg"
+              className="group text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transform transition-all duration-300 ease-out hover:scale-105 hover:shadow-xl active:scale-95 focus:scale-105 focus:shadow-lg"
+              onClick={handleTryClick}
+            >
+              {user ? t('upgrade') : t('hero.cta')}
+              <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:translate-x-1" />
+            </Button>
+            
+            <Button 
+              size="lg"
+              variant="outline"
+              className="group text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transform transition-all duration-300 ease-out hover:scale-105 hover:shadow-xl active:scale-95 focus:scale-105 focus:shadow-lg"
+              onClick={() => setGoalModalOpen(true)}
+            >
+              <Target className="mr-2 h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:scale-110" />
+              {t('goalReformulation.buttonText')}
+            </Button>
+          </div>
         </div>
       </section>
 
@@ -268,6 +411,233 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
       </footer>
 
       <ChatInterface open={chatOpen} onOpenChange={setChatOpen} />
+
+      {/* Script Improvement Modal */}
+      <Dialog open={improvementModalOpen} onOpenChange={setImprovementModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-center">{t('scriptImprover.title')}</DialogTitle>
+            <DialogDescription className="text-center text-base">
+              {t('scriptImprover.description')}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            <div>
+              <Label htmlFor="script-text" className="text-sm font-medium">
+                {t('scriptImprover.label')}
+              </Label>
+              <Textarea
+                id="script-text"
+                value={initialText}
+                onChange={(e) => setInitialText(e.target.value)}
+                placeholder={t('scriptImprover.placeholder')}
+                className="min-h-[200px] mt-2"
+                disabled={isProcessing}
+              />
+              {/* Замена простой валидации на TextValidator */}
+              <TextValidator 
+                text={initialText}
+                textType="script"
+                showRecommendations={true}
+                className="mt-3"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="bg-blue-50 border-blue-200">
+                <CardContent className="p-6">
+                  <h3 className="font-semibold text-blue-900 mb-4">🚀 Что включает улучшение:</h3>
+                  <ul className="space-y-2 text-sm text-blue-800">
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-blue-600" />
+                      Анализ конверсионных элементов (PAS-CTA-TRUST)
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-blue-600" />
+                      Усиление болей и преимуществ
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-blue-600" />
+                      Мощные призывы к действию (CTA)
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-blue-600" />
+                      Эмоциональные триггеры и доверие
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-blue-600" />
+                      Оценка конверсионности (1-10 баллов)
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="font-semibold mb-4">Пример улучшения</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 mb-1">Было:</p>
+                      <p className="text-sm bg-red-50 p-2 rounded border border-red-200">
+                        "Купите наш продукт. Он хороший и недорогой."
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 mb-1">Стало:</p>
+                      <p className="text-sm bg-green-50 p-2 rounded border border-green-200">
+                        "Откройте секрет экономии 40% семейного бюджета! Наше решение уже помогло 10,000+ семей..."
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="flex gap-4">
+              <Button 
+                onClick={handleImproveText}
+                disabled={initialText.length < 20 || isProcessing}
+                className="flex-1"
+                size="lg"
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {t('scriptImprover.processing')}
+                  </>
+                ) : (
+                  t('scriptImprover.improveButton')
+                )}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setImprovementModalOpen(false)}
+                disabled={isProcessing}
+              >
+                Отмена
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Goal Reformulation Modal */}
+      <Dialog open={goalModalOpen} onOpenChange={setGoalModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-center">{t('goalReformulation.modalTitle')}</DialogTitle>
+            <DialogDescription className="text-center text-base">
+              {t('goalReformulation.modalDescription')}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            <div>
+              <Label htmlFor="goal-text" className="text-sm font-medium">
+                {t('goalReformulation.currentGoalLabel')}
+              </Label>
+              <Textarea
+                id="goal-text"
+                value={goalText}
+                onChange={(e) => setGoalText(e.target.value)}
+                placeholder={t('goalReformulation.currentGoalPlaceholder')}
+                className="min-h-[150px] mt-2"
+                disabled={isProcessingGoal}
+              />
+              <TextValidator 
+                text={goalText}
+                textType="goal"
+                showRecommendations={true}
+                className="mt-3"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="bg-green-50 border-green-200">
+                <CardContent className="p-6">
+                  <h3 className="font-semibold text-green-900 mb-4">{t('goalReformulation.analysisTitle')}</h3>
+                  <ul className="space-y-2 text-sm text-green-800">
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-600" />
+                      {t('goalReformulation.analysisItems.smart')}
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-600" />
+                      {t('goalReformulation.analysisItems.pain')}
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-600" />
+                      {t('goalReformulation.analysisItems.gain')}
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-600" />
+                      {t('goalReformulation.analysisItems.cta')}
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="font-semibold mb-4">{t('goalReformulation.exampleTitle')}</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 mb-1">{t('goalReformulation.exampleBefore')}</p>
+                      <p className="text-sm bg-red-50 p-2 rounded border border-red-200">
+                        "{t('goalReformulation.exampleBeforeText')}"
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 mb-1">{t('goalReformulation.exampleAfter')}</p>
+                      <p className="text-sm bg-green-50 p-2 rounded border border-green-200">
+                        "{t('goalReformulation.exampleAfterText')}"
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="flex gap-4">
+              <Button 
+                onClick={handleGoalReformulation}
+                disabled={goalText.length < 10 || isProcessingGoal}
+                className="flex-1"
+                size="lg"
+              >
+                {isProcessingGoal ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {t('goalReformulation.reformulateProcessing')}
+                  </>
+                ) : (
+                  <>
+                    <Target className="h-4 w-4 mr-2" />
+                    {t('goalReformulation.reformulateButton')}
+                  </>
+                )}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setGoalModalOpen(false)}
+                disabled={isProcessingGoal}
+              >
+                {t('goalReformulation.cancel')}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Paywall Modal */}
+      <PaywallModal
+        open={showPaywall}
+        onOpenChange={setShowPaywall}
+        originalText={initialText || goalText}
+        improvedText={improvedText || reformulatedGoal}
+        onPaymentSuccess={handlePaymentSuccess}
+      />
 
       {/* Pricing Modal */}
       <Dialog open={improvementModalOpen} onOpenChange={setImprovementModalOpen}>
