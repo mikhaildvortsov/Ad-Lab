@@ -1,4 +1,35 @@
-// Database model types for PostgreSQL schema
+// Database Types for Ad Lab Application
+
+// =============================================================================
+// SHARED TYPES
+// =============================================================================
+
+export interface DatabaseResult<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+export interface PaginatedResult<T> {
+  data: T[];
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+}
+
+export interface QueryOptions {
+  page?: number;
+  limit?: number;
+  sort_by?: string;
+  sort_order?: 'ASC' | 'DESC';
+  start_date?: Date;
+  end_date?: Date;
+}
+
+// =============================================================================
+// USER MANAGEMENT
+// =============================================================================
 
 export interface User {
   id: string;
@@ -8,9 +39,9 @@ export interface User {
   provider: string;
   provider_id?: string | null;
   email_verified: boolean;
-  created_at: Date;
-  updated_at: Date;
-  last_login_at?: Date | null;
+  created_at: string;
+  updated_at: string;
+  last_login_at?: string | null;
   is_active: boolean;
   preferred_language: string;
 }
@@ -27,12 +58,16 @@ export interface CreateUserParams {
 
 export interface UpdateUserParams {
   name?: string;
-  avatar_url?: string | null;
+  avatar_url?: string;
   email_verified?: boolean;
   last_login_at?: Date;
   is_active?: boolean;
   preferred_language?: string;
 }
+
+// =============================================================================
+// SUBSCRIPTION MANAGEMENT
+// =============================================================================
 
 export interface SubscriptionPlan {
   id: string;
@@ -45,58 +80,61 @@ export interface SubscriptionPlan {
   max_queries_per_month?: number | null;
   max_tokens_per_query?: number | null;
   is_active: boolean;
-  created_at: Date;
+  created_at: string;
 }
 
-export interface CreateSubscriptionPlanParams {
-  name: string;
-  description?: string;
-  price_monthly: number;
-  price_yearly?: number;
-  currency?: string;
-  features?: string[];
-  max_queries_per_month?: number;
-  max_tokens_per_query?: number;
-  is_active?: boolean;
-}
-
-export type SubscriptionStatus = 'active' | 'cancelled' | 'expired' | 'pending';
+export type SubscriptionStatus = 'active' | 'inactive' | 'cancelled' | 'expired' | 'pending';
 
 export interface UserSubscription {
   id: string;
   user_id: string;
   plan_id: string;
   status: SubscriptionStatus;
-  payment_method?: string | null;
-  started_at: Date;
-  expires_at?: Date | null;
-  cancelled_at?: Date | null;
-  auto_renew: boolean;
-  created_at: Date;
-  updated_at: Date;
-  
-  // Joined data
-  plan?: SubscriptionPlan;
+  current_period_start: string;
+  current_period_end: string;
+  created_at: string;
+  updated_at: string;
+  cancelled_at?: string | null;
+  trial_start?: string | null;
+  trial_end?: string | null;
+  metadata?: Record<string, any> | null;
 }
 
 export interface CreateUserSubscriptionParams {
   user_id: string;
   plan_id: string;
   status?: SubscriptionStatus;
-  payment_method?: string;
-  expires_at?: Date;
-  auto_renew?: boolean;
+  current_period_start?: Date;
+  current_period_end?: Date;
+  trial_start?: Date;
+  trial_end?: Date;
+  metadata?: Record<string, any>;
 }
 
 export interface UpdateUserSubscriptionParams {
+  plan_id?: string;
   status?: SubscriptionStatus;
-  payment_method?: string;
-  expires_at?: Date;
+  current_period_start?: Date;
+  current_period_end?: Date;
   cancelled_at?: Date;
-  auto_renew?: boolean;
+  trial_start?: Date;
+  trial_end?: Date;
+  metadata?: Record<string, any>;
 }
 
-export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
+// =============================================================================
+// PAYMENT MANAGEMENT
+// =============================================================================
+
+export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'cancelled' | 'refunded';
+export type PaymentMethod = 'sbp' | 'card' | 'yookassa' | 'other';
+
+export const PAYMENT_METHODS: Record<PaymentMethod, string> = {
+  sbp: 'СБП',
+  card: 'Банковская карта',
+  yookassa: 'ЮKassa',
+  other: 'Другое'
+};
 
 export interface Payment {
   id: string;
@@ -104,19 +142,12 @@ export interface Payment {
   subscription_id?: string | null;
   amount: number;
   currency: string;
-  payment_method: string;
-  payment_provider?: string | null;
-  external_payment_id?: string | null;
   status: PaymentStatus;
+  payment_method: PaymentMethod;
+  external_payment_id?: string | null;
+  created_at: string;
+  updated_at: string;
   metadata?: Record<string, any> | null;
-  created_at: Date;
-  completed_at?: Date | null;
-  failed_at?: Date | null;
-  failure_reason?: string | null;
-  
-  // Joined data
-  user?: User;
-  subscription?: UserSubscription;
 }
 
 export interface CreatePaymentParams {
@@ -124,23 +155,21 @@ export interface CreatePaymentParams {
   subscription_id?: string;
   amount: number;
   currency?: string;
-  payment_method: string;
-  payment_provider?: string;
-  external_payment_id?: string;
   status?: PaymentStatus;
+  payment_method: PaymentMethod;
+  external_payment_id?: string;
   metadata?: Record<string, any>;
 }
 
 export interface UpdatePaymentParams {
   status?: PaymentStatus;
   external_payment_id?: string;
-  completed_at?: Date;
-  failed_at?: Date;
-  failure_reason?: string;
   metadata?: Record<string, any>;
 }
 
-export type QueryType = 'chat' | 'search' | 'generation' | 'analysis' | 'other';
+// =============================================================================
+// QUERY HISTORY
+// =============================================================================
 
 export interface QueryHistory {
   id: string;
@@ -150,27 +179,24 @@ export interface QueryHistory {
   response_text?: string | null;
   tokens_used: number;
   model_used: string;
-  query_type: QueryType;
+  query_type: string;
   niche?: string | null;
   language: string;
   processing_time_ms?: number | null;
   success: boolean;
   error_message?: string | null;
   metadata?: Record<string, any> | null;
-  created_at: Date;
-  
-  // Joined data
-  user?: User;
+  created_at: string;
 }
 
-export interface CreateQueryHistoryParams {
+export interface CreateQueryParams {
   user_id: string;
   session_id?: string;
   query_text: string;
   response_text?: string;
   tokens_used?: number;
-  model_used?: string;
-  query_type?: QueryType;
+  model_used: string;
+  query_type?: string;
   niche?: string;
   language?: string;
   processing_time_ms?: number;
@@ -179,99 +205,65 @@ export interface CreateQueryHistoryParams {
   metadata?: Record<string, any>;
 }
 
+export interface UpdateQueryParams {
+  response_text?: string;
+  tokens_used?: number;
+  processing_time_ms?: number;
+  success?: boolean;
+  error_message?: string;
+  metadata?: Record<string, any>;
+}
+
+// =============================================================================
+// USAGE STATISTICS
+// =============================================================================
+
 export interface UsageStatistics {
   id: string;
   user_id: string;
-  period_start: Date;
-  period_end: Date;
-  total_queries: number;
-  total_tokens: number;
-  subscription_plan_id?: string | null;
-  overage_queries: number;
-  overage_tokens: number;
-  created_at: Date;
-  
-  // Joined data
-  user?: User;
-  subscription_plan?: SubscriptionPlan;
+  month: string; // YYYY-MM format
+  queries_count: number;
+  tokens_used: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CreateUsageStatisticsParams {
   user_id: string;
-  period_start: Date;
-  period_end: Date;
-  total_queries?: number;
-  total_tokens?: number;
-  subscription_plan_id?: string;
-  overage_queries?: number;
-  overage_tokens?: number;
+  month: string;
+  queries_count?: number;
+  tokens_used?: number;
 }
 
 export interface UpdateUsageStatisticsParams {
-  total_queries?: number;
-  total_tokens?: number;
-  subscription_plan_id?: string;
-  overage_queries?: number;
-  overage_tokens?: number;
+  queries_count?: number;
+  tokens_used?: number;
 }
 
-// Common query options
-export interface PaginationOptions {
-  page?: number;
-  limit?: number;
-  offset?: number;
+// =============================================================================
+// FRONTEND TYPES
+// =============================================================================
+
+export interface FrontendPlan {
+  id: string;
+  name: string;
+  price: number;
+  features: string[];
+  improvements: number;
+  popular?: boolean;
 }
 
-export interface FilterOptions {
-  start_date?: Date;
-  end_date?: Date;
-  status?: string;
-  user_id?: string;
-}
+// Plan mapping constants
+export const PLAN_ID_TO_NAME: Record<string, string> = {
+  'free': 'Free',
+  'week': 'Week',
+  'month': 'Month',
+  'quarter': 'Quarter'
+};
 
-export interface QueryOptions extends PaginationOptions, FilterOptions {
-  sort_by?: string;
-  sort_order?: 'ASC' | 'DESC';
-}
-
-// Response types for paginated results
-export interface PaginatedResult<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  total_pages: number;
-}
-
-// Database operation result types
-export interface DatabaseResult<T = any> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  affected_rows?: number;
-}
-
-// Subscription plan features enum
-export const SUBSCRIPTION_FEATURES = {
-  BASIC_QUERIES: 'Базовые запросы',
-  UNLIMITED_QUERIES: 'Неограниченные запросы',
-  PRIORITY_SUPPORT: 'Приоритетная поддержка',
-  ADVANCED_ANALYTICS: 'Расширенная аналитика',
-  TEAM_COLLABORATION: 'Командная работа',
-  API_ACCESS: 'API доступ',
-  PERSONAL_SUPPORT: 'Персональная поддержка'
-} as const;
-
-// Payment methods enum
-export const PAYMENT_METHODS = {
-  SBP: 'sbp',
-  CARD: 'card',
-  YOOKASSA: 'yookassa',
-  SBERBANK: 'sberbank'
-} as const;
-
-// Provider types enum
-export const AUTH_PROVIDERS = {
-  EMAIL: 'email',
-  GOOGLE: 'google'
-} as const; 
+export const PLAN_NAME_TO_ID: Record<string, string> = {
+  'Free': 'free',
+  'Week': 'week', 
+  'Month': 'month',
+  'Quarter': 'quarter'
+}; 

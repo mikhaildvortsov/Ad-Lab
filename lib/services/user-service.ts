@@ -5,45 +5,40 @@ import {
   UpdateUserParams, 
   DatabaseResult,
   PaginatedResult,
-  QueryOptions,
-  AUTH_PROVIDERS
+  QueryOptions 
 } from '@/lib/database-types';
 import { v4 as uuidv4 } from 'uuid';
 
 export class UserService {
   
+  // ================ USER CRUD OPERATIONS ================
+  
   // Create a new user
   static async createUser(params: CreateUserParams): Promise<DatabaseResult<User>> {
     try {
       const id = uuidv4();
-      const {
-        email,
-        name,
-        avatar_url,
-        provider = AUTH_PROVIDERS.EMAIL,
-        provider_id,
-        email_verified = false,
-        preferred_language = 'ru'
-      } = params;
-
-      const result = await query<User>(
-        `INSERT INTO users (
+      const now = new Date().toISOString();
+      
+      const user = await query<User>(`
+        INSERT INTO users (
           id, email, name, avatar_url, provider, provider_id, 
-          email_verified, preferred_language
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        RETURNING *`,
-        [id, email, name, avatar_url, provider, provider_id, email_verified, preferred_language]
-      );
+          email_verified, preferred_language, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        RETURNING *
+      `, [
+        id,
+        params.email,
+        params.name,
+        params.avatar_url || null,
+        params.provider || 'email',
+        params.provider_id || null,
+        params.email_verified || false,
+        params.preferred_language || 'ru',
+        now,
+        now
+      ]);
 
-      if (result.rows.length === 0) {
-        return { success: false, error: 'Failed to create user' };
-      }
-
-      return { 
-        success: true, 
-        data: result.rows[0],
-        affected_rows: result.rowCount || 0
-      };
+      return { success: true, data: user.rows[0] };
     } catch (error) {
       console.error('Error creating user:', error);
       return { 
@@ -54,11 +49,11 @@ export class UserService {
   }
 
   // Get user by ID
-  static async getUserById(id: string): Promise<DatabaseResult<User>> {
+  static async getUserById(userId: string): Promise<DatabaseResult<User>> {
     try {
       const result = await query<User>(
         'SELECT * FROM users WHERE id = $1 AND is_active = true',
-        [id]
+        [userId]
       );
 
       if (result.rows.length === 0) {
@@ -80,7 +75,7 @@ export class UserService {
     try {
       const result = await query<User>(
         'SELECT * FROM users WHERE email = $1 AND is_active = true',
-        [email.toLowerCase()]
+        [email]
       );
 
       if (result.rows.length === 0) {
@@ -97,8 +92,8 @@ export class UserService {
     }
   }
 
-  // Get user by provider ID (for OAuth)
-  static async getUserByProvider(provider: string, providerId: string): Promise<DatabaseResult<User>> {
+  // Get user by provider ID
+  static async getUserByProviderId(provider: string, providerId: string): Promise<DatabaseResult<User>> {
     try {
       const result = await query<User>(
         'SELECT * FROM users WHERE provider = $1 AND provider_id = $2 AND is_active = true',
@@ -111,7 +106,7 @@ export class UserService {
 
       return { success: true, data: result.rows[0] };
     } catch (error) {
-      console.error('Error getting user by provider:', error);
+      console.error('Error getting user by provider ID:', error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 
@@ -120,42 +115,61 @@ export class UserService {
   }
 
   // Update user
-  static async updateUser(id: string, params: UpdateUserParams): Promise<DatabaseResult<User>> {
+  static async updateUser(userId: string, params: UpdateUserParams): Promise<DatabaseResult<User>> {
     try {
-      const updateFields: string[] = [];
-      const updateValues: any[] = [];
-      let paramIndex = 1;
+      const updates: string[] = [];
+      const values: any[] = [];
+      let valueIndex = 1;
 
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          updateFields.push(`${key} = $${paramIndex}`);
-          updateValues.push(value);
-          paramIndex++;
-        }
-      });
+      // Build dynamic update query
+      if (params.name !== undefined) {
+        updates.push(`name = $${valueIndex++}`);
+        values.push(params.name);
+      }
+      if (params.avatar_url !== undefined) {
+        updates.push(`avatar_url = $${valueIndex++}`);
+        values.push(params.avatar_url);
+      }
+      if (params.email_verified !== undefined) {
+        updates.push(`email_verified = $${valueIndex++}`);
+        values.push(params.email_verified);
+      }
+      if (params.last_login_at !== undefined) {
+        updates.push(`last_login_at = $${valueIndex++}`);
+        values.push(params.last_login_at?.toISOString());
+      }
+      if (params.is_active !== undefined) {
+        updates.push(`is_active = $${valueIndex++}`);
+        values.push(params.is_active);
+      }
+      if (params.preferred_language !== undefined) {
+        updates.push(`preferred_language = $${valueIndex++}`);
+        values.push(params.preferred_language);
+      }
 
-      if (updateFields.length === 0) {
+      if (updates.length === 0) {
         return { success: false, error: 'No fields to update' };
       }
 
-      // Add updated_at
-      updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
-      updateValues.push(id);
+      // Always update the updated_at field
+      updates.push(`updated_at = $${valueIndex++}`);
+      values.push(new Date().toISOString());
 
-      const result = await query<User>(
-        `UPDATE users SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
-        updateValues
-      );
+      // Add user ID as the last parameter
+      values.push(userId);
+
+      const result = await query<User>(`
+        UPDATE users 
+        SET ${updates.join(', ')}
+        WHERE id = $${valueIndex} AND is_active = true
+        RETURNING *
+      `, values);
 
       if (result.rows.length === 0) {
-        return { success: false, error: 'User not found or no changes made' };
+        return { success: false, error: 'User not found or update failed' };
       }
 
-      return { 
-        success: true, 
-        data: result.rows[0],
-        affected_rows: result.rowCount || 0
-      };
+      return { success: true, data: result.rows[0] };
     } catch (error) {
       console.error('Error updating user:', error);
       return { 
@@ -165,21 +179,21 @@ export class UserService {
     }
   }
 
-  // Update user's last login
-  static async updateLastLogin(id: string): Promise<DatabaseResult<boolean>> {
+  // Soft delete user (set is_active to false)
+  static async deleteUser(userId: string): Promise<DatabaseResult<boolean>> {
     try {
       const result = await query(
-        'UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1',
-        [id]
+        'UPDATE users SET is_active = false, updated_at = $1 WHERE id = $2 AND is_active = true',
+        [new Date().toISOString(), userId]
       );
 
-      return { 
-        success: true, 
-        data: true,
-        affected_rows: result.rowCount || 0
-      };
+      if (result.rowCount === 0) {
+        return { success: false, error: 'User not found or already deleted' };
+      }
+
+      return { success: true, data: true };
     } catch (error) {
-      console.error('Error updating last login:', error);
+      console.error('Error deleting user:', error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 
@@ -187,107 +201,41 @@ export class UserService {
     }
   }
 
-  // Soft delete user (deactivate)
-  static async deactivateUser(id: string): Promise<DatabaseResult<boolean>> {
-    try {
-      const result = await query(
-        'UPDATE users SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
-        [id]
-      );
-
-      return { 
-        success: true, 
-        data: true,
-        affected_rows: result.rowCount || 0
-      };
-    } catch (error) {
-      console.error('Error deactivating user:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      };
-    }
-  }
-
-  // Reactivate user
-  static async activateUser(id: string): Promise<DatabaseResult<boolean>> {
-    try {
-      const result = await query(
-        'UPDATE users SET is_active = true, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
-        [id]
-      );
-
-      return { 
-        success: true, 
-        data: true,
-        affected_rows: result.rowCount || 0
-      };
-    } catch (error) {
-      console.error('Error activating user:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      };
-    }
-  }
-
-  // Get users with pagination and filtering
+  // Get all users with pagination
   static async getUsers(options: QueryOptions = {}): Promise<DatabaseResult<PaginatedResult<User>>> {
     try {
-      const {
-        page = 1,
-        limit = 20,
-        sort_by = 'created_at',
-        sort_order = 'DESC',
-        start_date,
-        end_date
+      const { 
+        page = 1, 
+        limit = 20, 
+        sort_by = 'created_at', 
+        sort_order = 'DESC' 
       } = options;
 
       const offset = (page - 1) * limit;
-      const whereConditions: string[] = ['is_active = true'];
-      const queryParams: any[] = [];
-      let paramIndex = 1;
-
-      // Add date filtering
-      if (start_date) {
-        whereConditions.push(`created_at >= $${paramIndex}`);
-        queryParams.push(start_date);
-        paramIndex++;
-      }
-      
-      if (end_date) {
-        whereConditions.push(`created_at <= $${paramIndex}`);
-        queryParams.push(end_date);
-        paramIndex++;
-      }
-
-      const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
       // Get total count
-      const countResult = await query<{ count: string }>(
-        `SELECT COUNT(*) as count FROM users ${whereClause}`,
-        queryParams
+      const countResult = await query(
+        'SELECT COUNT(*) as count FROM users WHERE is_active = true'
       );
-      
       const total = parseInt(countResult.rows[0].count);
-      const totalPages = Math.ceil(total / limit);
 
-      // Get paginated results
-      queryParams.push(limit, offset);
-      const dataResult = await query<User>(
-        `SELECT * FROM users ${whereClause} 
-         ORDER BY ${sort_by} ${sort_order} 
-         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-        queryParams
-      );
+      // Get users
+      const result = await query<User>(`
+        SELECT * FROM users 
+        WHERE is_active = true
+        ORDER BY ${sort_by} ${sort_order}
+        LIMIT $1 OFFSET $2
+      `, [limit, offset]);
+
+      const totalPages = Math.ceil(total / limit);
 
       return {
         success: true,
         data: {
-          data: dataResult.rows,
-          total,
+          data: result.rows,
           page,
           limit,
+          total,
           total_pages: totalPages
         }
       };
@@ -300,83 +248,36 @@ export class UserService {
     }
   }
 
-  // Create or update user (for OAuth login)
-  static async upsertUser(params: CreateUserParams): Promise<DatabaseResult<User>> {
+  // Update user's last login timestamp
+  static async updateLastLogin(userId: string): Promise<DatabaseResult<boolean>> {
     try {
-      return await transaction(async (client) => {
-        // First, try to find existing user
-        let existingUser: User | null = null;
-        
-        if (params.provider_id && params.provider) {
-          const providerResult = await client.query<User>(
-            'SELECT * FROM users WHERE provider = $1 AND provider_id = $2',
-            [params.provider, params.provider_id]
-          );
-          if (providerResult.rows.length > 0) {
-            existingUser = providerResult.rows[0];
-          }
-        }
-        
-        if (!existingUser) {
-          const emailResult = await client.query<User>(
-            'SELECT * FROM users WHERE email = $1',
-            [params.email.toLowerCase()]
-          );
-          if (emailResult.rows.length > 0) {
-            existingUser = emailResult.rows[0];
-          }
-        }
+      const result = await query(
+        'UPDATE users SET last_login_at = $1, updated_at = $1 WHERE id = $2 AND is_active = true',
+        [new Date().toISOString(), userId]
+      );
 
-        if (existingUser) {
-          // Update existing user
-          const updateResult = await client.query<User>(
-            `UPDATE users SET 
-              name = $1, 
-              avatar_url = $2, 
-              provider = $3, 
-              provider_id = $4,
-              email_verified = $5,
-              last_login_at = CURRENT_TIMESTAMP,
-              updated_at = CURRENT_TIMESTAMP
-            WHERE id = $6 
-            RETURNING *`,
-            [
-              params.name,
-              params.avatar_url,
-              params.provider,
-              params.provider_id,
-              params.email_verified || true,
-              existingUser.id
-            ]
-          );
-          
-          return { success: true, data: updateResult.rows[0] };
-        } else {
-          // Create new user
-          const id = uuidv4();
-          const createResult = await client.query<User>(
-            `INSERT INTO users (
-              id, email, name, avatar_url, provider, provider_id, 
-              email_verified, preferred_language, last_login_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)
-            RETURNING *`,
-            [
-              id,
-              params.email.toLowerCase(),
-              params.name,
-              params.avatar_url,
-              params.provider || AUTH_PROVIDERS.EMAIL,
-              params.provider_id,
-              params.email_verified || true,
-              params.preferred_language || 'ru'
-            ]
-          );
-          
-          return { success: true, data: createResult.rows[0] };
-        }
-      });
+      return { success: true, data: result.rowCount > 0 };
     } catch (error) {
-      console.error('Error upserting user:', error);
+      console.error('Error updating last login:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  // Check if user exists by email
+  static async userExistsByEmail(email: string): Promise<DatabaseResult<boolean>> {
+    try {
+      const result = await query(
+        'SELECT COUNT(*) as count FROM users WHERE email = $1 AND is_active = true',
+        [email]
+      );
+
+      const exists = parseInt(result.rows[0].count) > 0;
+      return { success: true, data: exists };
+    } catch (error) {
+      console.error('Error checking user existence:', error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 
@@ -385,36 +286,45 @@ export class UserService {
   }
 
   // Get user statistics
-  static async getUserStats(): Promise<DatabaseResult<{
-    total_users: number;
-    active_users: number;
-    new_users_today: number;
-    new_users_this_month: number;
+  static async getUserStats(userId: string): Promise<DatabaseResult<{
+    queriesThisMonth: number;
+    totalQueries: number;
+    joinDate: string;
   }>> {
     try {
-      const result = await query<{
-        total_users: string;
-        active_users: string;
-        new_users_today: string;
-        new_users_this_month: string;
-      }>(
-        `SELECT 
-          COUNT(*) as total_users,
-          COUNT(*) FILTER (WHERE is_active = true) as active_users,
-          COUNT(*) FILTER (WHERE DATE(created_at) = CURRENT_DATE) as new_users_today,
-          COUNT(*) FILTER (WHERE DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE)) as new_users_this_month
-        FROM users`
-      );
+      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
 
-      const stats = result.rows[0];
-      
+      // Get queries this month
+      const monthlyResult = await query(`
+        SELECT COUNT(*) as count 
+        FROM query_history 
+        WHERE user_id = $1 AND created_at >= $2
+      `, [userId, `${currentMonth}-01`]);
+
+      // Get total queries
+      const totalResult = await query(`
+        SELECT COUNT(*) as count 
+        FROM query_history 
+        WHERE user_id = $1
+      `, [userId]);
+
+      // Get user join date
+      const userResult = await query<User>(`
+        SELECT created_at 
+        FROM users 
+        WHERE id = $1
+      `, [userId]);
+
+      if (userResult.rows.length === 0) {
+        return { success: false, error: 'User not found' };
+      }
+
       return {
         success: true,
         data: {
-          total_users: parseInt(stats.total_users),
-          active_users: parseInt(stats.active_users),
-          new_users_today: parseInt(stats.new_users_today),
-          new_users_this_month: parseInt(stats.new_users_this_month)
+          queriesThisMonth: parseInt(monthlyResult.rows[0].count),
+          totalQueries: parseInt(totalResult.rows[0].count),
+          joinDate: userResult.rows[0].created_at
         }
       };
     } catch (error) {

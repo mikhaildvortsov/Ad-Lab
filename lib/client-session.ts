@@ -49,10 +49,9 @@ export async function clientLogout(): Promise<void> {
       method: 'POST',
       credentials: 'include'
     })
+    console.log('Logout API call successful')
   } catch (error) {
     console.error('Failed to logout:', error)
+    throw error
   }
-  
-  // Redirect to home page
-  window.location.href = '/'
 } 

@@ -30,19 +30,27 @@ export default function AuthCallbackPage() {
       }
 
       // Проверяем сессию из cookies
+      console.log('Callback: Checking session...')
       const session = await getClientSession()
+      console.log('Callback: Session result:', session)
+      
       if (session) {
+        console.log('Callback: Session found, updating user:', session.user)
         updateUser(session.user)
         router.push('/dashboard')
       } else {
+        console.log('Callback: No session found, retrying...')
         // Wait a bit and try again before showing error
         await new Promise(resolve => setTimeout(resolve, 1000))
         const retrySession = await getClientSession()
+        console.log('Callback: Retry session result:', retrySession)
         
         if (retrySession) {
+          console.log('Callback: Retry session found, updating user:', retrySession.user)
           updateUser(retrySession.user)
           router.push('/dashboard')
         } else {
+          console.log('Callback: No session found after retry')
           setError('Не удалось получить данные пользователя.')
           setTimeout(() => router.push('/auth?error=no_session'), 2000)
         }

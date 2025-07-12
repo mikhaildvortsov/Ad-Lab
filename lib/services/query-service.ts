@@ -1,61 +1,52 @@
 import { query, transaction } from '@/lib/database';
 import { 
   QueryHistory, 
-  CreateQueryHistoryParams, 
+  CreateQueryParams, 
+  UpdateQueryParams, 
   DatabaseResult,
   PaginatedResult,
-  QueryOptions,
-  QueryType
+  QueryOptions 
 } from '@/lib/database-types';
 import { v4 as uuidv4 } from 'uuid';
 
 export class QueryService {
   
+  // ================ QUERY CRUD OPERATIONS ================
+  
   // Create a new query record
-  static async createQuery(params: CreateQueryHistoryParams): Promise<DatabaseResult<QueryHistory>> {
+  static async createQuery(params: CreateQueryParams): Promise<DatabaseResult<QueryHistory>> {
     try {
       const id = uuidv4();
-      const {
-        user_id,
-        session_id,
-        query_text,
-        response_text,
-        tokens_used = 0,
-        model_used = 'gpt-4o',
-        query_type = 'chat',
-        niche,
-        language = 'ru',
-        processing_time_ms,
-        success = true,
-        error_message,
-        metadata
-      } = params;
-
-      const result = await query<QueryHistory>(
-        `INSERT INTO query_history (
+      const now = new Date().toISOString();
+      
+      const queryRecord = await query<QueryHistory>(`
+        INSERT INTO query_history (
           id, user_id, session_id, query_text, response_text, tokens_used,
           model_used, query_type, niche, language, processing_time_ms,
-          success, error_message, metadata
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-        RETURNING *`,
-        [
-          id, user_id, session_id, query_text, response_text, tokens_used,
-          model_used, query_type, niche, language, processing_time_ms,
-          success, error_message, metadata ? JSON.stringify(metadata) : null
-        ]
-      );
+          success, error_message, metadata, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        RETURNING *
+      `, [
+        id,
+        params.user_id,
+        params.session_id || null,
+        params.query_text,
+        params.response_text || null,
+        params.tokens_used || 0,
+        params.model_used,
+        params.query_type || 'chat',
+        params.niche || null,
+        params.language || 'ru',
+        params.processing_time_ms || null,
+        params.success !== undefined ? params.success : true,
+        params.error_message || null,
+        params.metadata ? JSON.stringify(params.metadata) : null,
+        now
+      ]);
 
-      if (result.rows.length === 0) {
-        return { success: false, error: 'Failed to create query record' };
-      }
-
-      return { 
-        success: true, 
-        data: result.rows[0],
-        affected_rows: result.rowCount || 0
-      };
+      return { success: true, data: queryRecord.rows[0] };
     } catch (error) {
-      console.error('Error creating query record:', error);
+      console.error('Error creating query:', error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 
@@ -64,14 +55,11 @@ export class QueryService {
   }
 
   // Get query by ID
-  static async getQueryById(id: string): Promise<DatabaseResult<QueryHistory>> {
+  static async getQueryById(queryId: string): Promise<DatabaseResult<QueryHistory>> {
     try {
       const result = await query<QueryHistory>(
-        `SELECT qh.*, u.name as user_name, u.email as user_email
-         FROM query_history qh
-         LEFT JOIN users u ON qh.user_id = u.id
-         WHERE qh.id = $1`,
-        [id]
+        'SELECT * FROM query_history WHERE id = $1',
+        [queryId]
       );
 
       if (result.rows.length === 0) {
@@ -88,69 +76,115 @@ export class QueryService {
     }
   }
 
+  // Update query response and metadata
+  static async updateQueryResponse(
+    queryId: string, 
+    responseText: string, 
+    tokensUsed?: number, 
+    processingTime?: number
+  ): Promise<DatabaseResult<QueryHistory>> {
+    try {
+      const result = await query<QueryHistory>(`
+        UPDATE query_history 
+        SET response_text = $1, tokens_used = $2, processing_time_ms = $3, success = true
+        WHERE id = $4
+        RETURNING *
+      `, [responseText, tokensUsed || 0, processingTime || null, queryId]);
+
+      if (result.rows.length === 0) {
+        return { success: false, error: 'Query not found or update failed' };
+      }
+
+      return { success: true, data: result.rows[0] };
+    } catch (error) {
+      console.error('Error updating query response:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  // Mark query as failed
+  static async markQueryFailed(queryId: string, errorMessage: string): Promise<DatabaseResult<QueryHistory>> {
+    try {
+      const result = await query<QueryHistory>(`
+        UPDATE query_history 
+        SET success = false, error_message = $1
+        WHERE id = $2
+        RETURNING *
+      `, [errorMessage, queryId]);
+
+      if (result.rows.length === 0) {
+        return { success: false, error: 'Query not found or update failed' };
+      }
+
+      return { success: true, data: result.rows[0] };
+    } catch (error) {
+      console.error('Error marking query as failed:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
   // Get user's query history with pagination
   static async getUserQueries(
     userId: string, 
     options: QueryOptions = {}
   ): Promise<DatabaseResult<PaginatedResult<QueryHistory>>> {
     try {
-      const {
-        page = 1,
-        limit = 20,
-        sort_by = 'created_at',
+      const { 
+        page = 1, 
+        limit = 20, 
+        sort_by = 'created_at', 
         sort_order = 'DESC',
         start_date,
         end_date
       } = options;
 
       const offset = (page - 1) * limit;
-      const whereConditions: string[] = ['qh.user_id = $1'];
-      const queryParams: any[] = [userId];
+      const conditions = ['user_id = $1'];
+      const params = [userId];
       let paramIndex = 2;
 
-      // Add date filtering
+      // Add date filters if provided
       if (start_date) {
-        whereConditions.push(`qh.created_at >= $${paramIndex}`);
-        queryParams.push(start_date);
-        paramIndex++;
+        conditions.push(`created_at >= $${paramIndex++}`);
+        params.push(start_date.toISOString());
       }
-      
       if (end_date) {
-        whereConditions.push(`qh.created_at <= $${paramIndex}`);
-        queryParams.push(end_date);
-        paramIndex++;
+        conditions.push(`created_at <= $${paramIndex++}`);
+        params.push(end_date.toISOString());
       }
 
-      const whereClause = `WHERE ${whereConditions.join(' AND ')}`;
+      const whereClause = conditions.join(' AND ');
 
       // Get total count
-      const countResult = await query<{ count: string }>(
-        `SELECT COUNT(*) as count FROM query_history qh ${whereClause}`,
-        queryParams
+      const countResult = await query(
+        `SELECT COUNT(*) as count FROM query_history WHERE ${whereClause}`,
+        params
       );
-      
       const total = parseInt(countResult.rows[0].count);
-      const totalPages = Math.ceil(total / limit);
 
-      // Get paginated results
-      queryParams.push(limit, offset);
-      const dataResult = await query<QueryHistory>(
-        `SELECT qh.*, u.name as user_name, u.email as user_email
-         FROM query_history qh
-         LEFT JOIN users u ON qh.user_id = u.id
-         ${whereClause}
-         ORDER BY qh.${sort_by} ${sort_order} 
-         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-        queryParams
-      );
+      // Get queries
+      const result = await query<QueryHistory>(`
+        SELECT * FROM query_history 
+        WHERE ${whereClause}
+        ORDER BY ${sort_by} ${sort_order}
+        LIMIT $${paramIndex++} OFFSET $${paramIndex}
+      `, [...params, limit, offset]);
+
+      const totalPages = Math.ceil(total / limit);
 
       return {
         success: true,
         data: {
-          data: dataResult.rows,
-          total,
+          data: result.rows,
           page,
           limit,
+          total,
           total_pages: totalPages
         }
       };
@@ -167,18 +201,11 @@ export class QueryService {
   static async getSessionQueries(sessionId: string): Promise<DatabaseResult<QueryHistory[]>> {
     try {
       const result = await query<QueryHistory>(
-        `SELECT qh.*, u.name as user_name, u.email as user_email
-         FROM query_history qh
-         LEFT JOIN users u ON qh.user_id = u.id
-         WHERE qh.session_id = $1
-         ORDER BY qh.created_at ASC`,
+        'SELECT * FROM query_history WHERE session_id = $1 ORDER BY created_at ASC',
         [sessionId]
       );
 
-      return { 
-        success: true, 
-        data: result.rows 
-      };
+      return { success: true, data: result.rows };
     } catch (error) {
       console.error('Error getting session queries:', error);
       return { 
@@ -188,70 +215,67 @@ export class QueryService {
     }
   }
 
-  // Get user's usage statistics for a period
-  static async getUserUsageStats(
-    userId: string, 
-    startDate: Date, 
-    endDate: Date
-  ): Promise<DatabaseResult<{
-    total_queries: number;
-    total_tokens: number;
-    successful_queries: number;
-    failed_queries: number;
-    avg_processing_time: number;
-    query_types: Record<string, number>;
+  // Get query statistics for a user
+  static async getUserQueryStats(userId: string): Promise<DatabaseResult<{
+    totalQueries: number;
+    successfulQueries: number;
+    failedQueries: number;
+    totalTokensUsed: number;
+    averageTokensPerQuery: number;
+    queriesThisMonth: number;
+    mostUsedModel: string;
+    averageProcessingTime: number;
   }>> {
     try {
-      const result = await query<{
-        total_queries: string;
-        total_tokens: string;
-        successful_queries: string;
-        failed_queries: string;
-        avg_processing_time: string;
-      }>(
-        `SELECT 
+      // Get basic stats
+      const statsResult = await query(`
+        SELECT 
           COUNT(*) as total_queries,
-          COALESCE(SUM(tokens_used), 0) as total_tokens,
-          COUNT(*) FILTER (WHERE success = true) as successful_queries,
-          COUNT(*) FILTER (WHERE success = false) as failed_queries,
-          COALESCE(AVG(processing_time_ms), 0) as avg_processing_time
+          COUNT(CASE WHEN success = true THEN 1 END) as successful_queries,
+          COUNT(CASE WHEN success = false THEN 1 END) as failed_queries,
+          COALESCE(SUM(tokens_used), 0) as total_tokens_used,
+          COALESCE(AVG(tokens_used), 0) as average_tokens_per_query,
+          COALESCE(AVG(processing_time_ms), 0) as average_processing_time
         FROM query_history 
-        WHERE user_id = $1 AND created_at BETWEEN $2 AND $3`,
-        [userId, startDate, endDate]
-      );
+        WHERE user_id = $1
+      `, [userId]);
 
-      // Get query types breakdown
-      const queryTypesResult = await query<{
-        query_type: string;
-        count: string;
-      }>(
-        `SELECT query_type, COUNT(*) as count
-         FROM query_history 
-         WHERE user_id = $1 AND created_at BETWEEN $2 AND $3
-         GROUP BY query_type`,
-        [userId, startDate, endDate]
-      );
+      // Get queries this month
+      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+      const monthlyResult = await query(`
+        SELECT COUNT(*) as count 
+        FROM query_history 
+        WHERE user_id = $1 AND created_at >= $2
+      `, [userId, `${currentMonth}-01`]);
 
-      const stats = result.rows[0];
-      const queryTypes: Record<string, number> = {};
-      
-      queryTypesResult.rows.forEach(row => {
-        queryTypes[row.query_type] = parseInt(row.count);
-      });
+      // Get most used model
+      const modelResult = await query(`
+        SELECT model_used, COUNT(*) as count
+        FROM query_history 
+        WHERE user_id = $1
+        GROUP BY model_used
+        ORDER BY count DESC
+        LIMIT 1
+      `, [userId]);
+
+      const stats = statsResult.rows[0];
+      const mostUsedModel = modelResult.rows[0]?.model_used || 'N/A';
 
       return {
         success: true,
         data: {
-          total_queries: parseInt(stats.total_queries),
-          total_tokens: parseInt(stats.total_tokens),
-          successful_queries: parseInt(stats.successful_queries),
-          failed_queries: parseInt(stats.failed_queries),
-          avg_processing_time: parseFloat(stats.avg_processing_time),
-          query_types: queryTypes
+          totalQueries: parseInt(stats.total_queries),
+          successfulQueries: parseInt(stats.successful_queries),
+          failedQueries: parseInt(stats.failed_queries),
+          totalTokensUsed: parseInt(stats.total_tokens_used),
+          averageTokensPerQuery: Math.round(parseFloat(stats.average_tokens_per_query)),
+          queriesThisMonth: parseInt(monthlyResult.rows[0].count),
+          mostUsedModel,
+          averageProcessingTime: Math.round(parseFloat(stats.average_processing_time))
         }
       };
     } catch (error) {
-      console.error('Error getting user usage stats:', error);
+      console.error('Error getting user query stats:', error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 
@@ -259,80 +283,17 @@ export class QueryService {
     }
   }
 
-  // Get global query statistics
-  static async getGlobalStats(): Promise<DatabaseResult<{
-    total_queries: number;
-    total_tokens: number;
-    active_users_today: number;
-    queries_today: number;
-    popular_niches: Array<{ niche: string; count: number }>;
-    model_usage: Record<string, number>;
-  }>> {
+  // Delete query (hard delete)
+  static async deleteQuery(queryId: string): Promise<DatabaseResult<boolean>> {
     try {
-      // Basic stats
-      const basicStatsResult = await query<{
-        total_queries: string;
-        total_tokens: string;
-        queries_today: string;
-        active_users_today: string;
-      }>(
-        `SELECT 
-          COUNT(*) as total_queries,
-          COALESCE(SUM(tokens_used), 0) as total_tokens,
-          COUNT(*) FILTER (WHERE DATE(created_at) = CURRENT_DATE) as queries_today,
-          COUNT(DISTINCT user_id) FILTER (WHERE DATE(created_at) = CURRENT_DATE) as active_users_today
-        FROM query_history`
+      const result = await query(
+        'DELETE FROM query_history WHERE id = $1',
+        [queryId]
       );
 
-      // Popular niches (last 30 days)
-      const nichesResult = await query<{
-        niche: string;
-        count: string;
-      }>(
-        `SELECT niche, COUNT(*) as count
-         FROM query_history 
-         WHERE niche IS NOT NULL 
-         AND created_at >= CURRENT_DATE - INTERVAL '30 days'
-         GROUP BY niche
-         ORDER BY count DESC
-         LIMIT 10`
-      );
-
-      // Model usage
-      const modelResult = await query<{
-        model_used: string;
-        count: string;
-      }>(
-        `SELECT model_used, COUNT(*) as count
-         FROM query_history 
-         GROUP BY model_used
-         ORDER BY count DESC`
-      );
-
-      const basicStats = basicStatsResult.rows[0];
-      const popularNiches = nichesResult.rows.map(row => ({
-        niche: row.niche,
-        count: parseInt(row.count)
-      }));
-
-      const modelUsage: Record<string, number> = {};
-      modelResult.rows.forEach(row => {
-        modelUsage[row.model_used] = parseInt(row.count);
-      });
-
-      return {
-        success: true,
-        data: {
-          total_queries: parseInt(basicStats.total_queries),
-          total_tokens: parseInt(basicStats.total_tokens),
-          active_users_today: parseInt(basicStats.active_users_today),
-          queries_today: parseInt(basicStats.queries_today),
-          popular_niches: popularNiches,
-          model_usage: modelUsage
-        }
-      };
+      return { success: true, data: !!result.rowCount };
     } catch (error) {
-      console.error('Error getting global stats:', error);
+      console.error('Error deleting query:', error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 
@@ -340,19 +301,15 @@ export class QueryService {
     }
   }
 
-  // Delete user's query history (GDPR compliance)
-  static async deleteUserQueries(userId: string): Promise<DatabaseResult<boolean>> {
+  // Delete all queries for a user
+  static async deleteUserQueries(userId: string): Promise<DatabaseResult<number>> {
     try {
       const result = await query(
         'DELETE FROM query_history WHERE user_id = $1',
         [userId]
       );
 
-      return { 
-        success: true, 
-        data: true,
-        affected_rows: result.rowCount || 0
-      };
+      return { success: true, data: typeof result.rowCount === 'number' ? result.rowCount : 0 };
     } catch (error) {
       console.error('Error deleting user queries:', error);
       return { 
@@ -362,92 +319,78 @@ export class QueryService {
     }
   }
 
-  // Update query with response (for streaming responses)
-  static async updateQueryResponse(
-    queryId: string, 
-    responseText: string, 
-    tokensUsed: number,
-    processingTimeMs?: number
-  ): Promise<DatabaseResult<QueryHistory>> {
+  // Get recent queries across all users (admin function)
+  static async getRecentQueries(limit: number = 50): Promise<DatabaseResult<QueryHistory[]>> {
     try {
-      const result = await query<QueryHistory>(
-        `UPDATE query_history 
-         SET response_text = $1, tokens_used = $2, processing_time_ms = $3, success = true
-         WHERE id = $4 
-         RETURNING *`,
-        [responseText, tokensUsed, processingTimeMs, queryId]
-      );
+      const result = await query<QueryHistory>(`
+        SELECT qh.*, u.name as user_name, u.email as user_email
+        FROM query_history qh
+        LEFT JOIN users u ON qh.user_id = u.id
+        ORDER BY qh.created_at DESC
+        LIMIT $1
+      `, [limit]);
 
-      if (result.rows.length === 0) {
-        return { success: false, error: 'Query not found' };
-      }
-
-      return { 
-        success: true, 
-        data: result.rows[0],
-        affected_rows: result.rowCount || 0
-      };
-    } catch (error) {
-      console.error('Error updating query response:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      };
-    }
-  }
-
-  // Mark query as failed
-  static async markQueryFailed(
-    queryId: string, 
-    errorMessage: string
-  ): Promise<DatabaseResult<QueryHistory>> {
-    try {
-      const result = await query<QueryHistory>(
-        `UPDATE query_history 
-         SET success = false, error_message = $1
-         WHERE id = $2 
-         RETURNING *`,
-        [errorMessage, queryId]
-      );
-
-      if (result.rows.length === 0) {
-        return { success: false, error: 'Query not found' };
-      }
-
-      return { 
-        success: true, 
-        data: result.rows[0],
-        affected_rows: result.rowCount || 0
-      };
-    } catch (error) {
-      console.error('Error marking query as failed:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      };
-    }
-  }
-
-  // Get recent queries for analytics
-  static async getRecentQueries(
-    limit: number = 50
-  ): Promise<DatabaseResult<QueryHistory[]>> {
-    try {
-      const result = await query<QueryHistory>(
-        `SELECT qh.*, u.name as user_name, u.email as user_email
-         FROM query_history qh
-         LEFT JOIN users u ON qh.user_id = u.id
-         ORDER BY qh.created_at DESC
-         LIMIT $1`,
-        [limit]
-      );
-
-      return { 
-        success: true, 
-        data: result.rows 
-      };
+      return { success: true, data: result.rows };
     } catch (error) {
       console.error('Error getting recent queries:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  // Get popular niches/topics
+  static async getPopularNiches(limit: number = 10): Promise<DatabaseResult<Array<{
+    niche: string;
+    count: number;
+  }>>> {
+    try {
+      const result = await query(`
+        SELECT niche, COUNT(*) as count
+        FROM query_history 
+        WHERE niche IS NOT NULL
+        GROUP BY niche
+        ORDER BY count DESC
+        LIMIT $1
+      `, [limit]);
+
+      return { 
+        success: true, 
+        data: result.rows.map(row => ({
+          niche: row.niche,
+          count: parseInt(row.count)
+        }))
+      };
+    } catch (error) {
+      console.error('Error getting popular niches:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  // Update query metadata
+  static async updateQueryMetadata(
+    queryId: string, 
+    metadata: Record<string, any>
+  ): Promise<DatabaseResult<QueryHistory>> {
+    try {
+      const result = await query<QueryHistory>(`
+        UPDATE query_history 
+        SET metadata = $1
+        WHERE id = $2
+        RETURNING *
+      `, [JSON.stringify(metadata), queryId]);
+
+      if (result.rows.length === 0) {
+        return { success: false, error: 'Query not found or update failed' };
+      }
+
+      return { success: true, data: result.rows[0] };
+    } catch (error) {
+      console.error('Error updating query metadata:', error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 

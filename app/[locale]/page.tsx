@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Sparkles, Zap, Target, TrendingUp, ArrowRight, User, LogOut, Check, Wand2, Building2, ShoppingCart, GraduationCap, Heart, Loader2 } from "lucide-react"
+import { Sparkles, Zap, Target, TrendingUp, ArrowRight, User, LogOut, Check, Wand2, Building2, ShoppingCart, GraduationCap, Heart, Loader2, LucideAccessibility } from "lucide-react"
 import { LanguageSelector } from "@/components/language-selector"
 import { MobileNav } from "@/components/ui/mobile-nav"
 import { useLocale } from "@/lib/use-locale"
@@ -91,6 +91,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
   const { locale } = useLocale()
   const { t } = useTranslation(locale)
   const [chatOpen, setChatOpen] = useState(false);
+  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
 
   // Пока что простая проверка подписки (в реальном приложении это будет API call)
   const hasActiveSubscription = () => {
@@ -99,10 +100,17 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
     return false;
   };
 
-  const handleLogout = () => {
-    logout()
-  }
-
+  const handleLogout = async () => {
+    try {
+      await logout()
+      // Остаемся на главной странице, так как мы уже здесь
+      // Состояние обновится автоматически через AuthContext
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Даже при ошибке состояние обновится через AuthContext
+    }
+  };
+  
   const handleTryClick = () => {
     if (!user) {
       // Если пользователь не авторизован - перенаправляем на авторизацию
@@ -133,7 +141,8 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
         body: JSON.stringify({ 
           message: `Проанализируй конверсионные элементы этого текста и предложи улучшения: ${initialText}`,
           instructionType: 'conversion_analysis',
-          locale: locale
+          locale: locale,
+          sessionId: sessionId
         }),
       });
 
@@ -154,7 +163,8 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
           
 Анализ конверсии: ${analysisData.response}`,
           instructionType: 'copywriting',
-          locale: locale
+          locale: locale,
+          sessionId: sessionId
         }),
       });
 
@@ -198,7 +208,8 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
             ? `Reformulate this business goal using the SMART-PAIN-GAIN framework: ${goalText}`
             : `Переформулируй эту бизнес-цель по фреймворку SMART-PAIN-GAIN: ${goalText}`,
           instructionType: 'goal_reformulation',
-          locale: locale
+          locale: locale,
+          sessionId: sessionId
         }),
       });
 

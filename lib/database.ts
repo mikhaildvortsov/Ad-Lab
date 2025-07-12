@@ -1,15 +1,41 @@
-import { Pool, PoolClient, QueryResult } from 'pg';
+import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
 
 // Database connection configuration
-const dbConfig = {
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 5, // Reduced pool size for Supabase
-  idleTimeoutMillis: 60000, // Keep connections open longer
-  connectionTimeoutMillis: 10000, // Increased timeout for Supabase
-  acquireTimeoutMillis: 10000, // Time to wait for connection from pool
-  query_timeout: 30000, // Query timeout
-};
+function createDbConfig() {
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL is required');
+  }
+  
+  const url = new URL(process.env.DATABASE_URL);
+  
+  // Для Neon.tech используем отдельные параметры вместо connectionString
+  if (url.hostname.includes('neon.tech')) {
+    return {
+      host: url.hostname,
+      port: parseInt(url.port || '5432'),
+      database: url.pathname.substring(1),
+      user: url.username,
+      password: url.password,
+      ssl: { rejectUnauthorized: false },
+      max: 5,
+      idleTimeoutMillis: 60000,
+      connectionTimeoutMillis: 10000,
+      acquireTimeoutMillis: 10000,
+      query_timeout: 30000,
+    };
+  }
+  
+  // Для localhost используем connectionString
+  return {
+    connectionString: process.env.DATABASE_URL,
+    ssl: false,
+    max: 5,
+    idleTimeoutMillis: 60000,
+    connectionTimeoutMillis: 10000,
+    acquireTimeoutMillis: 10000,
+    query_timeout: 30000,
+  };
+}
 
 // Create a connection pool
 let pool: Pool | null = null;
@@ -19,6 +45,8 @@ function getPool(): Pool {
     if (!process.env.DATABASE_URL) {
       throw new Error('DATABASE_URL environment variable is required for database connection!');
     }
+    
+    const dbConfig = createDbConfig();
     
     pool = new Pool(dbConfig);
     
@@ -37,34 +65,23 @@ function getPool(): Pool {
   return pool;
 }
 
-// Generic query function with error handling
-export async function query<T = any>(
+// Generic query function
+export async function query<T extends QueryResultRow = any>(
   text: string, 
   params?: any[]
 ): Promise<QueryResult<T>> {
   const pool = getPool();
-  const start = Date.now();
   
   try {
     const result = await pool.query<T>(text, params);
-    const duration = Date.now() - start;
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Executed query:', { text, duration, rows: result.rowCount });
-    }
-    
     return result;
   } catch (error) {
-    console.error('Database query error:', {
-      text,
-      params,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    console.error('Database query error:', { text, params, error: (error as Error).message });
     throw error;
   }
 }
 
-// Transaction wrapper function
+// Transaction support
 export async function transaction<T>(
   callback: (client: PoolClient) => Promise<T>
 ): Promise<T> {
@@ -78,7 +95,6 @@ export async function transaction<T>(
     return result;
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('Transaction error:', error);
     throw error;
   } finally {
     client.release();
@@ -96,34 +112,34 @@ export async function healthCheck(): Promise<boolean> {
   }
 }
 
-// Close pool connections (useful for graceful shutdown)
+// Close all connections
 export async function closePool(): Promise<void> {
   if (pool) {
     await pool.end();
     pool = null;
-    console.log('Database pool closed');
   }
 }
 
-// Database initialization function
+
+
+// Initialize database with schema
 export async function initializeDatabase(): Promise<void> {
   try {
-    // Test connection
-    const isHealthy = await healthCheck();
-    if (!isHealthy) {
-      throw new Error('Database health check failed during initialization');
+    // Check if tables exist
+    const result = await query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+    `);
+    
+    console.log(`Found ${result.rows.length} tables in database`);
+    
+    if (result.rows.length === 0) {
+      console.log('No tables found. Database may need initialization.');
     }
     
-    console.log('Database initialized successfully');
-    
-    // Optionally run schema migrations here
-    // await runMigrations();
-    
   } catch (error) {
-    console.error('Failed to initialize database:', error);
+    console.error('Error checking database state:', error);
     throw error;
   }
-}
-
-// Export pool for advanced usage if needed
-export { getPool }; 
+} 

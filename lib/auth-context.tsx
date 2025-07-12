@@ -29,8 +29,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const logout = useCallback(async () => {
-    setUser(null)
-    await clientLogout()
+    try {
+      setUser(null)
+      await clientLogout()
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      // Всегда сбрасываем loading состояние после logout
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => {

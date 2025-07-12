@@ -143,3 +143,6 @@ INSERT INTO subscription_plans (name, description, price_monthly, price_yearly, 
 -- Grant necessary permissions (adjust according to your database user)
 -- GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO your_app_user;
 -- GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO your_app_user; 
+
+
+

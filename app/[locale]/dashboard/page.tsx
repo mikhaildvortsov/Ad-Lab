@@ -30,6 +30,14 @@ interface Plan {
   popular?: boolean
 }
 
+interface Request {
+  id: number
+  originalText: string
+  improvedText: string
+  date: string
+  status: string
+}
+
 const plans: Plan[] = [
   {
     id: 'week',
@@ -85,24 +93,8 @@ export default function Dashboard() {
 
     checkAndUpdateSession()
   }, [loading, user, updateUser])
-  const [requests] = useState([
-    {
-      id: 1,
-      originalText: "Купите наш продукт. Он очень хороший и недорогой.",
-      improvedText:
-        "Откройте для себя революционное решение, которое изменит вашу жизнь! Наш продукт сочетает в себе премиальное качество и доступную цену...",
-      date: "2024-01-15",
-      status: "completed",
-    },
-    {
-      id: 2,
-      originalText: "Скидка 50% на все товары. Торопитесь!",
-      improvedText:
-        "⚡ ВНИМАНИЕ! Невероятная возможность сэкономить 50% на ВСЕХ товарах! Но это предложение действует ограниченное время...",
-      date: "2024-01-14",
-      status: "completed",
-    },
-  ])
+  // История запросов пользователя (пустая для новых пользователей)
+  const [requests] = useState<Request[]>([])
   
   const router = useRouter()
   
@@ -113,8 +105,16 @@ export default function Dashboard() {
     }
   }, [user, loading, router])
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    try {
+      await logout()
+      // Принудительно перенаправляем на главную страницу
+      router.push('/')
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Даже если есть ошибка, все равно перенаправляем
+      router.push('/')
+    }
   }
 
   const handleRegenerateText = (requestId: number, originalText: string) => {
@@ -281,7 +281,30 @@ export default function Dashboard() {
             </div>
 
             <div className="space-y-4">
-              {requests.map((request) => (
+              {requests.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                    <History className="h-12 w-12 text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      {locale === 'ru' ? 'История запросов пуста' : 'No request history'}
+                    </h3>
+                    <p className="text-gray-500 mb-4">
+                      {locale === 'ru' 
+                        ? 'Здесь будут отображаться ваши запросы к ИИ для улучшения рекламных текстов'
+                        : 'Your AI requests for ad text improvements will appear here'
+                      }
+                    </p>
+                    <Button 
+                      onClick={() => setChatOpen(true)}
+                      className="mt-2"
+                    >
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      {locale === 'ru' ? 'Создать первый запрос' : 'Create first request'}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                requests.map((request) => (
                 <Card key={request.id}>
                   <CardHeader className="pb-4">
                     <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
@@ -368,7 +391,8 @@ export default function Dashboard() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                ))
+              )}
             </div>
           </TabsContent>
 

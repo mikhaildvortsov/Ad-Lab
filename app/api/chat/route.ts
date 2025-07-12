@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getInstruction, createCustomInstruction, type NicheType } from '@/lib/ai-instructions';
 import { checkRateLimit } from '@/lib/rate-limiter';
+import { getSession } from '@/lib/session';
+import { QueryService } from '@/lib/services/query-service';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const SITE_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
 const SITE_NAME = 'Ad Lab';
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  let queryRecord = null;
+  let userId = null;
+  
   try {
-    const { message, instructions, instructionType, niche, locale } = await request.json();
+    const { message, instructions, instructionType, niche, locale, sessionId } = await request.json();
 
     // Input validation
     if (!message || typeof message !== 'string') {
@@ -75,7 +81,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get current user session
+    const session = await getSession();
+    userId = session?.user?.id;
 
+    // Create query record if user is authenticated
+    if (userId) {
+      try {
+        const createQueryResult = await QueryService.createQuery({
+          user_id: userId,
+          session_id: sessionId || null,
+          query_text: sanitizedMessage,
+          model_used: 'gpt-4o',
+          query_type: 'chat',
+          niche: niche || null,
+          language: locale || 'ru',
+          success: true // Will be updated if there's an error
+        });
+
+        if (createQueryResult.success) {
+          queryRecord = createQueryResult.data;
+        }
+      } catch (error) {
+        console.error('Failed to create query record:', error);
+        // Continue with the request even if query recording fails
+      }
+    }
 
     // Create custom instruction with niche if provided
     const systemPrompt = instructions || 
@@ -107,8 +138,6 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(body)
     });
 
-
-
     let errorData = null;
     if (!response.ok) {
       try {
@@ -117,6 +146,18 @@ export async function POST(request: NextRequest) {
         errorData = await response.text();
       }
       console.error('[OpenAI API Error]', response.status, errorData);
+      
+      // Update query record with error if it was created
+      if (queryRecord && userId) {
+        try {
+          await QueryService.markQueryFailed(
+            queryRecord.id,
+            `OpenAI API Error: ${response.status} - ${JSON.stringify(errorData)}`
+          );
+        } catch (error) {
+          console.error('Failed to update query record with error:', error);
+        }
+      }
       
       // Специальная обработка для превышения квоты
       if (response.status === 429) {
@@ -133,19 +174,61 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
-    
-    // Only log in development mode for security
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[OpenAI] Response:', JSON.stringify(data, null, 2));
+    const assistantMessage = data.choices[0]?.message?.content;
+
+    if (!assistantMessage) {
+      console.error('[OpenAI] No assistant message in response:', data);
+      return NextResponse.json(
+        { error: 'No response from ChatGPT' },
+        { status: 500 }
+      );
+    }
+
+    // Log successful response
+    const endTime = Date.now();
+    const processingTime = endTime - startTime;
+    const tokensUsed = data.usage?.total_tokens || estimatedTokens;
+
+    // Update query record with response if it was created
+    if (queryRecord && userId) {
+      try {
+        await QueryService.updateQueryResponse(
+          queryRecord.id,
+          assistantMessage,
+          tokensUsed,
+          processingTime
+        );
+      } catch (error) {
+        console.error('Failed to update query record:', error);
+      }
     }
     
-    const responseContent = data.choices?.[0]?.message?.content || 'No response generated';
+    console.log(`[Chat] Request processed successfully in ${processingTime}ms`);
 
-    return NextResponse.json({ response: responseContent });
+    return NextResponse.json({
+      response: assistantMessage,
+      model: 'gpt-4o',
+      processingTime: processingTime,
+      timestamp: new Date().toISOString()
+    });
+
   } catch (error) {
-    console.error('[API Route Error]', error);
+    console.error('Error in chat API:', error);
+    
+    // Update query record with error if it was created
+    if (queryRecord && userId) {
+      try {
+        await QueryService.markQueryFailed(
+          queryRecord.id,
+          `API Route Error: ${error instanceof Error ? error.message : String(error)}`
+        );
+      } catch (updateError) {
+        console.error('Failed to update query record with error:', updateError);
+      }
+    }
+    
     return NextResponse.json(
-              { error: 'Failed to get response from ChatGPT', details: String(error) },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

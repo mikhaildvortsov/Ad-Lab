@@ -28,11 +28,12 @@ export const ChatInterface = forwardRef<any, { open: boolean; onOpenChange: (ope
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [instructionType, setInstructionType] = useState<'marketing' | 'copywriting' | 'audience' | 'creative' | 'analytics' | 'dkcp' | 'creative_script' | 'goal_reformulation' | 'conversion_analysis'>('marketing');
-    const [selectedNiche, setSelectedNiche] = useState<NicheType | 'all'>('all');
-    const [showPaywall, setShowPaywall] = useState(false);
-    const [lastUserMessage, setLastUserMessage] = useState('');
-    const [lastAssistantMessage, setLastAssistantMessage] = useState('');
-    const scrollAreaRef = useRef<HTMLDivElement>(null);
+      const [selectedNiche, setSelectedNiche] = useState<NicheType | 'all'>('all');
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [lastUserMessage, setLastUserMessage] = useState('');
+  const [lastAssistantMessage, setLastAssistantMessage] = useState('');
+  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
     useImperativeHandle(ref, () => ({
       clearMessages: () => setMessages([])
@@ -70,7 +71,8 @@ export const ChatInterface = forwardRef<any, { open: boolean; onOpenChange: (ope
             message: currentInput,
             instructionType: instructionType,
             niche: selectedNiche !== 'all' ? selectedNiche : undefined,
-            locale: locale
+            locale: locale,
+            sessionId: sessionId
           }),
         });
 

@@ -15,18 +15,22 @@
 import * as dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 
-import fs from 'fs';
-import path from 'path';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { query, healthCheck, initializeDatabase } from '@/lib/database';
 
 async function runSQLFile(filename: string): Promise<void> {
+  console.log(`📄 Running SQL file: ${filename}`);
+  
   try {
-    const sqlPath = path.join(process.cwd(), 'lib', filename);
-    const sql = fs.readFileSync(sqlPath, 'utf8');
+    const sqlPath = join(process.cwd(), 'lib', filename);
+    const sql = readFileSync(sqlPath, 'utf8');
     
-    console.log(`Executing ${filename}...`);
+    // Execute the entire SQL file as one statement
+    // This preserves dollar-quoted strings and complex SQL structures
     await query(sql);
-    console.log(`✅ ${filename} executed successfully`);
+    
+    console.log(`✅ Successfully executed ${filename}`);
   } catch (error) {
     console.error(`❌ Error executing ${filename}:`, error);
     throw error;
@@ -52,20 +56,36 @@ async function checkDatabaseConnection(): Promise<void> {
 }
 
 async function checkTablesExist(): Promise<boolean> {
+  console.log('📋 Checking if tables exist...');
+  
   try {
     const result = await query(`
       SELECT table_name 
       FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-      AND table_name IN ('users', 'subscription_plans', 'user_subscriptions', 'payments', 'query_history', 'usage_statistics')
+      WHERE table_schema = 'public'
     `);
     
-    const existingTables = result.rows.map(row => row.table_name);
-    console.log('📋 Existing tables:', existingTables);
+    const tables = result.rows.map(row => row.table_name);
+    const requiredTables = [
+      'users',
+      'subscription_plans', 
+      'user_subscriptions',
+      'payments',
+      'query_history',
+      'usage_statistics'
+    ];
     
-    return existingTables.length === 6; // All 6 tables exist
+    const missingTables = requiredTables.filter(table => !tables.includes(table));
+    
+    if (missingTables.length > 0) {
+      console.log('❌ Missing tables:', missingTables.join(', '));
+      return false;
+    }
+    
+    console.log('✅ All required tables exist');
+    return true;
   } catch (error) {
-    console.log('⚠️  Error checking tables (probably none exist yet):', error instanceof Error ? error.message : 'Unknown error');
+    console.log('❌ Error checking tables:', error);
     return false;
   }
 }
@@ -74,24 +94,36 @@ async function seedDefaultData(): Promise<void> {
   console.log('🌱 Seeding default data...');
   
   try {
-    // Check if subscription plans already exist
+    // Check if subscription plans exist
     const plansResult = await query('SELECT COUNT(*) as count FROM subscription_plans');
     const plansCount = parseInt(plansResult.rows[0].count);
     
-    if (plansCount > 0) {
-      console.log('📦 Subscription plans already exist, skipping seed data');
-      return;
+    if (plansCount === 0) {
+      console.log('📦 Creating default subscription plans...');
+      
+      // Insert default subscription plans
+      await query(`
+        INSERT INTO subscription_plans (id, name, description, price_monthly, price_yearly, currency, features, max_queries_per_month, max_tokens_per_query, is_active)
+        VALUES 
+        (gen_random_uuid(), 'Free', 'Бесплатный план для начинающих', 0, 0, 'RUB', 
+         '["5 запросов в день", "Базовые инструкции", "Поддержка по email"]'::jsonb, 
+         150, 1000, true),
+        (gen_random_uuid(), 'Week', 'Недельный доступ ко всем функциям', 1990, NULL, 'RUB',
+         '["Полный доступ на 7 дней", "Неограниченные улучшения", "Все функции приложения", "Поддержка 24/7"]'::jsonb,
+         NULL, NULL, true),
+        (gen_random_uuid(), 'Month', 'Месячная подписка со скидкой', 2990, 29900, 'RUB',
+         '["Полный доступ на 30 дней", "Неограниченные улучшения", "Все функции приложения", "Приоритетная поддержка", "Экономия 57%"]'::jsonb,
+         NULL, NULL, true),
+        (gen_random_uuid(), 'Quarter', 'Квартальная подписка с максимальной экономией', 9990, 99900, 'RUB',
+         '["Полный доступ на 90 дней", "Неограниченные улучшения", "Все функции приложения", "VIP поддержка", "Максимальная экономия"]'::jsonb,
+         NULL, NULL, true)
+      `);
+      
+      console.log('✅ Default subscription plans created');
+    } else {
+      console.log('📦 Subscription plans already exist, skipping...');
     }
     
-    // Insert default subscription plans
-    await query(`
-      INSERT INTO subscription_plans (name, description, price_monthly, price_yearly, features, max_queries_per_month, max_tokens_per_query) VALUES
-      ('Week', 'Недельный доступ ко всем функциям', 1990.00, NULL, '["Полный доступ на 7 дней", "Неограниченные улучшения", "Все функции приложения", "Поддержка 24/7"]', -1, -1),
-      ('Month', 'Месячный доступ со скидкой', 2990.00, NULL, '["Полный доступ на 30 дней", "Неограниченные улучшения", "Все функции приложения", "Приоритетная поддержка", "Экономия 57%"]', -1, -1),
-      ('Quarter', 'Максимальная экономия на 3 месяца', 9990.00, NULL, '["Полный доступ на 90 дней", "Неограниченные улучшения", "Все функции приложения", "VIP поддержка", "Максимальная экономия"]', -1, -1);
-    `);
-    
-    console.log('✅ Default subscription plans created');
   } catch (error) {
     console.error('❌ Error seeding default data:', error);
     throw error;
@@ -99,31 +131,44 @@ async function seedDefaultData(): Promise<void> {
 }
 
 async function createIndexes(): Promise<void> {
-  console.log('🔍 Creating database indexes...');
+  console.log('🗂️  Creating database indexes...');
   
-  const indexes = [
-    'CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);',
-    'CREATE INDEX IF NOT EXISTS idx_users_provider_id ON users(provider, provider_id);',
-    'CREATE INDEX IF NOT EXISTS idx_user_subscriptions_user_id ON user_subscriptions(user_id);',
-    'CREATE INDEX IF NOT EXISTS idx_user_subscriptions_status ON user_subscriptions(status);',
-    'CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id);',
-    'CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);',
-    'CREATE INDEX IF NOT EXISTS idx_payments_external_id ON payments(external_payment_id);',
-    'CREATE INDEX IF NOT EXISTS idx_query_history_user_id ON query_history(user_id);',
-    'CREATE INDEX IF NOT EXISTS idx_query_history_session_id ON query_history(session_id);',
-    'CREATE INDEX IF NOT EXISTS idx_query_history_created_at ON query_history(created_at);',
-    'CREATE INDEX IF NOT EXISTS idx_usage_statistics_user_period ON usage_statistics(user_id, period_start);'
-  ];
-  
-  for (const indexSql of indexes) {
-    try {
-      await query(indexSql);
-    } catch (error) {
-      console.log(`⚠️  Index already exists or error:`, error instanceof Error ? error.message : 'Unknown error');
+  try {
+    const indexes = [
+      // Users table indexes
+      'CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)',
+      'CREATE INDEX IF NOT EXISTS idx_users_provider ON users(provider, provider_id)',
+      'CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active)',
+      
+      // Query history indexes
+      'CREATE INDEX IF NOT EXISTS idx_query_history_user_id ON query_history(user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_query_history_session_id ON query_history(session_id)',
+      'CREATE INDEX IF NOT EXISTS idx_query_history_created_at ON query_history(created_at)',
+      'CREATE INDEX IF NOT EXISTS idx_query_history_success ON query_history(success)',
+      
+      // User subscriptions indexes
+      'CREATE INDEX IF NOT EXISTS idx_user_subscriptions_user_id ON user_subscriptions(user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_user_subscriptions_status ON user_subscriptions(status)',
+      'CREATE INDEX IF NOT EXISTS idx_user_subscriptions_period ON user_subscriptions(started_at, expires_at)',
+      
+      // Payments indexes
+      'CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status)',
+      'CREATE INDEX IF NOT EXISTS idx_payments_created_at ON payments(created_at)',
+      
+      // Usage statistics indexes
+      'CREATE INDEX IF NOT EXISTS idx_usage_statistics_user_period ON usage_statistics(user_id, period_start, period_end)',
+    ];
+    
+    for (const indexSQL of indexes) {
+      await query(indexSQL);
     }
+    
+    console.log('✅ Database indexes created');
+  } catch (error) {
+    console.error('❌ Error creating indexes:', error);
+    throw error;
   }
-  
-  console.log('✅ Database indexes created');
 }
 
 async function main(): Promise<void> {
@@ -164,15 +209,5 @@ async function main(): Promise<void> {
   }
 }
 
-// Run the initialization if this script is executed directly
-if (require.main === module) {
-  main().then(() => {
-    console.log('\n✅ Script completed');
-    process.exit(0);
-  }).catch((error) => {
-    console.error('\n❌ Script failed:', error);
-    process.exit(1);
-  });
-}
-
-export { main as initDatabase }; 
+// Run the script
+main(); 

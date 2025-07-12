@@ -86,6 +86,7 @@ export function MobileNav({ user, onLogout, t }: MobileNavProps) {
                   <Button 
                     variant="ghost" 
                     onClick={() => {
+                      console.log('MobileNav: Logout button clicked')
                       onLogout()
                       setIsOpen(false)
                     }}
