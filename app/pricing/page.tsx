@@ -13,6 +13,7 @@ interface Plan {
   id: string
   name: string
   price: number
+  originalPrice?: number
   features: string[]
   improvements: number
   popular?: boolean
@@ -59,13 +60,9 @@ export default function PricingPage() {
       // Пока что просто имитируем задержку
       await new Promise(resolve => setTimeout(resolve, 1000))
       
-      // Если пользователь авторизован, перенаправляем в дашборд
-      if (user) {
-        window.location.href = `/${locale}/dashboard`
-      } else {
-        // Если не авторизован, перенаправляем на авторизацию
-        window.location.href = '/auth'
-      }
+      // Redirect will be handled by middleware and auth context
+      // For now, just show success message
+      console.log('Plan selected successfully:', plan)
     } catch (error) {
       console.error('Ошибка при выборе тарифа:', error)
     } finally {

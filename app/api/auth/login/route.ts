@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     // Input validation
     if (!email || !password) {
       return NextResponse.json(
-        { error: 'Email and password are required' },
+        { success: false, error: 'Email and password are required' },
         { status: 400 }
       );
     }
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return NextResponse.json(
-        { error: 'Invalid email format' },
+        { success: false, error: 'Invalid email format' },
         { status: 400 }
       );
     }
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     // Password strength validation
     if (password.length < 8) {
       return NextResponse.json(
-        { error: 'Password must be at least 8 characters long' },
+        { success: false, error: 'Password must be at least 8 characters long' },
         { status: 400 }
       );
     }
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     
     if (!userResult.success || !userResult.data) {
       return NextResponse.json(
-        { error: 'Invalid credentials' },
+        { success: false, error: 'Invalid credentials' },
         { status: 401 }
       );
     }
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     // Verify password against hash
     if (!user.password_hash) {
       return NextResponse.json(
-        { error: 'Account not properly configured. Please contact support.' },
+        { success: false, error: 'Account not properly configured. Please contact support.' },
         { status: 500 }
       );
     }
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     
     if (!isPasswordValid) {
       return NextResponse.json(
-        { error: 'Invalid credentials' },
+        { success: false, error: 'Invalid credentials' },
         { status: 401 }
       );
     }
@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
     await createSession(sessionData);
 
     return NextResponse.json({ 
+      success: true,
       message: 'Login successful',
       user: {
         id: user.id,
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }

@@ -243,8 +243,8 @@ export class BillingService {
       const payment = await query<Payment>(`
         INSERT INTO payments (
           id, user_id, subscription_id, amount, currency, status,
-          payment_method, external_payment_id, created_at, updated_at, metadata
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          payment_method, external_payment_id, created_at, metadata
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING *
       `, [
         id,
@@ -255,7 +255,6 @@ export class BillingService {
         params.status || 'pending',
         params.payment_method,
         params.external_payment_id || null,
-        now,
         now,
         params.metadata ? JSON.stringify(params.metadata) : null
       ]);

@@ -91,6 +91,7 @@ export function PaywallModal({
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'tribute'>('tribute');
   const [tributeLoading, setTributeLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [csrfToken, setCsrfToken] = useState<string | null>(null);
   const [tributePaymentData, setTributePaymentData] = useState<{
     paymentUrl: string;
     tributeUrl: string;
@@ -103,6 +104,24 @@ export function PaywallModal({
   const [checkingStatus, setCheckingStatus] = useState(false);
   
   const plans = getPlans(t);
+
+  // Get CSRF token when modal opens
+  useEffect(() => {
+    if (open && isAuthenticated && !csrfToken) {
+      const fetchCsrfToken = async () => {
+        try {
+          const response = await fetch('/api/csrf-token');
+          if (response.ok) {
+            const data = await response.json();
+            setCsrfToken(data.csrfToken);
+          }
+        } catch (error) {
+          console.error('Failed to get CSRF token:', error);
+        }
+      };
+      fetchCsrfToken();
+    }
+  }, [open, isAuthenticated, csrfToken]);
 
   // Debug authentication state
   useEffect(() => {
@@ -154,15 +173,28 @@ export function PaywallModal({
   const handleTributePayment = async () => {
     if (!selectedPlan) return;
 
+    // Check if we have CSRF token
+    if (!csrfToken) {
+      setError('Отсутствует токен безопасности. Попробуйте перезагрузить страницу.');
+      return;
+    }
+
     setTributeLoading(true);
     setError(null);
     
     try {
+      console.log('Creating Tribute payment with data:', {
+        planId: selectedPlan.id,
+        planName: selectedPlan.name,
+        amount: selectedPlan.price
+      });
+
       // Create payment through API
       const response = await fetch('/api/payments/tribute', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
         },
         body: JSON.stringify({
           planId: selectedPlan.id,
@@ -171,13 +203,31 @@ export function PaywallModal({
         }),
       });
 
-      const data = await response.json();
+      console.log('API Response status:', response.status);
+      console.log('API Response headers:', response.headers);
 
-      if (!response.ok) {
-        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+      let data;
+      try {
+        const responseText = await response.text();
+        console.log('API Response text:', responseText);
+        
+        if (!responseText) {
+          throw new Error('Empty response from server');
+        }
+        
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        throw new Error('Invalid response format from server');
       }
 
-      if (data.success) {
+      console.log('Parsed API Response:', data);
+
+      if (!response.ok) {
+        throw new Error(data?.error || `HTTP error! status: ${response.status}`);
+      }
+
+      if (data?.success) {
         setTributePaymentData({
           paymentUrl: data.paymentUrl,
           tributeUrl: data.tributeUrl,
@@ -192,11 +242,11 @@ export function PaywallModal({
         // Start periodic payment status checking
         checkPaymentStatus(data.paymentId);
       } else {
-        throw new Error(data.error || 'Failed to create payment');
+        throw new Error(data?.error || 'Failed to create payment');
       }
     } catch (error: any) {
       console.error('Tribute payment error:', error);
-      const errorMessage = error.message || t('paywallModal.payment.error.tributePayment');
+      const errorMessage = error.message || 'Произошла ошибка при создании платежа';
       setError(errorMessage);
     } finally {
       setTributeLoading(false);
@@ -211,7 +261,11 @@ export function PaywallModal({
       try {
         setCheckingStatus(true);
         
-        const response = await fetch(`/api/payments/tribute?paymentId=${paymentId}`);
+        const response = await fetch(`/api/payments/tribute?paymentId=${paymentId}`, {
+          headers: {
+            'X-CSRF-Token': csrfToken || '',
+          }
+        });
         const data = await response.json();
 
         if (data.success) {
@@ -274,6 +328,7 @@ export function PaywallModal({
     setShowPayment(false);
     setPaymentMethod('tribute');
     setError(null);
+    setCsrfToken(null);
     setTributePaymentData(null);
     setPaymentStatus(null);
     setCheckingStatus(false);
@@ -324,7 +379,7 @@ export function PaywallModal({
               </Button>
             </DialogTitle>
             <DialogDescription>
-              <div className="flex items-center justify-center gap-2">
+              <span className="flex items-center justify-center gap-2">
                 {selectedPlan.originalPrice && (
                   <span className="text-gray-500 line-through text-sm">₽{selectedPlan.originalPrice}</span>
                 )}
@@ -334,7 +389,7 @@ export function PaywallModal({
                     {t('paywallModal.payment.discount').replace('{percent}', Math.round((1 - selectedPlan.price / selectedPlan.originalPrice) * 100).toString())}
                   </span>
                 )}
-              </div>
+              </span>
             </DialogDescription>
           </DialogHeader>
 

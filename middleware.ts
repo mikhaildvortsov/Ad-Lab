@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validateSession, needsRefresh, refreshGoogleToken, createResponseWithSession } from '@/lib/session'
 import { checkCSRFProtection, checkOrigin } from '@/lib/csrf-protection'
 import { applyEnvironmentHeaders } from '@/lib/security-headers'
+import { locales, defaultLocale } from '@/lib/i18n'
 
-// Protected routes that require authentication
+// Protected routes that require authentication (including localized versions)
 const protectedRoutes = [
   '/dashboard',
   '/chat',
@@ -20,13 +21,41 @@ const publicRoutes = [
   '/api/auth/logout'
 ]
 
+function getLocaleFromPath(pathname: string): string | null {
+  const segments = pathname.split('/').filter(Boolean)
+  const firstSegment = segments[0]
+  return locales.includes(firstSegment as any) ? firstSegment : null
+}
+
+function removeLocaleFromPath(pathname: string): string {
+  const segments = pathname.split('/').filter(Boolean)
+  const firstSegment = segments[0]
+  
+  if (locales.includes(firstSegment as any)) {
+    const pathWithoutLocale = '/' + segments.slice(1).join('/')
+    return pathWithoutLocale === '/' ? '/' : pathWithoutLocale
+  }
+  
+  return pathname
+}
+
+function isProtectedPath(pathname: string): boolean {
+  const pathWithoutLocale = removeLocaleFromPath(pathname)
+  return protectedRoutes.some(route => pathWithoutLocale.startsWith(route))
+}
+
+function isPublicPath(pathname: string): boolean {
+  const pathWithoutLocale = removeLocaleFromPath(pathname)
+  return publicRoutes.some(route => pathWithoutLocale === route || pathWithoutLocale.startsWith(route))
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   
-    // Skip middleware for static files and specific API routes
+  // Skip middleware for static files and specific API routes
   if (pathname.startsWith('/_next') || 
       pathname.startsWith('/favicon') ||
-      pathname === '/api/csrf-token') { // Allow CSRF token generation
+      pathname === '/api/csrf-token') {
     const response = NextResponse.next()
     return applyEnvironmentHeaders(response)
   }
@@ -60,9 +89,9 @@ export async function middleware(request: NextRequest) {
     }
   }
   
-  // Check if route requires authentication
-  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
-  const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route))
+  // Check if route requires authentication (support localized routes)
+  const isProtectedRoute = isProtectedPath(pathname)
+  const isPublicRoute = isPublicPath(pathname)
   
   // Get current session
   const session = await validateSession(request)
@@ -74,8 +103,11 @@ export async function middleware(request: NextRequest) {
   }
   
   // If session exists and trying to access auth page, redirect to dashboard
-  if (session && pathname === '/auth') {
-    const response = NextResponse.redirect(new URL('/dashboard', request.url))
+  // Preserve locale in redirect
+  if (session && (pathname === '/auth' || pathname.match(/^\/[a-z]{2}\/auth$/))) {
+    const locale = getLocaleFromPath(pathname)
+    const dashboardPath = locale && locale !== defaultLocale ? `/${locale}/dashboard` : '/dashboard'
+    const response = NextResponse.redirect(new URL(dashboardPath, request.url))
     return applyEnvironmentHeaders(response)
   }
   
@@ -111,7 +143,9 @@ export async function middleware(request: NextRequest) {
     }
   }
   
-  return NextResponse.next()
+  // Continue without modification
+  const response = NextResponse.next()
+  return applyEnvironmentHeaders(response)
 }
 
 // Configure which routes to run middleware on

@@ -39,8 +39,8 @@ export interface TributeStatusResponse {
 
 // Configuration for Tribute integration
 const TRIBUTE_CONFIG = {
-  // Tribute bot information
-  BOT_USERNAME: '@tribute_bot', // Main Tribute bot
+  // Tribute app information
+  BOT_USERNAME: '@tribute', // Main Tribute app
   API_URL: process.env.TRIBUTE_API_URL || 'https://api.tribute.tg/v1',
   WEBHOOK_SECRET: process.env.TRIBUTE_WEBHOOK_SECRET,
   
@@ -221,20 +221,10 @@ export class TributeService {
    * Generates a Tribute payment URL (Telegram deep link)
    */
   private static generateTributePaymentUrl(paymentData: any): string {
-    // Create Telegram deep link to Tribute bot
-    // Format: https://t.me/tribute_bot?start=payment_DATA
+    // Create Telegram deep link to Tribute app
+    // Format: https://t.me/tribute/app?startapp=piu3
     
-    // Encode payment data
-    const encodedData = Buffer.from(JSON.stringify({
-      orderId: paymentData.orderId,
-      amount: paymentData.amount,
-      currency: paymentData.currency,
-      description: paymentData.description,
-      userId: paymentData.userId,
-      planName: paymentData.planName
-    })).toString('base64');
-
-    return `https://t.me/tribute_bot?start=payment_${encodedData}`;
+    return `https://t.me/tribute/app?startapp=piu3`;
   }
 
   /**
@@ -299,9 +289,14 @@ export class TributeService {
    */
   static validateWebhookSignature(payload: string, signature: string): boolean {
     try {
+      // В продакшене ВСЕГДА требуем webhook secret
       if (!TRIBUTE_CONFIG.WEBHOOK_SECRET) {
+        if (process.env.NODE_ENV === 'production') {
+          console.error('TRIBUTE_WEBHOOK_SECRET is required in production');
+          return false;
+        }
         console.warn('Tribute webhook secret not configured - allowing all webhooks in development');
-        return process.env.NODE_ENV === 'development';
+        return true;
       }
 
       if (!signature) {
@@ -317,8 +312,9 @@ export class TributeService {
         .digest('hex');
       
       // Signature might be prefixed with 'sha256=' or just be the hex
-      const receivedSignature = signature.replace('sha256=', '');
+      const receivedSignature = signature.replace(/^sha256=/, '');
       
+      // Используем timing-safe сравнение для защиты от timing атак
       return crypto.timingSafeEqual(
         Buffer.from(expectedSignature, 'hex'),
         Buffer.from(receivedSignature, 'hex')

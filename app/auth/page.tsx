@@ -18,6 +18,7 @@ export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [name, setName] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
@@ -48,28 +49,39 @@ export default function AuthPage() {
     setError("")
     
     try {
-      const response = await fetch('/api/auth/login', {
+      // Choose the correct endpoint based on login/register mode
+      const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register'
+      const requestBody = isLogin 
+        ? { email, password }
+        : { email, password, name }
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password, isRegistration: !isLogin }),
+        body: JSON.stringify(requestBody),
       })
 
       const data = await response.json()
 
       if (data.success) {
-        // Получаем сессию из cookies (она была создана API роутом)
-        const session = await getClientSession()
-        if (session) {
-          // Обновляем AuthContext с новыми данными пользователя
-          updateUser(session.user)
-          console.log('Email auth: updated AuthContext with user:', session.user)
-          
-          // Перенаправляем на dashboard
-          router.push('/dashboard')
+        if (isLogin) {
+          // Login: get session and redirect to dashboard
+          const session = await getClientSession()
+          if (session) {
+            updateUser(session.user)
+            console.log('Email auth: updated AuthContext with user:', session.user)
+            router.push('/dashboard')
+          } else {
+            setError('Не удалось получить данные сессии')
+          }
         } else {
-          setError('Не удалось получить данные сессии')
+          // Registration: show success and switch to login
+          setError('')
+          setIsLogin(true)
+          setPassword('')
+          alert('Регистрация успешна! Теперь вы можете войти в аккаунт.')
         }
       } else {
         setError(data.error || 'Ошибка авторизации')
@@ -137,6 +149,21 @@ export default function AuthPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {!isLogin && (
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-sm sm:text-base">Имя</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Ваше имя"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-11 sm:h-12"
+                  required={!isLogin}
+                />
+              </div>
+            )}
+            
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm sm:text-base">Email</Label>
               <div className="relative">
@@ -174,6 +201,11 @@ export default function AuthPage() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              {!isLogin && (
+                <p className="text-xs text-gray-500">
+                  Минимум 8 символов, включая заглавную букву, строчную букву и цифру
+                </p>
+              )}
             </div>
 
             {error && (
@@ -195,7 +227,12 @@ export default function AuthPage() {
 
           <div className="text-center pt-2">
             <button
-              onClick={() => setIsLogin(!isLogin)}
+              onClick={() => {
+                setIsLogin(!isLogin)
+                setError('')
+                setPassword('')
+                setName('')
+              }}
               className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
             >
               {isLogin 

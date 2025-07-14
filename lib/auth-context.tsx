@@ -44,19 +44,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Проверяем сессию при загрузке
     const checkSession = async () => {
       try {
+        console.log('AuthContext: Checking session...')
         const session = await getClientSession()
+        console.log('AuthContext: Session result:', session)
         if (session) {
           setUser(session.user)
           console.log('AuthContext: setting user from session:', session.user)
+        } else {
+          console.log('AuthContext: No session found')
         }
       } catch (error) {
-        console.error('Error checking session:', error)
+        console.error('AuthContext: Error checking session:', error)
       } finally {
+        console.log('AuthContext: Setting loading to false')
         setLoading(false)
       }
     }
 
-    checkSession()
+    // Add timeout fallback to ensure loading state is cleared
+    const timeoutId = setTimeout(() => {
+      console.log('AuthContext: Timeout reached, forcing loading to false')
+      setLoading(false)
+    }, 5000) // 5 second timeout
+
+    checkSession().finally(() => {
+      clearTimeout(timeoutId)
+    })
+
+    return () => clearTimeout(timeoutId)
   }, [])
 
   // Автоматическое обновление токена каждые 5 минут
@@ -69,10 +84,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!success) {
           console.log('Token refresh failed, logging out')
           setUser(null)
-          window.location.href = '/auth'
+          // Let middleware handle redirect instead of forcing it here
         }
       } catch (error) {
         console.error('Token refresh error:', error)
+        // Let middleware handle redirect instead of forcing it here
+        setUser(null)
       }
     }, 5 * 60 * 1000) // 5 минут
 

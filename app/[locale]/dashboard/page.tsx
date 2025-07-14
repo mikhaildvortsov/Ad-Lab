@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -13,6 +12,7 @@ import { MobileNav } from "@/components/ui/mobile-nav"
 import { useAuth } from "@/lib/auth-context"
 import { getClientSession } from "@/lib/client-session"
 import { ChatInterface } from "@/components/chat-interface"
+import { PaywallModal } from "@/components/paywall-modal"
 import { useLocale } from "@/lib/use-locale"
 import { useTranslation } from "@/lib/translations"
 import { LanguageSelector } from "@/components/language-selector"
@@ -74,16 +74,42 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
   const [copySuccess, setCopySuccess] = useState<number | null>(null)
+  const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null)
+
+  // Check user subscription status
+  useEffect(() => {
+    const checkSubscription = async () => {
+      if (user) {
+        try {
+          const response = await fetch('/api/auth/subscription')
+          if (response.ok) {
+            const data = await response.json()
+            if (data.success) {
+              setHasActiveSubscription(data.data.hasActiveSubscription)
+            }
+          }
+        } catch (error) {
+          console.error('Error checking subscription:', error)
+          setHasActiveSubscription(false)
+        }
+      }
+    }
+
+    checkSubscription()
+  }, [user])
 
   // Fallback: если AuthContext не загрузился, но сессия есть, обновляем контекст
   useEffect(() => {
     const checkAndUpdateSession = async () => {
       if (!loading && !user) {
         try {
+          console.log('Dashboard: AuthContext has no user, checking session directly...')
           const session = await getClientSession()
           if (session) {
             console.log('Dashboard: Found session, updating AuthContext:', session.user)
             updateUser(session.user)
+          } else {
+            console.log('Dashboard: No session found, user should be redirected by middleware')
           }
         } catch (error) {
           console.error('Dashboard: Error checking session:', error)
@@ -91,29 +117,23 @@ export default function Dashboard() {
       }
     }
 
-    checkAndUpdateSession()
+    // Only run this check once after initial load
+    const timeoutId = setTimeout(checkAndUpdateSession, 100)
+    return () => clearTimeout(timeoutId)
   }, [loading, user, updateUser])
+
   // История запросов пользователя (пустая для новых пользователей)
   const [requests] = useState<Request[]>([])
   
-  const router = useRouter()
-  
-  useEffect(() => {
-    // Если пользователь не авторизован и загрузка завершена, перенаправляем на авторизацию
-    if (!loading && !user) {
-      router.push('/auth')
-    }
-  }, [user, loading, router])
+  // Removed router and redirect logic - let middleware handle authentication
 
   const handleLogout = async () => {
     try {
       await logout()
-      // Принудительно перенаправляем на главную страницу
-      router.push('/')
+      // Let the auth state change trigger appropriate redirects through middleware
     } catch (error) {
       console.error('Logout error:', error)
-      // Даже если есть ошибка, все равно перенаправляем
-      router.push('/')
+      // Let the auth state change trigger appropriate redirects through middleware
     }
   }
 
@@ -149,27 +169,15 @@ export default function Dashboard() {
     URL.revokeObjectURL(url)
   }
 
-  const handleChangePlan = async (newPlan: Plan) => {
-    setIsLoading(true)
-    try {
-      // Здесь будет API вызов для смены тарифа
-      console.log('Смена тарифа на:', newPlan.name)
-      
-      // Имитация API вызова
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      setCurrentPlan(newPlan)
-      setShowPlanModal(false)
-      
-      // Показываем уведомление об успешной смене тарифа
-      alert(`Тариф успешно изменен на "${newPlan.name}"`)
-    } catch (error) {
-      console.error('Ошибка при смене тарифа:', error)
-      alert('Произошла ошибка при смене тарифа. Попробуйте позже.')
-    } finally {
-      setIsLoading(false)
-    }
+  const handlePaymentSuccess = () => {
+    // After successful payment, update subscription status and close modal
+    setShowPlanModal(false)
+    setHasActiveSubscription(true)
+    // Open chat interface after successful payment
+    setChatOpen(true)
   }
+
+
 
   const handleCancelSubscription = async () => {
     setIsLoading(true)
@@ -203,12 +211,16 @@ export default function Dashboard() {
     )
   }
 
-  if (!user && typeof window !== 'undefined') {
-    window.location.replace('/');
-    return <div>{t('dashboard.redirecting')}</div>;
-  }
+  // Let middleware handle authentication redirects instead of client-side redirects
   if (!user) {
-    return <div>{t('dashboard.authRequired')}</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">{t('dashboard.loading')}</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -295,7 +307,13 @@ export default function Dashboard() {
                       }
                     </p>
                     <Button 
-                      onClick={() => setChatOpen(true)}
+                      onClick={() => {
+                        if (hasActiveSubscription) {
+                          setChatOpen(true)
+                        } else {
+                          setShowPlanModal(true)
+                        }
+                      }}
                       className="mt-2"
                     >
                       <Sparkles className="h-4 w-4 mr-2" />
@@ -414,54 +432,14 @@ export default function Dashboard() {
                     ))}
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 mt-4">
-                    <Dialog open={showPlanModal} onOpenChange={setShowPlanModal}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="w-full sm:w-auto">
-                          {t('dashboard.billing.changePlan')}
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>{t('dashboard.billing.selectNewPlan')}</DialogTitle>
-                          <DialogDescription>
-                            {t('dashboard.billing.selectPlanDescription')}
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                          {plans.map((plan) => (
-                            <Card key={plan.id} className={`relative ${plan.popular ? 'ring-2 ring-blue-500' : ''}`}>
-                              {plan.popular && (
-                                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                                  <Badge className="bg-blue-500 text-white">{t('dashboard.billing.popular')}</Badge>
-                                </div>
-                              )}
-                              <CardHeader className="text-center">
-                                <CardTitle className="text-lg">{plan.name}</CardTitle>
-                                <div className="text-2xl font-bold">₽{plan.price}<span className="text-sm font-normal text-gray-500">/{locale === 'en' ? 'month' : 'месяц'}</span></div>
-                              </CardHeader>
-                              <CardContent>
-                                <ul className="space-y-2 mb-4">
-                                  {plan.features.map((feature, index) => (
-                                    <li key={index} className="flex items-center gap-2 text-sm">
-                                      <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
-                                      {feature}
-                                    </li>
-                                  ))}
-                                </ul>
-                                <Button 
-                                  onClick={() => handleChangePlan(plan)}
-                                  disabled={isLoading || currentPlan.id === plan.id}
-                                  className="w-full"
-                                  variant={currentPlan.id === plan.id ? "secondary" : "default"}
-                                >
-                                  {isLoading ? t('dashboard.billing.loading') : currentPlan.id === plan.id ? t('dashboard.billing.currentPlanButton') : t('dashboard.billing.selectPlanButton')}
-                                </Button>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full sm:w-auto"
+                      onClick={() => setShowPlanModal(true)}
+                    >
+                      {t('dashboard.billing.changePlan')}
+                    </Button>
                     
                     <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
                       <DialogTrigger asChild>
@@ -590,6 +568,12 @@ export default function Dashboard() {
       </div>
       
       <ChatInterface open={chatOpen} onOpenChange={setChatOpen} />
+      
+      <PaywallModal 
+        open={showPlanModal} 
+        onOpenChange={setShowPlanModal}
+        onPaymentSuccess={handlePaymentSuccess}
+      />
     </div>
   )
 }

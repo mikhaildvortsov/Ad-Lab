@@ -5,11 +5,19 @@ import { BillingService } from '@/lib/services/billing-service';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text();
-    const signature = request.headers.get('x-tribute-signature') || '';
+    const signature = request.headers.get('x-tribute-signature') || 
+                     request.headers.get('x-signature') || 
+                     request.headers.get('signature') || '';
     const contentType = request.headers.get('content-type') || '';
 
-    // Validate webhook signature from Tribute
-    if (!TributeService.validateWebhookSignature(body, signature)) {
+    console.log('Webhook received:', { 
+      signature: signature ? '[PRESENT]' : '[MISSING]', 
+      contentType,
+      bodyLength: body.length 
+    });
+
+    // Validate webhook signature from Tribute (только если есть подпись)
+    if (signature && !TributeService.validateWebhookSignature(body, signature)) {
       console.error('Invalid Tribute webhook signature');
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }

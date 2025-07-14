@@ -91,7 +91,26 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
   const { locale } = useLocale()
   const { t } = useTranslation(locale)
   const [chatOpen, setChatOpen] = useState(false);
+  const [csrfToken, setCsrfToken] = useState<string | null>(null);
   const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+
+  // Get CSRF token when user is authenticated
+  useEffect(() => {
+    if (user && !csrfToken) {
+      const fetchCsrfToken = async () => {
+        try {
+          const response = await fetch('/api/csrf-token');
+          if (response.ok) {
+            const data = await response.json();
+            setCsrfToken(data.csrfToken);
+          }
+        } catch (error) {
+          console.error('Failed to get CSRF token:', error);
+        }
+      };
+      fetchCsrfToken();
+    }
+  }, [user, csrfToken]);
 
   // Пока что простая проверка подписки (в реальном приложении это будет API call)
   const hasActiveSubscription = () => {
@@ -132,11 +151,18 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
     setIsProcessing(true);
     
     try {
+      // Check if we have CSRF token
+      if (!csrfToken) {
+        console.error('No CSRF token available');
+        return;
+      }
+
       // Сначала анализируем конверсионность, затем улучшаем
       const analysisResponse = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
         },
         body: JSON.stringify({ 
           message: `Проанализируй конверсионные элементы этого текста и предложи улучшения: ${initialText}`,
@@ -198,10 +224,17 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
     setIsProcessingGoal(true);
     
     try {
+      // Check if we have CSRF token
+      if (!csrfToken) {
+        console.error('No CSRF token available');
+        return;
+      }
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
         },
         body: JSON.stringify({ 
           message: locale === 'en' 

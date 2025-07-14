@@ -32,12 +32,29 @@ export const ChatInterface = forwardRef<any, { open: boolean; onOpenChange: (ope
   const [showPaywall, setShowPaywall] = useState(false);
   const [lastUserMessage, setLastUserMessage] = useState('');
   const [lastAssistantMessage, setLastAssistantMessage] = useState('');
+  const [csrfToken, setCsrfToken] = useState<string | null>(null);
   const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
     useImperativeHandle(ref, () => ({
       clearMessages: () => setMessages([])
     }));
+
+    // Get CSRF token when component mounts
+    useEffect(() => {
+      const fetchCsrfToken = async () => {
+        try {
+          const response = await fetch('/api/csrf-token');
+          if (response.ok) {
+            const data = await response.json();
+            setCsrfToken(data.csrfToken);
+          }
+        } catch (error) {
+          console.error('Failed to get CSRF token:', error);
+        }
+      };
+      fetchCsrfToken();
+    }, []);
 
     useEffect(() => {
       if (scrollAreaRef.current) {
@@ -47,6 +64,12 @@ export const ChatInterface = forwardRef<any, { open: boolean; onOpenChange: (ope
 
     const sendMessage = async () => {
       if (!input.trim() || isLoading) return;
+
+      // Check if we have CSRF token
+      if (!csrfToken) {
+        console.error('No CSRF token available');
+        return;
+      }
 
       const userMessage: Message = {
         id: Date.now().toString(),
@@ -66,6 +89,7 @@ export const ChatInterface = forwardRef<any, { open: boolean; onOpenChange: (ope
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken,
           },
           body: JSON.stringify({ 
             message: currentInput,

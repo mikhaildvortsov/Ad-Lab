@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     // Input validation
     if (!email || !password || !name) {
       return NextResponse.json(
-        { error: 'Email, password, and name are required' },
+        { success: false, error: 'Email, password, and name are required' },
         { status: 400 }
       );
     }
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return NextResponse.json(
-        { error: 'Invalid email format' },
+        { success: false, error: 'Invalid email format' },
         { status: 400 }
       );
     }
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     // Password strength validation
     if (password.length < 8) {
       return NextResponse.json(
-        { error: 'Password must be at least 8 characters long' },
+        { success: false, error: 'Password must be at least 8 characters long' },
         { status: 400 }
       );
     }
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
       return NextResponse.json(
-        { error: 'Password must contain at least one uppercase letter, one lowercase letter, and one number' },
+        { success: false, error: 'Password must contain at least one uppercase letter, one lowercase letter, and one number' },
         { status: 400 }
       );
     }
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     // Name validation
     if (name.trim().length < 2) {
       return NextResponse.json(
-        { error: 'Name must be at least 2 characters long' },
+        { success: false, error: 'Name must be at least 2 characters long' },
         { status: 400 }
       );
     }
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     const existingUserResult = await UserService.userExistsByEmail(email);
     if (existingUserResult.success && existingUserResult.data) {
       return NextResponse.json(
-        { error: 'User with this email already exists' },
+        { success: false, error: 'User with this email already exists' },
         { status: 409 }
       );
     }
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     if (!userResult.success || !userResult.data) {
       return NextResponse.json(
-        { error: userResult.error || 'Failed to create user' },
+        { success: false, error: userResult.error || 'Failed to create user' },
         { status: 500 }
       );
     }
@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
     const user = userResult.data;
 
     return NextResponse.json({
+      success: true,
       message: 'User registered successfully',
       user: {
         id: user.id,
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Registration error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
