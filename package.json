@@ -10,7 +10,8 @@
     "db:init": "tsx scripts/init-database.ts",
     "db:schema": "psql $DATABASE_URL -f lib/database-schema.sql",
     "test:neon": "tsx scripts/test-neon-connection.ts",
-    "check:cloud-db": "tsx scripts/check-cloud-db-readiness.ts"
+    "check:cloud-db": "tsx scripts/check-cloud-db-readiness.ts",
+    "check:domain": "node scripts/check-domain.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

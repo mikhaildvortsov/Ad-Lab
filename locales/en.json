@@ -237,43 +237,43 @@
       "title": "Payment: {planName}",
       "discount": "Save {percent}%",
       "error": {
-        "authRequired": "Login required to create payment",
-        "checking": "Checking authorization...",
-        "paymentCreation": "Error creating payment. Please try later.",
-        "sbpPayment": "Error creating SBP payment",
-        "cardPayment": "Card payment temporarily unavailable. Use SBP.",
-        "paymentFailed": "Payment failed. Please try again.",
-        "paymentTimeout": "Payment timeout exceeded. Check payment status later.",
-        "statusCheck": "Error checking payment status. Contact support."
+        "generic": "Payment error",
+        "cardPayment": "Card payment temporarily unavailable. Use Tribute.",
+        "tributePayment": "Error creating Tribute payment",
+        "timeout": "Payment timeout",
+        "insufficientFunds": "Insufficient funds",
+        "invalidCard": "Invalid card data"
       },
-      "sbp": {
-        "title": "SBP Payment",
-        "description": "Fast and secure payment via Fast Payment System",
-        "amount": "Amount: ${amount}",
-        "createPayment": "Create SBP payment",
-        "creating": "Creating payment...",
-        "qrCodeAlt": "QR code for SBP payment",
-        "qrCodeDescription": "Scan the code in your banking app",
-        "orderNumber": "Order: ...{orderId}",
-        "timeRemaining": "Time remaining: {time}",
-        "openInBank": "Open in banking app",
-        "createNew": "Create new payment",
-        "afterCreation": "After creating payment you will receive QR code",
-        "status": {
-          "checking": "Checking status...",
-          "waiting": "Waiting for payment...",
-          "error": "Payment error"
-        },
+      "tribute": {
+        "title": "Tribute Payment",
+        "description": "Pay through secure Telegram service",
+        "amount": "Amount: {amount} ₽",
+        "createPayment": "Create Tribute payment",
+        "creating": "Creating...",
         "success": {
-          "title": "Payment successful!",
-          "description": "Subscription \"{planName}\" activated",
-          "autoClose": "Modal will close automatically..."
+          "title": "Payment Successful!",
+          "description": "Your {planName} subscription has been activated.",
+          "autoClose": "This window will close automatically in 5 seconds..."
+        },
+        "afterCreation": "Complete payment through Telegram",
+        "openInTelegram": "Open in Telegram",
+        "createNew": "Create New Payment",
+        "status": {
+          "waiting": "Waiting for payment...",
+          "checking": "Checking status...",
+          "error": "Payment error"
         }
       },
       "card": {
         "title": "Card Payment",
-        "unavailable": "Card payment will be available soon",
-        "useSbp": "Use SBP for instant payment for now"
+        "description": "Payment by bank card",
+        "number": "Card number",
+        "expiry": "MM/YY",
+        "cvc": "CVC",
+        "name": "Cardholder name",
+        "pay": "Pay {amount} ₽",
+        "processing": "Processing...",
+        "useTribute": "Use Tribute for instant payment for now"
       },
       "security": "🔒 Secure payment. Your data is protected."
     },

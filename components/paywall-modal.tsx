@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Check, CreditCard, Smartphone, QrCode, X, RefreshCw, AlertTriangle, CheckCircle, LogIn } from 'lucide-react';
+import { Check, CreditCard, Smartphone, X, RefreshCw, AlertTriangle, CheckCircle, LogIn } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useLocale } from '@/lib/use-locale';
@@ -88,12 +88,12 @@ export function PaywallModal({
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'sbp'>('sbp');
-  const [sbpLoading, setSbpLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'tribute'>('tribute');
+  const [tributeLoading, setTributeLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sbpPaymentData, setSbpPaymentData] = useState<{
-    qrCode: string;
-    qrUrl: string;
+  const [tributePaymentData, setTributePaymentData] = useState<{
+    paymentUrl: string;
+    tributeUrl: string;
     paymentId: string;
     orderId: string;
     amount: number;
@@ -113,21 +113,21 @@ export function PaywallModal({
     setSelectedPlan(plan);
     setError(null);
     
-    // Ждем загрузки данных аутентификации
+    // Wait for authentication data to load
     if (loading) {
       setError(t('paywallModal.payment.error.checking'));
       return;
     }
     
-    // Проверяем аутентификацию перед переходом к оплате
+    // Check authentication before proceeding to payment
     if (!isAuthenticated) {
       setError(t('paywallModal.payment.error.authRequired'));
       return;
     }
     
     setShowPayment(true);
-    // Сбрасываем SBP данные при выборе нового плана
-    setSbpPaymentData(null);
+    // Reset Tribute data when selecting a new plan
+    setTributePaymentData(null);
     setPaymentStatus(null);
   };
 
@@ -138,28 +138,28 @@ export function PaywallModal({
     setError(null);
     
     try {
-      if (paymentMethod === 'sbp') {
-        await handleSBPPayment();
+      if (paymentMethod === 'tribute') {
+        await handleTributePayment();
       } else {
         await handleCardPayment();
       }
     } catch (error) {
       console.error('Payment error:', error);
-      setError(t('paywallModal.payment.error.paymentCreation'));
+      setError(t('paywallModal.payment.error.generic'));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSBPPayment = async () => {
+  const handleTributePayment = async () => {
     if (!selectedPlan) return;
 
-    setSbpLoading(true);
+    setTributeLoading(true);
     setError(null);
     
     try {
-      // Создаем платеж через API
-      const response = await fetch('/api/payments/sbp', {
+      // Create payment through API
+      const response = await fetch('/api/payments/tribute', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -178,9 +178,9 @@ export function PaywallModal({
       }
 
       if (data.success) {
-        setSbpPaymentData({
-          qrCode: data.qrCode,
-          qrUrl: data.qrUrl,
+        setTributePaymentData({
+          paymentUrl: data.paymentUrl,
+          tributeUrl: data.tributeUrl,
           paymentId: data.paymentId,
           orderId: data.orderId,
           amount: data.amount,
@@ -189,51 +189,50 @@ export function PaywallModal({
 
         setPaymentStatus('pending');
 
-        // Начинаем периодическую проверку статуса платежа
+        // Start periodic payment status checking
         checkPaymentStatus(data.paymentId);
       } else {
         throw new Error(data.error || 'Failed to create payment');
       }
     } catch (error: any) {
-      console.error('SBP payment error:', error);
-      const errorMessage = error.message || t('paywallModal.payment.error.sbpPayment');
+      console.error('Tribute payment error:', error);
+      const errorMessage = error.message || t('paywallModal.payment.error.tributePayment');
       setError(errorMessage);
     } finally {
-      setSbpLoading(false);
+      setTributeLoading(false);
     }
   };
 
   const checkPaymentStatus = async (paymentId: string) => {
-    const maxAttempts = 60; // 10 минут проверки (каждые 10 секунд)
     let attempts = 0;
-
+    const maxAttempts = 60; // 5 minutes maximum
+    
     const checkStatus = async () => {
       try {
         setCheckingStatus(true);
-        const response = await fetch(`/api/payments/sbp?paymentId=${paymentId}`);
+        
+        const response = await fetch(`/api/payments/tribute?paymentId=${paymentId}`);
         const data = await response.json();
 
         if (data.success) {
-          if (data.status === 'completed') {
-            // Платеж успешно завершен
+          const status = data.status;
+          
+          if (status === 'completed') {
             setPaymentStatus('completed');
             setCheckingStatus(false);
             
-            // Уведомляем о успешной оплате
-            if (onPaymentSuccess) {
-              onPaymentSuccess();
-            }
-            
-            // Автоматически закрываем модал через 3 секунды
+            // Auto-close modal after successful payment
             setTimeout(() => {
-              onOpenChange(false);
               resetModal();
-            }, 3000);
+              if (onPaymentSuccess) {
+                onPaymentSuccess();
+              }
+            }, 5000);
             
             return;
-          } else if (data.status === 'failed') {
+          } else if (status === 'failed') {
             setPaymentStatus('failed');
-            setError(t('paywallModal.payment.error.paymentFailed'));
+            setError(t('paywallModal.payment.error.tributePayment'));
             setCheckingStatus(false);
             return;
           }
@@ -241,58 +240,70 @@ export function PaywallModal({
 
         attempts++;
         if (attempts < maxAttempts) {
-          // Продолжаем проверку через 10 секунд
-          setTimeout(checkStatus, 10000);
+          // Continue checking every 5 seconds
+          setTimeout(checkStatus, 5000);
         } else {
-          // Превышено время ожидания
-          setError(t('paywallModal.payment.error.paymentTimeout'));
+          setPaymentStatus('failed');
+          setError(t('paywallModal.payment.error.timeout'));
           setCheckingStatus(false);
         }
       } catch (error) {
-        console.error('Error checking payment status:', error);
+        console.error('Status check error:', error);
         attempts++;
-        setCheckingStatus(false);
         if (attempts < maxAttempts) {
-          setTimeout(checkStatus, 10000);
+          setTimeout(checkStatus, 5000);
         } else {
-          setError(t('paywallModal.payment.error.statusCheck'));
+          setPaymentStatus('failed');
+          setError(t('paywallModal.payment.error.timeout'));
+          setCheckingStatus(false);
         }
       }
     };
 
-    // Начинаем первую проверку через 5 секунд
-    setTimeout(checkStatus, 5000);
+    // Start checking after 3 seconds
+    setTimeout(checkStatus, 3000);
   };
 
   const handleCardPayment = async () => {
-    // Здесь будет интеграция с платежной системой для карт
-    console.log('Processing card payment for plan:', selectedPlan);
-    setError(t('paywallModal.payment.error.cardPayment'));
+    // Card payment is disabled for now
+    setError(t('paywallModal.payment.card.useTribute'));
   };
 
   const resetModal = () => {
-    setShowPayment(false);
     setSelectedPlan(null);
-    setSbpPaymentData(null);
-    setPaymentStatus(null);
+    setShowPayment(false);
+    setPaymentMethod('tribute');
     setError(null);
-    setIsLoading(false);
-    setSbpLoading(false);
+    setTributePaymentData(null);
+    setPaymentStatus(null);
     setCheckingStatus(false);
+    setTributeLoading(false);
   };
 
   const formatTimeRemaining = (expiresAt: string) => {
-    const expiry = new Date(expiresAt);
-    const now = new Date();
-    const diff = expiry.getTime() - now.getTime();
+    const now = new Date().getTime();
+    const expiry = new Date(expiresAt).getTime();
+    const remaining = Math.max(0, expiry - now);
     
-    if (diff <= 0) return locale === 'en' ? 'Expired' : 'Истекло';
-    
-    const minutes = Math.floor(diff / 60000);
-    const seconds = Math.floor((diff % 60000) / 1000);
+    const minutes = Math.floor(remaining / (1000 * 60));
+    const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
     
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
+
+  // Close modal when payment is completed
+  useEffect(() => {
+    if (paymentStatus === 'completed') {
+      const timer = setTimeout(() => {
+        resetModal();
+        onOpenChange(false);
+        if (onPaymentSuccess) {
+          onPaymentSuccess();
+        }
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [paymentStatus, onOpenChange, onPaymentSuccess]);
 
   if (showPayment && selectedPlan) {
     return (
@@ -334,11 +345,11 @@ export function PaywallModal({
             </Alert>
           )}
           
-          <Tabs value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as 'card' | 'sbp')}>
+          <Tabs value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as 'card' | 'tribute')}>
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="sbp" className="flex items-center gap-2">
+              <TabsTrigger value="tribute" className="flex items-center gap-2">
                 <Smartphone className="h-4 w-4" />
-                {locale === 'en' ? 'SBP' : 'СБП'}
+                {locale === 'en' ? 'Tribute' : 'Тribute'}
               </TabsTrigger>
               <TabsTrigger value="card" className="flex items-center gap-2" disabled>
                 <CreditCard className="h-4 w-4" />
@@ -346,92 +357,84 @@ export function PaywallModal({
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="sbp" className="space-y-4">
+            <TabsContent value="tribute" className="space-y-4">
               {paymentStatus === 'completed' ? (
                 // Успешная оплата
                 <div className="text-center space-y-4">
                   <div className="bg-green-50 rounded-lg p-6">
                     <CheckCircle className="h-16 w-16 mx-auto text-green-500 mb-3" />
-                    <h3 className="text-lg font-medium text-green-800 mb-2">{t('paywallModal.payment.sbp.success.title')}</h3>
+                    <h3 className="text-lg font-medium text-green-800 mb-2">{t('paywallModal.payment.tribute.success.title')}</h3>
                     <p className="text-sm text-green-600">
-                      {t('paywallModal.payment.sbp.success.description').replace('{planName}', selectedPlan.name)}
+                      {t('paywallModal.payment.tribute.success.description').replace('{planName}', selectedPlan.name)}
                     </p>
                   </div>
                   <p className="text-sm text-gray-600">
-                    {t('paywallModal.payment.sbp.success.autoClose')}
+                    {t('paywallModal.payment.tribute.success.autoClose')}
                   </p>
                 </div>
-              ) : !sbpPaymentData ? (
+              ) : !tributePaymentData ? (
                 // Начальное состояние - кнопка создания платежа
                 <div className="text-center space-y-4">
                   <div className="bg-gray-50 rounded-lg p-6">
                     <Smartphone className="h-16 w-16 mx-auto text-blue-500 mb-3" />
-                    <h3 className="text-lg font-medium mb-2">{t('paywallModal.payment.sbp.title')}</h3>
+                    <h3 className="text-lg font-medium mb-2">{t('paywallModal.payment.tribute.title')}</h3>
                     <p className="text-sm text-gray-600 mb-4">
-                      {t('paywallModal.payment.sbp.description')}
+                      {t('paywallModal.payment.tribute.description')}
                     </p>
-                    <p className="font-medium text-lg">{t('paywallModal.payment.sbp.amount').replace('{amount}', selectedPlan.price.toString())}</p>
+                    <p className="font-medium text-lg">{t('paywallModal.payment.tribute.amount').replace('{amount}', selectedPlan.price.toString())}</p>
                   </div>
                   
                   <Button 
-                    onClick={handleSBPPayment}
-                    disabled={sbpLoading}
+                    onClick={handleTributePayment}
+                    disabled={tributeLoading}
                     className="w-full h-12 text-base"
                   >
-                    {sbpLoading ? (
+                    {tributeLoading ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        {t('paywallModal.payment.sbp.creating')}
+                        {t('paywallModal.payment.tribute.creating')}
                       </>
                     ) : (
-                      t('paywallModal.payment.sbp.createPayment')
+                      t('paywallModal.payment.tribute.createPayment')
                     )}
                   </Button>
                   
                   <div className="text-xs text-gray-500">
-                    {t('paywallModal.payment.sbp.afterCreation')}
+                    {t('paywallModal.payment.tribute.afterCreation')}
                   </div>
                 </div>
               ) : (
-                // Состояние с QR-кодом
+                // Состояние с ссылкой на Tribute
                 <div className="text-center space-y-4">
                   <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
-                    {sbpPaymentData.qrCode ? (
-                      <img 
-                        src={sbpPaymentData.qrCode} 
-                        alt={t('paywallModal.payment.sbp.qrCodeAlt')}
-                        className="h-48 w-48 mx-auto mb-3 border border-gray-100 rounded-lg"
-                      />
-                    ) : (
-                      <div className="h-48 w-48 mx-auto mb-3 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <QrCode className="h-24 w-24 text-gray-400" />
-                      </div>
-                    )}
-                    <p className="text-sm text-gray-600">{t('paywallModal.payment.sbp.qrCodeAlt')}</p>
+                    <div className="h-48 w-48 mx-auto mb-3 bg-blue-50 rounded-lg flex items-center justify-center">
+                      <Smartphone className="h-24 w-24 text-blue-500" />
+                    </div>
+                    <p className="text-sm text-gray-600 mb-2">{t('paywallModal.payment.tribute.title')}</p>
                     <p className="text-xs text-gray-500 mt-1">
-                      {t('paywallModal.payment.sbp.qrCodeDescription')}
+                      {t('paywallModal.payment.tribute.description')}
                     </p>
                     <p className="text-xs text-gray-400 mt-2">
-                      {t('paywallModal.payment.sbp.orderNumber').replace('{orderId}', sbpPaymentData.orderId.slice(-8))}
+                      {t('paywallModal.payment.tribute.orderNumber').replace('{orderId}', tributePaymentData.orderId.slice(-8))}
                     </p>
                   </div>
                   
                   <div className="space-y-3">
-                    <p className="font-medium">{t('paywallModal.payment.sbp.amount').replace('{amount}', sbpPaymentData.amount.toString())}</p>
+                    <p className="font-medium">{t('paywallModal.payment.tribute.amount').replace('{amount}', tributePaymentData.amount.toString())}</p>
                     
                     <div className="text-sm text-gray-600">
-                      {t('paywallModal.payment.sbp.timeRemaining').replace('{time}', formatTimeRemaining(sbpPaymentData.expiresAt))}
+                      {t('paywallModal.payment.tribute.timeRemaining').replace('{time}', formatTimeRemaining(tributePaymentData.expiresAt))}
                     </div>
                     
-                    {sbpPaymentData.qrUrl && (
+                    {tributePaymentData.tributeUrl && (
                       <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => window.open(sbpPaymentData.qrUrl, '_blank')}
-                        className="w-full"
+                        variant="default" 
+                        size="lg"
+                        onClick={() => window.open(tributePaymentData.tributeUrl, '_blank')}
+                        className="w-full h-12 text-base bg-blue-600 hover:bg-blue-700"
                       >
                         <Smartphone className="h-4 w-4 mr-2" />
-                        {t('paywallModal.payment.sbp.openInBank')}
+                        {t('paywallModal.payment.tribute.openInTelegram')}
                       </Button>
                     )}
                     
@@ -454,22 +457,22 @@ export function PaywallModal({
                             : 'text-blue-800'
                         }>
                           {paymentStatus === 'failed' 
-                            ? t('paywallModal.payment.sbp.status.error') 
+                            ? t('paywallModal.payment.tribute.status.error') 
                             : checkingStatus 
-                              ? t('paywallModal.payment.sbp.status.checking') 
-                              : t('paywallModal.payment.sbp.status.waiting')
+                              ? t('paywallModal.payment.tribute.status.checking') 
+                              : t('paywallModal.payment.tribute.status.waiting')
                           }
                         </span>
                       </div>
                     </div>
                     
                     <Button 
-                      onClick={() => setSbpPaymentData(null)}
+                      onClick={() => setTributePaymentData(null)}
                       variant="ghost"
                       size="sm"
                       className="w-full text-gray-500"
                     >
-                      {t('paywallModal.payment.sbp.createNew')}
+                      {t('paywallModal.payment.tribute.createNew')}
                     </Button>
                   </div>
                 </div>
@@ -480,7 +483,7 @@ export function PaywallModal({
               <div className="text-center p-6 text-gray-500">
                 <CreditCard className="h-12 w-12 mx-auto mb-3 text-gray-400" />
                 <p>{t('paywallModal.payment.card.unavailable')}</p>
-                <p className="text-sm mt-2">{t('paywallModal.payment.card.useSbp')}</p>
+                <p className="text-sm mt-2">{t('paywallModal.payment.card.useTribute')}</p>
               </div>
             </TabsContent>
           </Tabs>

@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   title: 'Ad Lab - Профессиональные инструменты для рекламных текстов',
   description: 'Превратите обычные рекламные скрипты в мощные продающие тексты с помощью профессиональных техник копирайтинга',
   generator: 'v0.dev',
+  icons: {
+    icon: '/favicons/favicon-32x32.png',
+  },
 }
 
 export const viewport: Viewport = {

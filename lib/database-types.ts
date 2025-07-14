@@ -127,11 +127,11 @@ export interface UpdateUserSubscriptionParams {
 // =============================================================================
 
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'cancelled' | 'refunded';
-export type PaymentMethod = 'sbp' | 'card' | 'yookassa' | 'other';
+export type PaymentMethod = 'tribute' | 'card' | 'yookassa' | 'other';
 
-export const PAYMENT_METHODS: Record<PaymentMethod, string> = {
-  sbp: 'СБП',
-  card: 'Банковская карта',
+export const PAYMENT_METHOD_NAMES: Record<PaymentMethod, string> = {
+  tribute: 'Tribute',
+  card: 'Карта',
   yookassa: 'ЮKassa',
   other: 'Другое'
 };

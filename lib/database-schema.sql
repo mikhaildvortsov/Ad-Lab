@@ -41,7 +41,7 @@ CREATE TABLE user_subscriptions (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     plan_id UUID NOT NULL REFERENCES subscription_plans(id),
     status VARCHAR(20) NOT NULL DEFAULT 'active', -- 'active', 'cancelled', 'expired', 'pending'
-    payment_method VARCHAR(50), -- 'sbp', 'card', 'yookassa', etc.
+    payment_method VARCHAR(50), -- 'tribute', 'card', 'yookassa', etc.
     started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP WITH TIME ZONE,
     cancelled_at TIMESTAMP WITH TIME ZONE,
