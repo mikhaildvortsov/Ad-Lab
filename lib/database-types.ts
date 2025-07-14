@@ -38,6 +38,7 @@ export interface User {
   avatar_url?: string | null;
   provider: string;
   provider_id?: string | null;
+  password_hash?: string | null; // For local authentication
   email_verified: boolean;
   created_at: string;
   updated_at: string;
@@ -52,6 +53,7 @@ export interface CreateUserParams {
   avatar_url?: string;
   provider?: string;
   provider_id?: string;
+  password?: string; // For local authentication - will be hashed
   email_verified?: boolean;
   preferred_language?: string;
 }

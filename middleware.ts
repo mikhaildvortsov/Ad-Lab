@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateSession, needsRefresh, refreshGoogleToken, createResponseWithSession } from '@/lib/session'
+import { checkCSRFProtection, checkOrigin } from '@/lib/csrf-protection'
+import { applyEnvironmentHeaders } from '@/lib/security-headers'
 
 // Protected routes that require authentication
 const protectedRoutes = [
@@ -21,11 +23,41 @@ const publicRoutes = [
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   
-  // Skip middleware for static files and API routes (except auth)
+    // Skip middleware for static files and specific API routes
   if (pathname.startsWith('/_next') || 
       pathname.startsWith('/favicon') ||
-      pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/')) {
-    return NextResponse.next()
+      pathname === '/api/csrf-token') { // Allow CSRF token generation
+    const response = NextResponse.next()
+    return applyEnvironmentHeaders(response)
+  }
+
+  // Apply CSRF protection to API routes (except auth callbacks)
+  if (pathname.startsWith('/api/') && 
+      !pathname.startsWith('/api/auth/google') && 
+      !pathname.startsWith('/api/auth/callback')) {
+    
+    // Check origin for additional security
+    if (!checkOrigin(request)) {
+      const response = NextResponse.json(
+        { error: 'Invalid request origin' },
+        { status: 403 }
+      )
+      return applyEnvironmentHeaders(response)
+    }
+
+    // Get session for CSRF validation
+    const session = await validateSession(request)
+    const sessionId = session?.user?.id
+
+    // Check CSRF protection
+    const csrfCheck = await checkCSRFProtection(request, sessionId)
+    if (!csrfCheck.valid) {
+      const response = NextResponse.json(
+        { error: csrfCheck.error || 'CSRF validation failed' },
+        { status: 403 }
+      )
+      return applyEnvironmentHeaders(response)
+    }
   }
   
   // Check if route requires authentication
@@ -37,12 +69,14 @@ export async function middleware(request: NextRequest) {
   
   // If no session and trying to access protected route, redirect to auth
   if (!session && isProtectedRoute) {
-    return NextResponse.redirect(new URL('/auth', request.url))
+    const response = NextResponse.redirect(new URL('/auth', request.url))
+    return applyEnvironmentHeaders(response)
   }
   
   // If session exists and trying to access auth page, redirect to dashboard
   if (session && pathname === '/auth') {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    const response = NextResponse.redirect(new URL('/dashboard', request.url))
+    return applyEnvironmentHeaders(response)
   }
   
   // If session exists, check if token needs refresh
@@ -60,19 +94,20 @@ export async function middleware(request: NextRequest) {
         
         // Create response with updated session
         const response = NextResponse.next()
-        return createResponseWithSession(response, updatedSession)
+        const responseWithSession = await createResponseWithSession(response, updatedSession)
+        return applyEnvironmentHeaders(responseWithSession)
       } else {
         // Refresh failed, redirect to auth
         const response = NextResponse.redirect(new URL('/auth', request.url))
         response.cookies.delete('session')
-        return response
+        return applyEnvironmentHeaders(response)
       }
     } catch (error) {
       console.error('Token refresh in middleware failed:', error)
       // If refresh fails, redirect to auth
       const response = NextResponse.redirect(new URL('/auth', request.url))
       response.cookies.delete('session')
-      return response
+      return applyEnvironmentHeaders(response)
     }
   }
   

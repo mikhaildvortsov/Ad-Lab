@@ -12,6 +12,7 @@ CREATE TABLE users (
     avatar_url VARCHAR(512),
     provider VARCHAR(50) DEFAULT 'email', -- 'google', 'email', etc.
     provider_id VARCHAR(255), -- ID from OAuth provider
+    password_hash VARCHAR(255), -- For local authentication (bcrypt hash)
     email_verified BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

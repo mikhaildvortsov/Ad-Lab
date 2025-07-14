@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { setSession } from '@/lib/session';
-
-// In-memory storage for demo purposes
-const registeredUsers = new Map<string, { email: string, password: string, name: string }>();
+import { createSession } from '@/lib/session';
+import bcrypt from 'bcryptjs';
+import { UserService } from '@/lib/services/user-service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,36 +15,78 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user exists
-    const user = registeredUsers.get(email);
-    if (!user) {
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: 'Invalid email format' },
+        { status: 400 }
+      );
+    }
+
+    // Password strength validation
+    if (password.length < 8) {
+      return NextResponse.json(
+        { error: 'Password must be at least 8 characters long' },
+        { status: 400 }
+      );
+    }
+
+    // Get user from database
+    const userResult = await UserService.getUserByEmail(email);
+    
+    if (!userResult.success || !userResult.data) {
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
       );
     }
 
-    // Verify password
-    if (user.password !== password) {
+    const user = userResult.data;
+
+    // Verify password against hash
+    if (!user.password_hash) {
+      return NextResponse.json(
+        { error: 'Account not properly configured. Please contact support.' },
+        { status: 500 }
+      );
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    
+    if (!isPasswordValid) {
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
       );
     }
+
+    // Update last login timestamp
+    await UserService.updateLastLogin(user.id);
 
     // Create session
-    const sessionUser = {
-      id: email, // Using email as ID for simplicity
-      email: user.email,
-      name: user.name,
-      image: null
+    const sessionData = {
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        image: user.avatar_url || undefined
+      },
+      accessToken: 'local-auth-token',
+      refreshToken: 'local-refresh-token',
+      expiresAt: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60) // 30 days
     };
 
-    await setSession(sessionUser);
+    await createSession(sessionData);
 
     return NextResponse.json({ 
       message: 'Login successful',
-      user: sessionUser 
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        image: user.avatar_url
+      }
     });
   } catch (error) {
     console.error('Login error:', error);

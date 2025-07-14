@@ -8,6 +8,7 @@ import {
   QueryOptions 
 } from '@/lib/database-types';
 import { v4 as uuidv4 } from 'uuid';
+import bcrypt from 'bcryptjs';
 
 export class UserService {
   
@@ -19,11 +20,18 @@ export class UserService {
       const id = uuidv4();
       const now = new Date().toISOString();
       
+      // Hash password if provided (for local authentication)
+      let passwordHash = null;
+      if (params.password) {
+        const saltRounds = 12; // Higher salt rounds for better security
+        passwordHash = await bcrypt.hash(params.password, saltRounds);
+      }
+      
       const user = await query<User>(`
         INSERT INTO users (
-          id, email, name, avatar_url, provider, provider_id, 
+          id, email, name, avatar_url, provider, provider_id, password_hash,
           email_verified, preferred_language, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING *
       `, [
         id,
@@ -32,6 +40,7 @@ export class UserService {
         params.avatar_url || null,
         params.provider || 'email',
         params.provider_id || null,
+        passwordHash,
         params.email_verified || false,
         params.preferred_language || 'ru',
         now,

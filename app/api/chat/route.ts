@@ -53,8 +53,12 @@ export async function POST(request: NextRequest) {
     // Оценка количества токенов (примерно 4 символа = 1 токен)
     const estimatedTokens = Math.ceil((sanitizedMessage.length + (instructions || '').length) / 4) + 1000; // +1000 для ответа
 
-    // Проверка rate limit
-    const rateLimitResult = await checkRateLimit(request, estimatedTokens);
+    // Get current user session for better rate limiting
+    const session = await getSession();
+    userId = session?.user?.id;
+
+    // Проверка rate limit с user ID для точной идентификации
+    const rateLimitResult = await checkRateLimit(request, estimatedTokens, 'chatGPT', userId);
     if (!rateLimitResult.allowed) {
       return NextResponse.json(
         { 
@@ -80,10 +84,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-
-    // Get current user session
-    const session = await getSession();
-    userId = session?.user?.id;
 
     // Create query record if user is authenticated
     if (userId) {

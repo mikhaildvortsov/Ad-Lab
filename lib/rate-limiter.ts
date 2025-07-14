@@ -108,23 +108,28 @@ export const chatGPTLimiter = new InMemoryRateLimiter(RATE_LIMIT_CONFIGS.chatGPT
 export const chatGPTHourlyLimiter = new InMemoryRateLimiter(RATE_LIMIT_CONFIGS.chatGPTHourly);
 
 // Утилитарная функция для получения идентификатора пользователя
-export function getUserIdentifier(request: any): string {
-  // Приоритет: user ID > IP адрес
+export function getUserIdentifier(request: any, userId?: string): string {
+  // Приоритет: authenticated user ID > IP адрес + user agent
+  if (userId) {
+    return `user-${userId}`; // Точная идентификация авторизованного пользователя
+  }
+  
+  // Fallback для неавторизованных пользователей
   const userAgent = request.headers.get('user-agent') || '';
   const forwarded = request.headers.get('x-forwarded-for');
   const ip = forwarded ? forwarded.split(',')[0] : request.ip || 'unknown';
   
-  // В будущем можно добавить user ID из сессии
-  return `${ip}-${userAgent.slice(0, 50)}`;
+  return `anon-${ip}-${userAgent.slice(0, 30)}`;
 }
 
 // Основная функция для проверки rate limit
 export async function checkRateLimit(
   request: any, 
   estimatedTokens = 1000,
-  config: 'chatGPT' | 'premium' = 'chatGPT'
+  config: 'chatGPT' | 'premium' = 'chatGPT',
+  userId?: string
 ): Promise<{ allowed: boolean; resetTime: number; remaining: number; error?: string }> {
-  const identifier = getUserIdentifier(request);
+  const identifier = getUserIdentifier(request, userId);
   
   // Проверяем оба лимита (минутный и часовой)
   const [minuteCheck, hourlyCheck] = await Promise.all([
