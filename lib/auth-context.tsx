@@ -74,9 +74,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timeoutId)
   }, [])
 
-  // Автоматическое обновление токена каждые 5 минут
+  // Автоматическое обновление токена
+  // В продакшене - каждый час, в разработке - каждые 5 минут
   useEffect(() => {
     if (!user) return
+
+    const refreshInterval = process.env.NODE_ENV === 'production' 
+      ? 60 * 60 * 1000  // 1 час для продакшена
+      : 5 * 60 * 1000   // 5 минут для разработки
 
     const interval = setInterval(async () => {
       try {
@@ -91,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Let middleware handle redirect instead of forcing it here
         setUser(null)
       }
-    }, 5 * 60 * 1000) // 5 минут
+    }, refreshInterval)
 
     return () => clearInterval(interval)
   }, [user])

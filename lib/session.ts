@@ -28,7 +28,10 @@ const SESSION_CONFIG = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax' as const,
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    // В продакшене - 1 год, в разработке - 30 дней
+    maxAge: process.env.NODE_ENV === 'production' 
+      ? 365 * 24 * 60 * 60 // 1 год для продакшена
+      : 30 * 24 * 60 * 60,  // 30 дней для разработки
     path: '/'
   }
 }

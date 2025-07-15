@@ -82,6 +82,18 @@ export async function GET(request: NextRequest) {
       if (existingUserResult.success && existingUserResult.data) {
         // Пользователь существует, обновляем last_login_at
         dbUser = existingUserResult.data;
+        console.log('Google OAuth: Found existing user:', {
+          databaseId: dbUser.id,
+          email: dbUser.email,
+          providerId: dbUser.provider_id
+        });
+        
+        // Validate that we have the correct UUID format
+        if (!dbUser.id || dbUser.id.length !== 36 || !dbUser.id.includes('-')) {
+          console.error('ERROR: Invalid user ID format from database:', dbUser.id);
+          throw new Error('Invalid user ID format');
+        }
+        
         await UserService.updateUser(dbUser.id, { 
           name: userData.name,
           avatar_url: userData.picture || null
@@ -101,6 +113,18 @@ export async function GET(request: NextRequest) {
         
         if (createUserResult.success && createUserResult.data) {
           dbUser = createUserResult.data;
+          console.log('Google OAuth: Created new user:', {
+            databaseId: dbUser.id,
+            email: dbUser.email,
+            providerId: dbUser.provider_id
+          });
+          
+          // Validate that we have the correct UUID format
+          if (!dbUser.id || dbUser.id.length !== 36 || !dbUser.id.includes('-')) {
+            console.error('ERROR: Invalid user ID format from database:', dbUser.id);
+            throw new Error('Invalid user ID format');
+          }
+          
           console.log('Google OAuth: new user created:', dbUser.email);
         } else {
           console.error('Failed to create user:', createUserResult.error);
@@ -117,9 +141,11 @@ export async function GET(request: NextRequest) {
     }
     
     // Создаем сессию с данными пользователя из БД
+    console.log('Google OAuth: Creating session with user ID:', dbUser.id);
+    
     const sessionData: SessionData = {
       user: {
-        id: dbUser.id,
+        id: dbUser.id,  // This should be the database UUID, not Google ID
         name: dbUser.name,
         email: dbUser.email,
         image: dbUser.avatar_url || undefined,
@@ -127,6 +153,14 @@ export async function GET(request: NextRequest) {
       accessToken: tokenData.access_token,
       refreshToken: tokenData.refresh_token,
       expiresAt: Math.floor(Date.now() / 1000) + tokenData.expires_in
+    }
+    
+    // Final validation before creating session
+    if (sessionData.user.id === userData.id) {
+      console.error('CRITICAL ERROR: Session contains Google ID instead of database UUID!');
+      console.error('Google ID:', userData.id);
+      console.error('Database should have UUID:', dbUser.id);
+      throw new Error('Session creation failed: wrong user ID');
     }
     
     // Создаем защищенную сессию

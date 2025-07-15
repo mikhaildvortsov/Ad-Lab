@@ -111,35 +111,49 @@ export async function middleware(request: NextRequest) {
     return applyEnvironmentHeaders(response)
   }
   
-  // If session exists, check if token needs refresh
-  if (session && needsRefresh(session)) {
-    try {
-      const newTokenData = await refreshGoogleToken(session.refreshToken)
-      
-      if (newTokenData) {
-        // Update session with new token
-        const updatedSession = {
-          ...session,
-          accessToken: newTokenData.accessToken,
-          expiresAt: newTokenData.expiresAt
-        }
+  // If session exists, check if token needs refresh or session needs extension
+  if (session) {
+    let updatedSession = session
+    let needsUpdate = false
+
+    // Check if token needs refresh
+    if (needsRefresh(session)) {
+      try {
+        const newTokenData = await refreshGoogleToken(session.refreshToken)
         
-        // Create response with updated session
-        const response = NextResponse.next()
-        const responseWithSession = await createResponseWithSession(response, updatedSession)
-        return applyEnvironmentHeaders(responseWithSession)
-      } else {
-        // Refresh failed, redirect to auth
+        if (newTokenData) {
+          updatedSession = {
+            ...session,
+            accessToken: newTokenData.accessToken,
+            expiresAt: newTokenData.expiresAt
+          }
+          needsUpdate = true
+        } else {
+          // Refresh failed, redirect to auth
+          const response = NextResponse.redirect(new URL('/auth', request.url))
+          response.cookies.delete('session')
+          return applyEnvironmentHeaders(response)
+        }
+      } catch (error) {
+        console.error('Token refresh in middleware failed:', error)
+        // If refresh fails, redirect to auth
         const response = NextResponse.redirect(new URL('/auth', request.url))
         response.cookies.delete('session')
         return applyEnvironmentHeaders(response)
       }
-    } catch (error) {
-      console.error('Token refresh in middleware failed:', error)
-      // If refresh fails, redirect to auth
-      const response = NextResponse.redirect(new URL('/auth', request.url))
-      response.cookies.delete('session')
-      return applyEnvironmentHeaders(response)
+    }
+
+    // В продакшене: автоматически продлеваем сессию при каждом запросе
+    // Это обеспечивает "вечную" авторизацию для активных пользователей
+    if (process.env.NODE_ENV === 'production') {
+      needsUpdate = true
+    }
+
+    // Update session cookie if needed
+    if (needsUpdate) {
+      const response = NextResponse.next()
+      const responseWithSession = await createResponseWithSession(response, updatedSession)
+      return applyEnvironmentHeaders(responseWithSession)
     }
   }
   
