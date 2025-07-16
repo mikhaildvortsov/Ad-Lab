@@ -72,6 +72,14 @@ export async function createSession(sessionData: SessionData) {
 export async function getSession(): Promise<SessionData | null> {
   try {
     const cookieStore = await cookies()
+    
+    // Проверяем флаг logout - если он установлен, возвращаем null
+    const logoutFlag = cookieStore.get('logout_flag')?.value
+    if (logoutFlag === 'true') {
+      console.log('getSession: Logout flag detected, returning null')
+      return null
+    }
+    
     const token = cookieStore.get(SESSION_CONFIG.cookieName)?.value
     
     if (!token) return null
@@ -116,7 +124,52 @@ export async function updateSession(sessionData: Partial<SessionData>) {
 // Delete session
 export async function deleteSession() {
   const cookieStore = await cookies()
-  cookieStore.delete(SESSION_CONFIG.cookieName)
+  
+  // Удаляем основной cookie с множественными вариантами настроек для надежности
+  const cookieOptions = [
+    // Основные настройки
+    {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+      maxAge: 0,
+      expires: new Date(0),
+      path: '/'
+    },
+    // Дублируем с другими вариантами path для надежности
+    {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+      maxAge: 0,
+      expires: new Date(0),
+      path: '/'
+    },
+    // Дополнительно - без httpOnly (на случай если был установлен без него)
+    {
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+      maxAge: 0,
+      expires: new Date(0),
+      path: '/'
+    }
+  ]
+  
+  // Применяем все варианты удаления
+  for (const options of cookieOptions) {
+    cookieStore.set(SESSION_CONFIG.cookieName, '', options)
+  }
+  
+  // Дополнительно устанавливаем флаг logout для middleware
+  cookieStore.set('logout_flag', 'true', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    maxAge: 30, // 30 секунд - достаточно для обработки logout
+    path: '/'
+  })
+  
+  console.log('Session deleted with logout flag set')
 }
 
 // Check if session needs refresh
@@ -165,6 +218,13 @@ export async function refreshGoogleToken(refreshToken: string): Promise<{
 
 // Middleware helper for session validation
 export async function validateSession(request: NextRequest) {
+  // КРИТИЧЕСКИ ВАЖНО: проверяем флаг logout в первую очередь
+  const logoutFlag = request.cookies.get('logout_flag')?.value
+  if (logoutFlag === 'true') {
+    console.log('validateSession: Logout flag detected, returning null session')
+    return null
+  }
+  
   const sessionCookie = request.cookies.get(SESSION_CONFIG.cookieName)?.value
   
   if (!sessionCookie) {

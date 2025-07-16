@@ -24,6 +24,24 @@ export async function GET(request: NextRequest) {
   }
   
   if (!code) {
+    // Проверяем что это осознанный запрос на авторизацию, а не случайный редирект
+    const intentHeader = request.headers.get('referer')
+    const isFromAuthPage = intentHeader?.includes('/auth') || request.nextUrl.searchParams.get('intent') === 'login'
+    
+    if (!isFromAuthPage) {
+      console.log('Google OAuth: Blocking automatic auth redirect, not from auth page')
+      return NextResponse.redirect(new URL('/auth?error=auth_required', request.url))
+    }
+    
+    // Дополнительная проверка через заголовки что это не автоматический запрос
+    const userAgent = request.headers.get('user-agent') || ''
+    const isBot = /bot|crawler|spider|crawling/i.test(userAgent)
+    
+    if (isBot) {
+      console.log('Google OAuth: Blocking bot/crawler from OAuth')
+      return NextResponse.redirect(new URL('/auth?error=auth_blocked', request.url))
+    }
+    
     // Первый этап - редирект на Google OAuth
     const googleAuthUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth')
     googleAuthUrl.searchParams.set('client_id', googleClientId)
@@ -31,7 +49,8 @@ export async function GET(request: NextRequest) {
     googleAuthUrl.searchParams.set('response_type', 'code')
     googleAuthUrl.searchParams.set('scope', 'openid email profile')
     googleAuthUrl.searchParams.set('access_type', 'offline')
-    googleAuthUrl.searchParams.set('prompt', 'consent')
+    // Используем 'select_account' чтобы всегда показывать экран выбора аккаунта
+    googleAuthUrl.searchParams.set('prompt', 'select_account')
     
     return NextResponse.redirect(googleAuthUrl.toString())
   }

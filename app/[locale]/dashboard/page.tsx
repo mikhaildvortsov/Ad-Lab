@@ -7,15 +7,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Sparkles, History, CreditCard, Settings, LogOut, FileText, Calendar, TrendingUp, User, Check, X, RefreshCw, Copy, Download } from "lucide-react"
+import { Sparkles, History, CreditCard, Settings, LogOut, FileText, Calendar, TrendingUp, User, Check, X, RefreshCw, Copy, Download, AlertCircle } from "lucide-react"
 import { MobileNav } from "@/components/ui/mobile-nav"
 import { useAuth } from "@/lib/auth-context"
-import { getClientSession } from "@/lib/client-session"
 import { ChatInterface } from "@/components/chat-interface"
 import { PaywallModal } from "@/components/paywall-modal"
 import { useLocale } from "@/lib/use-locale"
 import { useTranslation } from "@/lib/translations"
 import { LanguageSelector } from "@/components/language-selector"
+import { useRouter } from "next/navigation"
+import { isAuthBlocked } from '@/lib/client-session'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -67,7 +68,8 @@ const plans: Plan[] = [
 export default function Dashboard() {
   const { locale } = useLocale()
   const { t } = useTranslation(locale)
-  const { user, loading, logout, updateUser } = useAuth()
+  const { user, loading, error, logout, clearError } = useAuth()
+  const router = useRouter()
   const [showPlanModal, setShowPlanModal] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [currentPlan, setCurrentPlan] = useState<Plan>(plans[0])
@@ -75,22 +77,42 @@ export default function Dashboard() {
   const [chatOpen, setChatOpen] = useState(false)
   const [copySuccess, setCopySuccess] = useState<number | null>(null)
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null)
+  const [subscriptionData, setSubscriptionData] = useState<any>(null)
+  const [clientSideRedirect, setClientSideRedirect] = useState(false)
 
   // Check user subscription status
   useEffect(() => {
     const checkSubscription = async () => {
       if (user) {
+        // В тестовом режиме всегда считаем подписку активной
+        if (process.env.NEXT_PUBLIC_TEST_MODE === 'true') {
+          setHasActiveSubscription(true)
+          setSubscriptionData({
+            hasActiveSubscription: true,
+            subscription: {
+              id: 'test-subscription',
+              planName: 'Test Plan',
+              status: 'active',
+              expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+              isExpired: false
+            }
+          })
+          return
+        }
+        
         try {
           const response = await fetch('/api/auth/subscription')
           if (response.ok) {
             const data = await response.json()
             if (data.success) {
               setHasActiveSubscription(data.data.hasActiveSubscription)
+              setSubscriptionData(data.data)
             }
           }
         } catch (error) {
           console.error('Error checking subscription:', error)
           setHasActiveSubscription(false)
+          setSubscriptionData(null)
         }
       }
     }
@@ -98,34 +120,28 @@ export default function Dashboard() {
     checkSubscription()
   }, [user])
 
-  // Fallback: если AuthContext не загрузился, но сессия есть, обновляем контекст
+  // Client-side fallback redirect если middleware не сработал
   useEffect(() => {
-    const checkAndUpdateSession = async () => {
-      if (!loading && !user) {
-        try {
-          console.log('Dashboard: AuthContext has no user, checking session directly...')
-          const session = await getClientSession()
-          if (session) {
-            console.log('Dashboard: Found session, updating AuthContext:', session.user)
-            updateUser(session.user)
-          } else {
-            console.log('Dashboard: No session found, user should be redirected by middleware')
-          }
-        } catch (error) {
-          console.error('Dashboard: Error checking session:', error)
-        }
-      }
+    // Не делаем fallback redirect если авторизация заблокирована
+    if (isAuthBlocked()) {
+      console.log('Dashboard: Auth blocked, skipping fallback redirect')
+      return
     }
-
-    // Only run this check once after initial load
-    const timeoutId = setTimeout(checkAndUpdateSession, 100)
-    return () => clearTimeout(timeoutId)
-  }, [loading, user, updateUser])
+    
+    if (!loading && !user && !error) {
+      // Даем middleware немного времени сработать
+      const timeoutId = setTimeout(() => {
+        console.log('Dashboard: No user found and no error, redirecting to auth (middleware fallback)')
+        setClientSideRedirect(true)
+        router.push('/auth')
+      }, 2000) // 2 секунды на случай если middleware медленно работает
+      
+      return () => clearTimeout(timeoutId)
+    }
+  }, [loading, user, error, router])
 
   // История запросов пользователя (пустая для новых пользователей)
   const [requests] = useState<Request[]>([])
-  
-  // Removed router and redirect logic - let middleware handle authentication
 
   const handleLogout = async () => {
     try {
@@ -177,8 +193,6 @@ export default function Dashboard() {
     setChatOpen(true)
   }
 
-
-
   const handleCancelSubscription = async () => {
     setIsLoading(true)
     try {
@@ -200,6 +214,7 @@ export default function Dashboard() {
     }
   }
 
+  // Show loading spinner
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
@@ -211,13 +226,64 @@ export default function Dashboard() {
     )
   }
 
-  // Let middleware handle authentication redirects instead of client-side redirects
-  if (!user) {
+  // Show error state with option to retry or go to auth
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            {locale === 'ru' ? 'Ошибка авторизации' : 'Authorization Error'}
+          </h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button onClick={() => {
+              clearError()
+              window.location.reload()
+            }} variant="outline">
+              {locale === 'ru' ? 'Попробовать снова' : 'Try Again'}
+            </Button>
+            <Button onClick={() => router.push('/auth')}>
+              {locale === 'ru' ? 'Войти заново' : 'Sign In Again'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show redirect message when doing client-side fallback
+  if (clientSideRedirect) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">{t('dashboard.loading')}</p>
+          <p className="text-gray-600">
+            {locale === 'ru' ? 'Перенаправление...' : 'Redirecting...'}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // Final fallback - if no user and no loading, show auth prompt
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            {locale === 'ru' ? 'Требуется авторизация' : 'Authorization Required'}
+          </h2>
+          <p className="text-gray-600 mb-6">
+            {locale === 'ru' 
+              ? 'Для доступа к панели управления необходимо войти в систему' 
+              : 'Please sign in to access the dashboard'
+            }
+          </p>
+          <Button onClick={() => router.push('/auth')}>
+            {locale === 'ru' ? 'Войти в систему' : 'Sign In'}
+          </Button>
         </div>
       </div>
     )
@@ -419,61 +485,97 @@ export default function Dashboard() {
               <h2 className="text-lg sm:text-xl font-semibold mb-4">{t('dashboard.billing.currentPlan')}</h2>
               <Card className="border-blue-200 bg-blue-50">
                 <CardHeader>
-                  <CardTitle className="text-base sm:text-lg text-blue-900">{t('dashboard.billing.plan').replace('{name}', currentPlan.name)}</CardTitle>
+                  <CardTitle className="text-base sm:text-lg text-blue-900 flex items-center gap-2">
+                    {t('dashboard.billing.plan').replace('{name}', subscriptionData?.subscription?.planName || currentPlan.name)}
+                    {process.env.NEXT_PUBLIC_TEST_MODE === 'true' && (
+                      <Badge variant="secondary" className="text-xs">
+                        {locale === 'ru' ? 'Тестовый режим' : 'Test Mode'}
+                      </Badge>
+                    )}
+                  </CardTitle>
                   <CardDescription className="text-blue-700 text-sm sm:text-base">
-                    ₽{currentPlan.price}/{locale === 'en' ? 'month' : 'месяц'} • {t('dashboard.billing.nextBilling').replace('{date}', locale === 'en' ? 'February 15, 2024' : '15 февраля 2024')}
+                    {process.env.NEXT_PUBLIC_TEST_MODE === 'true' 
+                      ? (locale === 'ru' ? 'Безлимитный доступ • Активен до ' : 'Unlimited access • Active until ') + 
+                        new Date(subscriptionData?.subscription?.expiresAt || Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString(locale === 'en' ? "en-US" : "ru-RU")
+                      : `₽${currentPlan.price}/${locale === 'en' ? 'month' : 'месяц'} • ${t('dashboard.billing.nextBilling').replace('{date}', locale === 'en' ? 'February 15, 2024' : '15 февраля 2024')}`
+                    }
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2 text-sm text-blue-800">
-                    <div>✓ {currentPlan.improvements === -1 ? t('dashboard.billing.unlimited') : currentPlan.improvements} {t('dashboard.billing.improvements')} ({t('dashboard.billing.used')}: 2/{currentPlan.improvements === -1 ? '∞' : currentPlan.improvements})</div>
-                    {currentPlan.features.map((feature, index) => (
-                      <div key={index}>✓ {feature}</div>
-                    ))}
+                    {process.env.NEXT_PUBLIC_TEST_MODE === 'true' ? (
+                      <>
+                        <div>✓ {t('dashboard.billing.unlimited')} {t('dashboard.billing.improvements')} ({t('dashboard.billing.used')}: 0/∞)</div>
+                        <div>✓ {locale === 'ru' ? 'Безлимитный доступ ко всем функциям' : 'Unlimited access to all features'}</div>
+                        <div>✓ {locale === 'ru' ? 'Все функции приложения' : 'All app features'}</div>
+                        <div>✓ {locale === 'ru' ? 'Демонстрационный режим' : 'Demo mode'}</div>
+                        <div>✓ {locale === 'ru' ? 'Отключенные лимиты' : 'No rate limits'}</div>
+                      </>
+                    ) : (
+                      <>
+                        <div>✓ {currentPlan.improvements === -1 ? t('dashboard.billing.unlimited') : currentPlan.improvements} {t('dashboard.billing.improvements')} ({t('dashboard.billing.used')}: 2/{currentPlan.improvements === -1 ? '∞' : currentPlan.improvements})</div>
+                        {currentPlan.features.map((feature, index) => (
+                          <div key={index}>✓ {feature}</div>
+                        ))}
+                      </>
+                    )}
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-2 mt-4">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full sm:w-auto"
-                      onClick={() => setShowPlanModal(true)}
-                    >
-                      {t('dashboard.billing.changePlan')}
-                    </Button>
-                    
-                    <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:bg-red-50">
-                          {t('dashboard.billing.cancelSubscription')}
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>{t('dashboard.billing.cancelModal.title')}</DialogTitle>
-                          <DialogDescription>
-                            {t('dashboard.billing.cancelModal.description')}
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="flex gap-2 mt-6">
-                          <Button 
-                            onClick={handleCancelSubscription}
-                            disabled={isLoading}
-                            variant="destructive"
-                            className="flex-1"
-                          >
-                            {isLoading ? t('dashboard.billing.cancelModal.canceling') : t('dashboard.billing.cancelModal.confirm')}
+                  {process.env.NEXT_PUBLIC_TEST_MODE !== 'true' && (
+                    <div className="flex flex-col sm:flex-row gap-2 mt-4">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full sm:w-auto"
+                        onClick={() => setShowPlanModal(true)}
+                      >
+                        {t('dashboard.billing.changePlan')}
+                      </Button>
+                      
+                      <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:bg-red-50">
+                            {t('dashboard.billing.cancelSubscription')}
                           </Button>
-                          <Button 
-                            onClick={() => setShowCancelModal(false)}
-                            variant="outline"
-                            className="flex-1"
-                          >
-                            {t('dashboard.billing.cancelModal.cancel')}
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>{t('dashboard.billing.cancelModal.title')}</DialogTitle>
+                            <DialogDescription>
+                              {t('dashboard.billing.cancelModal.description')}
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="flex gap-2 mt-6">
+                            <Button 
+                              onClick={handleCancelSubscription}
+                              disabled={isLoading}
+                              variant="destructive"
+                              className="flex-1"
+                            >
+                              {isLoading ? t('dashboard.billing.cancelModal.canceling') : t('dashboard.billing.cancelModal.confirm')}
+                            </Button>
+                            <Button 
+                              onClick={() => setShowCancelModal(false)}
+                              variant="outline"
+                              className="flex-1"
+                            >
+                              {t('dashboard.billing.cancelModal.cancel')}
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  )}
+                  {process.env.NEXT_PUBLIC_TEST_MODE === 'true' && (
+                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm text-yellow-800">
+                        <strong>{locale === 'ru' ? '🧪 Тестовый режим:' : '🧪 Test Mode:'}</strong> {' '}
+                        {locale === 'ru' 
+                          ? 'Все функции доступны бесплатно. Это демонстрационная версия.' 
+                          : 'All features are available for free. This is a demo version.'
+                        }
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -483,26 +585,48 @@ export default function Dashboard() {
               <Card>
                 <CardContent className="p-0">
                   <div className="divide-y">
-                    <div className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                      <div>
-                        <div className="font-medium">{t('dashboard.billing.plan').replace('{name}', currentPlan.name)}</div>
-                        <div className="text-sm text-gray-500">{locale === 'en' ? 'January 15, 2024' : '15 января 2024'}</div>
+                    {process.env.NEXT_PUBLIC_TEST_MODE === 'true' ? (
+                      <div className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                        <div>
+                          <div className="font-medium flex items-center gap-2">
+                            {t('dashboard.billing.plan').replace('{name}', 'Test Plan')}
+                            <Badge variant="secondary" className="text-xs">
+                              {locale === 'ru' ? 'Тестовый режим' : 'Test Mode'}
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-gray-500">{new Date().toLocaleDateString(locale === 'en' ? "en-US" : "ru-RU")}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-medium">{locale === 'ru' ? 'Бесплатно' : 'Free'}</div>
+                          <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                            {locale === 'ru' ? 'Активен' : 'Active'}
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-medium">₽{currentPlan.price}</div>
-                        <Badge variant="secondary" className="text-xs">{t('dashboard.billing.paid')}</Badge>
-                      </div>
-                    </div>
-                    <div className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                      <div>
-                        <div className="font-medium">{t('dashboard.billing.plan').replace('{name}', currentPlan.name)}</div>
-                        <div className="text-sm text-gray-500">{locale === 'en' ? 'December 15, 2023' : '15 декабря 2023'}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-medium">₽{currentPlan.price}</div>
-                        <Badge variant="secondary" className="text-xs">{t('dashboard.billing.paid')}</Badge>
-                      </div>
-                    </div>
+                    ) : (
+                      <>
+                        <div className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                          <div>
+                            <div className="font-medium">{t('dashboard.billing.plan').replace('{name}', currentPlan.name)}</div>
+                            <div className="text-sm text-gray-500">{locale === 'en' ? 'January 15, 2024' : '15 января 2024'}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-medium">₽{currentPlan.price}</div>
+                            <Badge variant="secondary" className="text-xs">{t('dashboard.billing.paid')}</Badge>
+                          </div>
+                        </div>
+                        <div className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                          <div>
+                            <div className="font-medium">{t('dashboard.billing.plan').replace('{name}', currentPlan.name)}</div>
+                            <div className="text-sm text-gray-500">{locale === 'en' ? 'December 15, 2023' : '15 декабря 2023'}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-medium">₽{currentPlan.price}</div>
+                            <Badge variant="secondary" className="text-xs">{t('dashboard.billing.paid')}</Badge>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -576,4 +700,4 @@ export default function Dashboard() {
       />
     </div>
   )
-}
+} 
