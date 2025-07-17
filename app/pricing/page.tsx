@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,37 +19,35 @@ interface Plan {
   popular?: boolean
 }
 
-const plans: Plan[] = [
-  {
-    id: 'week',
-    name: 'Неделя',
-    price: 1990,
-    features: ['Полный доступ на 7 дней', 'Неограниченные улучшения', 'Все функции приложения', 'Поддержка 24/7'],
-    improvements: -1
-  },
-  {
-    id: 'month',
-    name: 'Месяц',
-    price: 2990,
-    originalPrice: 6990,
-    features: ['Полный доступ на 30 дней', 'Неограниченные улучшения', 'Все функции приложения', 'Приоритетная поддержка', 'Экономия 57%'],
-    improvements: -1,
-    popular: true
-  },
-  {
-    id: 'quarter',
-    name: 'Три месяца',
-    price: 9990,
-    features: ['Полный доступ на 90 дней', 'Неограниченные улучшения', 'Все функции приложения', 'VIP поддержка', 'Максимальная экономия'],
-    improvements: -1
-  }
-]
-
 export default function PricingPage() {
   const { user, loading } = useAuth()
   const { locale } = useLocale()
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [loadingPlans, setLoadingPlans] = useState(false)
+
+  // Fetch plans from API
+  useEffect(() => {
+    const fetchPlans = async () => {
+      setLoadingPlans(true)
+      try {
+        const response = await fetch('/api/plans')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success) {
+            setPlans(data.data)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching plans:', error)
+      } finally {
+        setLoadingPlans(false)
+      }
+    }
+
+    fetchPlans()
+  }, [])
 
   const handleSelectPlan = async (plan: Plan) => {
     setIsLoading(true)
@@ -70,12 +68,12 @@ export default function PricingPage() {
     }
   }
 
-  if (loading) {
+  if (loading || loadingPlans) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Загрузка...</p>
+          <p className="text-gray-600">{loading ? 'Загрузка...' : 'Загружаем тарифы...'}</p>
         </div>
       </div>
     )
@@ -118,7 +116,7 @@ export default function PricingPage() {
             Выберите подходящий тариф
           </h1>
           <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">
-            Начните с бесплатного пробного периода и выберите план, который лучше всего подходит для ваших потребностей
+            Выберите план, который лучше всего подходит для ваших потребностей
           </p>
         </div>
 
@@ -158,7 +156,7 @@ export default function PricingPage() {
                   {isLoading && selectedPlan?.id === plan.id ? (
                     "Обработка..."
                   ) : (
-                    user ? "Выбрать план" : "Начать бесплатно"
+                    user ? "Выбрать план" : "Выбрать план"
                   )}
                 </Button>
               </CardContent>

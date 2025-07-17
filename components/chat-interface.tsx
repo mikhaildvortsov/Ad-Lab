@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Bot, User, Loader2, Trash2, Copy, Settings, Target } from 'lucide-react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { PaywallModal } from '@/components/paywall-modal';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getInstruction, getAvailableNiches, type NicheType } from '@/lib/ai-instructions';
@@ -20,8 +20,12 @@ interface Message {
   timestamp: Date;
 }
 
-export const ChatInterface = forwardRef<any, { open: boolean; onOpenChange: (open: boolean) => void }>(
-  (props, ref) => {
+export const ChatInterface = forwardRef<any, { 
+  open: boolean; 
+  onOpenChange: (open: boolean) => void;
+  presetText?: string;
+  onPresetTextUsed?: () => void;
+}>((props, ref) => {
     const { locale } = useLocale();
     const { t } = useTranslation(locale);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -39,6 +43,17 @@ export const ChatInterface = forwardRef<any, { open: boolean; onOpenChange: (ope
     useImperativeHandle(ref, () => ({
       clearMessages: () => setMessages([])
     }));
+
+    // Set preset text when dialog opens and preset text is provided
+    useEffect(() => {
+      if (props.open && props.presetText && !input) {
+        setInput(props.presetText);
+        // Notify parent that preset text was used
+        if (props.onPresetTextUsed) {
+          props.onPresetTextUsed();
+        }
+      }
+    }, [props.open, props.presetText, input, props.onPresetTextUsed]);
 
     // Get CSRF token when component mounts
     useEffect(() => {
@@ -190,6 +205,9 @@ export const ChatInterface = forwardRef<any, { open: boolean; onOpenChange: (ope
           <DialogContent className="max-w-4xl w-full p-0 h-[90vh] sm:h-auto">
             <div className="flex flex-col h-full max-h-[80vh]">
               <DialogTitle className="sr-only">AI Чат</DialogTitle>
+              <DialogDescription className="sr-only">
+                Интерактивный AI помощник для работы с текстами и креативными задачами
+              </DialogDescription>
               
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-t-lg">
@@ -201,16 +219,6 @@ export const ChatInterface = forwardRef<any, { open: boolean; onOpenChange: (ope
                       {selectedNiche !== 'all' ? `Специализация: ${selectedNiche}` : 'Универсальный помощник'}
                     </p>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={handleClear}
-                    variant="ghost"
-                    size="sm"
-                    className="text-white hover:bg-white/20"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
                 </div>
               </div>
 
@@ -392,6 +400,15 @@ export const ChatInterface = forwardRef<any, { open: boolean; onOpenChange: (ope
                     disabled={isLoading}
                     className="flex-1"
                   />
+                  <Button
+                    onClick={handleClear}
+                    variant="outline"
+                    size="sm"
+                    className="px-3"
+                    title="Очистить чат"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                   <Button
                     onClick={sendMessage}
                     disabled={isLoading || !input.trim()}

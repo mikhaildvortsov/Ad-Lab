@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Sparkles, History, CreditCard, Settings, LogOut, FileText, Calendar, TrendingUp, User, Check, X, RefreshCw, Copy, Download, AlertCircle } from "lucide-react"
+import { Sparkles, History, CreditCard, Settings, LogOut, FileText, Calendar, TrendingUp, User, Check, X, RefreshCw, Copy, Download, AlertCircle, Trash2 } from "lucide-react"
 import { MobileNav } from "@/components/ui/mobile-nav"
 import { useAuth } from "@/lib/auth-context"
 import { ChatInterface } from "@/components/chat-interface"
@@ -39,31 +39,7 @@ interface Request {
   status: string
 }
 
-const plans: Plan[] = [
-  {
-    id: 'week',
-    name: 'Неделя',
-    price: 1990,
-    features: ['Полный доступ на 7 дней', 'Неограниченные улучшения', 'Все функции приложения', 'Поддержка 24/7'],
-    improvements: -1
-  },
-  {
-    id: 'month',
-    name: 'Месяц',
-    price: 2990,
-    originalPrice: 6990,
-    features: ['Полный доступ на 30 дней', 'Неограниченные улучшения', 'Все функции приложения', 'Приоритетная поддержка', 'Экономия 57%'],
-    improvements: -1,
-    popular: true
-  },
-  {
-    id: 'quarter',
-    name: 'Три месяца',
-    price: 9990,
-    features: ['Полный доступ на 90 дней', 'Неограниченные улучшения', 'Все функции приложения', 'VIP поддержка', 'Максимальная экономия'],
-    improvements: -1
-  }
-]
+// Plans will be fetched from API
 
 export default function Dashboard() {
   const { locale } = useLocale()
@@ -72,12 +48,19 @@ export default function Dashboard() {
   const router = useRouter()
   const [showPlanModal, setShowPlanModal] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
-  const [currentPlan, setCurrentPlan] = useState<Plan>(plans[0])
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [currentPlan, setCurrentPlan] = useState<Plan | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
   const [copySuccess, setCopySuccess] = useState<number | null>(null)
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null)
   const [subscriptionData, setSubscriptionData] = useState<any>(null)
+  const [loadingPlans, setLoadingPlans] = useState(false)
+  const [currentUsage, setCurrentUsage] = useState<any>(null)
+  const [showDeletePaymentModal, setShowDeletePaymentModal] = useState(false)
+  const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null)
+  const [isDeletingPayment, setIsDeletingPayment] = useState(false)
+  const [presetText, setPresetText] = useState<string>('')
 
 
   // Check user subscription status
@@ -124,8 +107,160 @@ export default function Dashboard() {
   // Middleware должен правильно обрабатывать все редиректы
   // Клиентский fallback может вызывать циклы редиректов
 
-  // История запросов пользователя (пустая для новых пользователей)
-  const [requests] = useState<Request[]>([])
+  // История запросов пользователя
+  const [requests, setRequests] = useState<Request[]>([])
+  const [analytics, setAnalytics] = useState<any>(null)
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false)
+  const [loadingPayments, setLoadingPayments] = useState(false)
+  const [errorHistory, setErrorHistory] = useState<string | null>(null)
+  const [errorAnalytics, setErrorAnalytics] = useState<string | null>(null)
+  const [errorPayments, setErrorPayments] = useState<string | null>(null)
+
+  // Fetch real data when user is available
+  useEffect(() => {
+    if (user && hasActiveSubscription !== null) {
+      fetchHistoryData()
+      fetchAnalyticsData()
+      fetchPaymentHistory()
+      fetchPlansData()
+      fetchCurrentUsage()
+    }
+  }, [user, hasActiveSubscription])
+
+  const fetchHistoryData = async () => {
+    setLoadingHistory(true)
+    setErrorHistory(null)
+    try {
+      const response = await fetch('/api/history?limit=10')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          // Transform database format to dashboard format
+          const transformedRequests = data.data.data.map((query: any, index: number) => ({
+            id: index + 1, // Simple numbering for display
+            originalText: query.query_text,
+            improvedText: query.response_text || 'Processing...',
+            date: query.created_at,
+            status: query.success ? 'completed' : 'failed'
+          }))
+          setRequests(transformedRequests)
+        } else {
+          setErrorHistory(data.error || 'Failed to load history')
+        }
+      } else {
+        setErrorHistory('Failed to load history data')
+      }
+    } catch (error) {
+      console.error('Error fetching history:', error)
+      setErrorHistory('Network error while loading history')
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
+
+  const fetchAnalyticsData = async () => {
+    setLoadingAnalytics(true)
+    setErrorAnalytics(null)
+    try {
+      const response = await fetch('/api/analytics')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setAnalytics(data.data)
+        } else {
+          setErrorAnalytics(data.error || 'Failed to load analytics')
+        }
+      } else {
+        setErrorAnalytics('Failed to load analytics data')
+      }
+    } catch (error) {
+      console.error('Error fetching analytics:', error)
+      setErrorAnalytics('Network error while loading analytics')
+    } finally {
+      setLoadingAnalytics(false)
+    }
+  }
+
+  const fetchPaymentHistory = async () => {
+    setLoadingPayments(true)
+    setErrorPayments(null)
+    try {
+      const response = await fetch('/api/payments/history?limit=5')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setPaymentHistory(data.data.data)
+        } else {
+          setErrorPayments(data.error || 'Failed to load payment history')
+        }
+      } else {
+        setErrorPayments('Failed to load payment data')
+      }
+    } catch (error) {
+      console.error('Error fetching payment history:', error)
+      setErrorPayments('Network error while loading payments')
+    } finally {
+      setLoadingPayments(false)
+    }
+  }
+
+  // Retry functions
+  const retryFetchHistory = () => {
+    fetchHistoryData()
+  }
+
+  const retryFetchAnalytics = () => {
+    fetchAnalyticsData()
+  }
+
+  const retryFetchPayments = () => {
+    fetchPaymentHistory()
+  }
+
+  const fetchPlansData = async () => {
+    setLoadingPlans(true)
+    try {
+      const response = await fetch('/api/plans')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setPlans(data.data)
+          // Set current plan based on subscription
+          if (subscriptionData?.subscription?.planName) {
+            const plan = data.data.find((p: Plan) => p.name === subscriptionData.subscription.planName)
+            if (plan) setCurrentPlan(plan)
+          } else if (data.data.length > 0) {
+            // Default to first plan if no subscription
+            setCurrentPlan(data.data[0])
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching plans:', error)
+    } finally {
+      setLoadingPlans(false)
+    }
+  }
+
+  const fetchCurrentUsage = async () => {
+    try {
+      const response = await fetch('/api/history?action=stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'stats' })
+      })
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setCurrentUsage(data.data)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching current usage:', error)
+    }
+  }
 
   const handleLogout = async () => {
     try {
@@ -138,9 +273,9 @@ export default function Dashboard() {
   }
 
   const handleRegenerateText = (requestId: number, originalText: string) => {
-    // Открываем чат с исходным текстом для повторной генерации
+    // Устанавливаем предустановленный текст и открываем чат
+    setPresetText(originalText)
     setChatOpen(true)
-    // TODO: Передать исходный текст в чат-интерфейс
     console.log('Повторная генерация для запроса:', requestId, originalText)
   }
 
@@ -196,6 +331,62 @@ export default function Dashboard() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleDeletePayment = async () => {
+    if (!paymentToDelete) return
+    
+    setIsDeletingPayment(true)
+    try {
+      console.log('Deleting payment:', paymentToDelete)
+      
+      // First get CSRF token
+      console.log('Getting CSRF token...')
+      const csrfResponse = await fetch('/api/csrf-token')
+      if (!csrfResponse.ok) {
+        throw new Error('Failed to get CSRF token')
+      }
+      
+      const csrfData = await csrfResponse.json()
+      const csrfToken = csrfData.csrfToken
+      console.log('Got CSRF token:', csrfToken ? 'success' : 'failed')
+      
+      // Now make the delete request with CSRF token
+      const response = await fetch(`/api/payments/history?id=${paymentToDelete}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
+      })
+      
+      const data = await response.json()
+      console.log('Delete response:', response.status, data)
+      
+      if (data.success) {
+        // Remove payment from list
+        setPaymentHistory(prev => prev.filter(p => p.id !== paymentToDelete))
+        setShowDeletePaymentModal(false)
+        setPaymentToDelete(null)
+        
+        // Show success message
+        console.log('Payment deleted successfully')
+      } else {
+        const errorMessage = data.details || data.error || (locale === 'ru' ? 'Неизвестная ошибка' : 'Unknown error')
+        console.error('Delete failed:', errorMessage)
+        alert((locale === 'ru' ? 'Ошибка при удалении платежа: ' : 'Error deleting payment: ') + errorMessage)
+      }
+    } catch (error) {
+      console.error('Error deleting payment:', error)
+      alert(locale === 'ru' ? 'Ошибка сети при удалении платежа' : 'Network error deleting payment')
+    } finally {
+      setIsDeletingPayment(false)
+    }
+  }
+
+  const openDeletePaymentModal = (paymentId: string) => {
+    setPaymentToDelete(paymentId)
+    setShowDeletePaymentModal(true)
   }
 
   // Show loading spinner
@@ -340,7 +531,43 @@ export default function Dashboard() {
             </div>
 
             <div className="space-y-4">
-              {requests.length === 0 ? (
+              {loadingHistory ? (
+                // Loading skeleton
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <Card key={i}>
+                      <CardHeader>
+                        <div className="animate-pulse space-y-2">
+                          <div className="h-5 bg-gray-200 rounded w-1/3"></div>
+                          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="animate-pulse space-y-3">
+                          <div className="h-4 bg-gray-200 rounded w-full"></div>
+                          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                          <div className="h-4 bg-gray-200 rounded w-full"></div>
+                          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : errorHistory ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                    <AlertCircle className="h-12 w-12 text-red-400 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      {locale === 'ru' ? 'Ошибка загрузки истории' : 'Error Loading History'}
+                    </h3>
+                    <p className="text-gray-500 mb-4">{errorHistory}</p>
+                    <Button onClick={retryFetchHistory} variant="outline">
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      {locale === 'ru' ? 'Попробовать снова' : 'Try Again'}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : requests.length === 0 ? (
                 <Card>
                   <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                     <History className="h-12 w-12 text-gray-400 mb-4" />
@@ -355,7 +582,7 @@ export default function Dashboard() {
                     </p>
                     <Button 
                       onClick={() => {
-                        setShowPlanModal(true)
+                        setChatOpen(true)
                       }}
                       className="mt-2"
                     >
@@ -459,102 +686,50 @@ export default function Dashboard() {
 
           <TabsContent value="billing" className="space-y-6">
             <div>
-              <h2 className="text-lg sm:text-xl font-semibold mb-4">{t('dashboard.billing.currentPlan')}</h2>
-              <Card className="border-blue-200 bg-blue-50">
-                <CardHeader>
-                  <CardTitle className="text-base sm:text-lg text-blue-900 flex items-center gap-2">
-                    {t('dashboard.billing.plan').replace('{name}', subscriptionData?.subscription?.planName || currentPlan.name)}
-                    {process.env.NEXT_PUBLIC_TEST_MODE === 'true' && (
-                      <Badge variant="secondary" className="text-xs">
-                        {locale === 'ru' ? 'Тестовый режим' : 'Test Mode'}
-                      </Badge>
-                    )}
-                  </CardTitle>
-                  <CardDescription className="text-blue-700 text-sm sm:text-base">
-                    {process.env.NEXT_PUBLIC_TEST_MODE === 'true' 
-                      ? (locale === 'ru' ? 'Безлимитный доступ • Активен до ' : 'Unlimited access • Active until ') + 
-                        new Date(subscriptionData?.subscription?.expiresAt || Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString(locale === 'en' ? "en-US" : "ru-RU")
-                      : `₽${currentPlan.price}/${locale === 'en' ? 'month' : 'месяц'} • ${t('dashboard.billing.nextBilling').replace('{date}', locale === 'en' ? 'February 15, 2024' : '15 февраля 2024')}`
-                    }
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm text-blue-800">
-                    {process.env.NEXT_PUBLIC_TEST_MODE === 'true' ? (
-                      <>
-                        <div>✓ {t('dashboard.billing.unlimited')} {t('dashboard.billing.improvements')} ({t('dashboard.billing.used')}: 0/∞)</div>
-                        <div>✓ {locale === 'ru' ? 'Безлимитный доступ ко всем функциям' : 'Unlimited access to all features'}</div>
-                        <div>✓ {locale === 'ru' ? 'Все функции приложения' : 'All app features'}</div>
-                        <div>✓ {locale === 'ru' ? 'Демонстрационный режим' : 'Demo mode'}</div>
-                        <div>✓ {locale === 'ru' ? 'Отключенные лимиты' : 'No rate limits'}</div>
-                      </>
-                    ) : (
-                      <>
-                        <div>✓ {currentPlan.improvements === -1 ? t('dashboard.billing.unlimited') : currentPlan.improvements} {t('dashboard.billing.improvements')} ({t('dashboard.billing.used')}: 2/{currentPlan.improvements === -1 ? '∞' : currentPlan.improvements})</div>
-                        {currentPlan.features.map((feature, index) => (
-                          <div key={index}>✓ {feature}</div>
-                        ))}
-                      </>
-                    )}
-                  </div>
-                  {process.env.NEXT_PUBLIC_TEST_MODE !== 'true' && (
-                    <div className="flex flex-col sm:flex-row gap-2 mt-4">
+              <h2 className="text-lg sm:text-xl font-semibold mb-4">{t('dashboard.billing.management')}</h2>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button 
+                  onClick={() => setShowPlanModal(true)}
+                  className="flex-1"
+                >
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  {t('dashboard.billing.changePlan')}
+                </Button>
+                
+                <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50">
+                      <X className="h-4 w-4 mr-2" />
+                      {t('dashboard.billing.cancelSubscription')}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>{t('dashboard.billing.cancelModal.title')}</DialogTitle>
+                      <DialogDescription>
+                        {t('dashboard.billing.cancelModal.description')}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex gap-2 mt-6">
                       <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="w-full sm:w-auto"
-                        onClick={() => setShowPlanModal(true)}
+                        onClick={handleCancelSubscription}
+                        disabled={isLoading}
+                        variant="destructive"
+                        className="flex-1"
                       >
-                        {t('dashboard.billing.changePlan')}
+                        {isLoading ? t('dashboard.billing.cancelModal.canceling') : t('dashboard.billing.cancelModal.confirm')}
                       </Button>
-                      
-                      <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:bg-red-50">
-                            {t('dashboard.billing.cancelSubscription')}
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>{t('dashboard.billing.cancelModal.title')}</DialogTitle>
-                            <DialogDescription>
-                              {t('dashboard.billing.cancelModal.description')}
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="flex gap-2 mt-6">
-                            <Button 
-                              onClick={handleCancelSubscription}
-                              disabled={isLoading}
-                              variant="destructive"
-                              className="flex-1"
-                            >
-                              {isLoading ? t('dashboard.billing.cancelModal.canceling') : t('dashboard.billing.cancelModal.confirm')}
-                            </Button>
-                            <Button 
-                              onClick={() => setShowCancelModal(false)}
-                              variant="outline"
-                              className="flex-1"
-                            >
-                              {t('dashboard.billing.cancelModal.cancel')}
-                            </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+                      <Button 
+                        onClick={() => setShowCancelModal(false)}
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        {t('dashboard.billing.cancelModal.cancel')}
+                      </Button>
                     </div>
-                  )}
-                  {process.env.NEXT_PUBLIC_TEST_MODE === 'true' && (
-                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <p className="text-sm text-yellow-800">
-                        <strong>{locale === 'ru' ? '🧪 Тестовый режим:' : '🧪 Test Mode:'}</strong> {' '}
-                        {locale === 'ru' 
-                          ? 'Все функции доступны бесплатно. Это демонстрационная версия.' 
-                          : 'All features are available for free. This is a demo version.'
-                        }
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
 
             <div>
@@ -562,7 +737,25 @@ export default function Dashboard() {
               <Card>
                 <CardContent className="p-0">
                   <div className="divide-y">
-                    {process.env.NEXT_PUBLIC_TEST_MODE === 'true' ? (
+                    {loadingPayments ? (
+                      // Loading skeleton for payments
+                      <div className="space-y-0 divide-y">
+                        {[1, 2, 3].map((i) => (
+                          <div key={i} className="p-4">
+                            <div className="animate-pulse flex justify-between items-center">
+                              <div className="space-y-2">
+                                <div className="h-4 bg-gray-200 rounded w-32"></div>
+                                <div className="h-3 bg-gray-200 rounded w-24"></div>
+                              </div>
+                              <div className="text-right space-y-2">
+                                <div className="h-4 bg-gray-200 rounded w-16"></div>
+                                <div className="h-3 bg-gray-200 rounded w-12"></div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : process.env.NEXT_PUBLIC_TEST_MODE === 'true' ? (
                       <div className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <div>
                           <div className="font-medium flex items-center gap-2">
@@ -574,35 +767,73 @@ export default function Dashboard() {
                           <div className="text-sm text-gray-500">{new Date().toLocaleDateString(locale === 'en' ? "en-US" : "ru-RU")}</div>
                         </div>
                         <div className="text-right">
-                          <div className="font-medium">{locale === 'ru' ? 'Бесплатно' : 'Free'}</div>
+                          <div className="font-medium">{locale === 'ru' ? 'Тестовый' : 'Test'}</div>
                           <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
                             {locale === 'ru' ? 'Активен' : 'Active'}
                           </Badge>
                         </div>
                       </div>
+                    ) : errorPayments ? (
+                      <div className="p-8 text-center">
+                        <AlertCircle className="h-8 w-8 mx-auto mb-2 text-red-400" />
+                        <p className="text-sm text-red-600 mb-3">{errorPayments}</p>
+                        <Button onClick={retryFetchPayments} variant="outline" size="sm">
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          {locale === 'ru' ? 'Повторить' : 'Retry'}
+                        </Button>
+                      </div>
+                    ) : paymentHistory.length === 0 ? (
+                      <div className="p-8 text-center text-gray-500">
+                        <CreditCard className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                        <p className="text-sm">
+                          {locale === 'ru' ? 'История платежей пуста' : 'No payment history'}
+                        </p>
+                      </div>
                     ) : (
-                      <>
-                        <div className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                      paymentHistory.map((payment) => (
+                        <div key={payment.id} className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                           <div>
-                            <div className="font-medium">{t('dashboard.billing.plan').replace('{name}', currentPlan.name)}</div>
-                            <div className="text-sm text-gray-500">{locale === 'en' ? 'January 15, 2024' : '15 января 2024'}</div>
+                            <div className="font-medium">
+                              {t('dashboard.billing.plan').replace('{name}', payment.plan_name)}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {new Date(payment.created_at).toLocaleDateString(locale === 'en' ? "en-US" : "ru-RU")}
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <div className="font-medium">₽{currentPlan.price}</div>
-                            <Badge variant="secondary" className="text-xs">{t('dashboard.billing.paid')}</Badge>
+                          <div className="flex items-center gap-2">
+                            <div className="text-right">
+                              <div className="font-medium">
+                                {payment.currency === 'RUB' ? '₽' : '$'}{payment.amount}
+                              </div>
+                              <Badge 
+                                variant="secondary" 
+                                className={`text-xs ${
+                                  payment.status === 'completed' 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : payment.status === 'pending'
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-red-100 text-red-800'
+                                }`}
+                              >
+                                {payment.status === 'completed' 
+                                  ? t('dashboard.billing.paid') 
+                                  : payment.status === 'pending'
+                                  ? (locale === 'ru' ? 'В обработке' : 'Pending')
+                                  : (locale === 'ru' ? 'Неудачно' : 'Failed')
+                                }
+                              </Badge>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openDeletePaymentModal(payment.id)}
+                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
-                        <div className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                          <div>
-                            <div className="font-medium">{t('dashboard.billing.plan').replace('{name}', currentPlan.name)}</div>
-                            <div className="text-sm text-gray-500">{locale === 'en' ? 'December 15, 2023' : '15 декабря 2023'}</div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-medium">₽{currentPlan.price}</div>
-                            <Badge variant="secondary" className="text-xs">{t('dashboard.billing.paid')}</Badge>
-                          </div>
-                        </div>
-                      </>
+                      ))
                     )}
                   </div>
                 </CardContent>
@@ -611,70 +842,139 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {loadingAnalytics ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i}>
+                    <CardContent className="p-6">
+                      <div className="animate-pulse space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                        <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                        <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : errorAnalytics ? (
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-600">{t('dashboard.analytics.totalRequests')}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-xl sm:text-2xl font-bold">24</div>
-                  <p className="text-xs text-green-600">{t('dashboard.analytics.monthlyGrowth').replace('{percent}', '12')}</p>
+                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                  <AlertCircle className="h-12 w-12 text-red-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    {locale === 'ru' ? 'Ошибка загрузки аналитики' : 'Error Loading Analytics'}
+                  </h3>
+                  <p className="text-gray-500 mb-4">{errorAnalytics}</p>
+                  <Button onClick={retryFetchAnalytics} variant="outline">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    {locale === 'ru' ? 'Попробовать снова' : 'Try Again'}
+                  </Button>
                 </CardContent>
               </Card>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">{t('dashboard.analytics.totalRequests')}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl sm:text-2xl font-bold">{analytics?.totalRequests || 0}</div>
+                    <p className="text-xs text-green-600">{t('dashboard.analytics.monthlyGrowth').replace('{percent}', String(analytics?.monthlyGrowth || 0))}</p>
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-600">{t('dashboard.analytics.averageLength')}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-xl sm:text-2xl font-bold">156</div>
-                  <p className="text-xs text-gray-500">{t('dashboard.analytics.characters')}</p>
-                </CardContent>
-              </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">{t('dashboard.analytics.averageLength')}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl sm:text-2xl font-bold">{analytics?.averageLength || 0}</div>
+                    <p className="text-xs text-gray-500">{t('dashboard.analytics.characters')}</p>
+                  </CardContent>
+                </Card>
 
-              <Card className="sm:col-span-2 lg:col-span-1">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-600">{t('dashboard.analytics.qualityImprovement')}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-xl sm:text-2xl font-bold">+340%</div>
-                  <p className="text-xs text-blue-600">{t('dashboard.analytics.average')}</p>
-                </CardContent>
-              </Card>
-            </div>
+                <Card className="sm:col-span-2 lg:col-span-1">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">{t('dashboard.analytics.qualityImprovement')}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl sm:text-2xl font-bold">{analytics?.qualityImprovement || '+0%'}</div>
+                    <p className="text-xs text-blue-600">{t('dashboard.analytics.average')}</p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
             <Card>
               <CardHeader>
                 <CardTitle className="text-base sm:text-lg">{t('dashboard.analytics.dailyActivity')}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-48 sm:h-64 flex items-end justify-between gap-1 sm:gap-2">
-                  {[3, 7, 2, 8, 5, 12, 4].map((height, index) => (
-                    <div key={index} className="flex-1 bg-blue-200 rounded-t" style={{ height: `${height * 6}px` }} />
-                  ))}
-                </div>
-                <div className="flex justify-between text-xs text-gray-500 mt-2">
-                  <span>{t('dashboard.analytics.days.mon')}</span>
-                  <span>{t('dashboard.analytics.days.tue')}</span>
-                  <span>{t('dashboard.analytics.days.wed')}</span>
-                  <span>{t('dashboard.analytics.days.thu')}</span>
-                  <span>{t('dashboard.analytics.days.fri')}</span>
-                  <span>{t('dashboard.analytics.days.sat')}</span>
-                  <span>{t('dashboard.analytics.days.sun')}</span>
-                </div>
+                {loadingAnalytics ? (
+                  <div className="h-48 sm:h-64 animate-pulse bg-gray-200 rounded"></div>
+                ) : (
+                  <>
+                    <div className="h-48 sm:h-64 flex items-end justify-between gap-1 sm:gap-2">
+                      {(analytics?.weeklyActivity || [0, 0, 0, 0, 0, 0, 0]).map((height: number, index: number) => (
+                        <div key={index} className="flex-1 bg-blue-200 rounded-t" style={{ height: `${Math.max(height * 6, 4)}px` }} />
+                      ))}
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-500 mt-2">
+                      <span>{t('dashboard.analytics.days.mon')}</span>
+                      <span>{t('dashboard.analytics.days.tue')}</span>
+                      <span>{t('dashboard.analytics.days.wed')}</span>
+                      <span>{t('dashboard.analytics.days.thu')}</span>
+                      <span>{t('dashboard.analytics.days.fri')}</span>
+                      <span>{t('dashboard.analytics.days.sat')}</span>
+                      <span>{t('dashboard.analytics.days.sun')}</span>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </div>
       
-      <ChatInterface open={chatOpen} onOpenChange={setChatOpen} />
+      <ChatInterface 
+        open={chatOpen} 
+        onOpenChange={setChatOpen}
+        presetText={presetText}
+        onPresetTextUsed={() => setPresetText('')}
+      />
       
       <PaywallModal 
         open={showPlanModal} 
         onOpenChange={setShowPlanModal}
         onPaymentSuccess={handlePaymentSuccess}
       />
+      
+      <Dialog open={showDeletePaymentModal} onOpenChange={setShowDeletePaymentModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('dashboard.billing.deletePaymentModal.title')}</DialogTitle>
+            <DialogDescription>
+              {t('dashboard.billing.deletePaymentModal.description')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 mt-6">
+            <Button 
+              onClick={handleDeletePayment}
+              disabled={isDeletingPayment}
+              variant="destructive"
+              className="flex-1"
+            >
+              {isDeletingPayment ? t('dashboard.billing.deletePaymentModal.deleting') : t('dashboard.billing.deletePaymentModal.confirm')}
+            </Button>
+            <Button 
+              onClick={() => setShowDeletePaymentModal(false)}
+              variant="outline"
+              className="flex-1"
+            >
+              {t('dashboard.billing.deletePaymentModal.cancel')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 

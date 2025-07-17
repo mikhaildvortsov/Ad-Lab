@@ -97,8 +97,6 @@ export interface UserSubscription {
   created_at: string;
   updated_at: string;
   cancelled_at?: string | null;
-  trial_start?: string | null;
-  trial_end?: string | null;
   metadata?: Record<string, any> | null;
 }
 
@@ -108,8 +106,6 @@ export interface CreateUserSubscriptionParams {
   status?: SubscriptionStatus;
   current_period_start?: Date;
   current_period_end?: Date;
-  trial_start?: Date;
-  trial_end?: Date;
   metadata?: Record<string, any>;
 }
 
@@ -119,8 +115,6 @@ export interface UpdateUserSubscriptionParams {
   current_period_start?: Date;
   current_period_end?: Date;
   cancelled_at?: Date;
-  trial_start?: Date;
-  trial_end?: Date;
   metadata?: Record<string, any>;
 }
 
@@ -149,6 +143,9 @@ export interface Payment {
   external_payment_id?: string | null;
   created_at: string;
   updated_at: string;
+  completed_at?: string | null;
+  failed_at?: string | null;
+  failure_reason?: string | null;
   metadata?: Record<string, any> | null;
 }
 
@@ -257,14 +254,12 @@ export interface FrontendPlan {
 
 // Plan mapping constants
 export const PLAN_ID_TO_NAME: Record<string, string> = {
-  'free': 'Free',
   'week': 'Week',
   'month': 'Month',
   'quarter': 'Quarter'
 };
 
 export const PLAN_NAME_TO_ID: Record<string, string> = {
-  'Free': 'free',
   'Week': 'week', 
   'Month': 'month',
   'Quarter': 'quarter'

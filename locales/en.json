@@ -40,7 +40,7 @@
     "title": "Transform ordinary ad scripts into",
     "titleHighlight": "powerful selling texts",
     "subtitle": "Harness the power of professional copywriting to create selling ad texts that actually work.",
-    "cta": "Try for free"
+    "cta": "Get started"
   },
   "features": {
     "title": "Features",
@@ -219,7 +219,7 @@
     "copiedMessage": "Script copied to clipboard!"
   },
   "footer": {
-    "copyright": "© 2024 Ad Lab. All rights reserved."
+    "copyright": "© 2025 Ad Lab. All rights reserved."
   },
   "cookieConsent": {
     "title": "Cookie Usage",
@@ -251,7 +251,7 @@
   "upgradeTextDesc": "Enter the text you want to improve. Our algorithms will help make it more effective and appealing.",
   "pricingModal": {
     "title": "Choose the right plan",
-    "description": "Start with a free trial and choose the plan that best suits your needs",
+    "description": "Choose the plan that best suits your needs",
     "whatsIncluded": "What's included in all plans:",
     "unlimitedImprovements": "Unlimited improvements",
     "improvementsPerMonth": "improvements per month",
@@ -425,6 +425,7 @@
       "improvedText": "Improved text:"
     },
     "billing": {
+      "management": "Subscription Management",
       "currentPlan": "Current Plan",
       "plan": "{name} plan",
       "nextBilling": "Next billing: {date}",
@@ -435,6 +436,7 @@
       "cancelSubscription": "Cancel Subscription",
       "paymentHistory": "Payment History",
       "paid": "Paid",
+      "deletePayment": "Delete Payment",
       "selectNewPlan": "Select New Plan",
       "selectPlanDescription": "Choose a plan that suits your needs",
       "popular": "Popular",
@@ -447,6 +449,13 @@
         "confirm": "Yes, cancel",
         "cancel": "No, keep it",
         "canceling": "Canceling..."
+      },
+      "deletePaymentModal": {
+        "title": "Delete payment?",
+        "description": "Are you sure you want to delete this payment record? This action cannot be undone.",
+        "confirm": "Yes, delete",
+        "cancel": "Cancel",
+        "deleting": "Deleting..."
       }
     },
     "analytics": {

@@ -545,7 +545,10 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
         </div>
       </footer>
 
-      <ChatInterface open={chatOpen} onOpenChange={setChatOpen} />
+              <ChatInterface 
+          open={chatOpen} 
+          onOpenChange={setChatOpen}
+        />
 
       {/* Script Improvement Modal */}
       <Dialog open={improvementModalOpen} onOpenChange={setImprovementModalOpen}>

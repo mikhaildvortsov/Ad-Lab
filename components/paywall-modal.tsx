@@ -23,48 +23,7 @@ interface Plan {
   popular?: boolean;
 }
 
-const getPlans = (t: (key: string) => string): Plan[] => [
-  {
-    id: 'week',
-    name: t('paywallModal.plans.week.name'),
-    price: 1990,
-    features: [
-      t('paywallModal.plans.week.features.0'),
-      t('paywallModal.plans.week.features.1'),
-      t('paywallModal.plans.week.features.2'),
-      t('paywallModal.plans.week.features.3')
-    ],
-    improvements: -1
-  },
-  {
-    id: 'month',
-    name: t('paywallModal.plans.month.name'),
-    price: 2990,
-    originalPrice: 6990,
-    features: [
-      t('paywallModal.plans.month.features.0'),
-      t('paywallModal.plans.month.features.1'),
-      t('paywallModal.plans.month.features.2'),
-      t('paywallModal.plans.month.features.3'),
-      t('paywallModal.plans.month.features.4')
-    ],
-    improvements: -1,
-    popular: true
-  },
-  {
-    id: 'quarter',
-    name: t('paywallModal.plans.quarter.name'),
-    price: 9990,
-    features: [
-      t('paywallModal.plans.quarter.features.0'),
-      t('paywallModal.plans.quarter.features.1'),
-      t('paywallModal.plans.quarter.features.2'),
-      t('paywallModal.plans.quarter.features.3'),
-      t('paywallModal.plans.quarter.features.4')
-    ],
-    improvements: -1
-  }
-];
+// Plans will be fetched from API
 
 interface PaywallModalProps {
   open: boolean;
@@ -104,8 +63,32 @@ export function PaywallModal({
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'completed' | 'failed' | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [paymentExpired, setPaymentExpired] = useState(false);
-  
-  const plans = getPlans(t);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [loadingPlans, setLoadingPlans] = useState(false);
+
+  // Fetch plans from API
+  useEffect(() => {
+    const fetchPlans = async () => {
+      setLoadingPlans(true);
+      try {
+        const response = await fetch('/api/plans');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setPlans(data.data);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching plans:', error);
+      } finally {
+        setLoadingPlans(false);
+      }
+    };
+
+    if (open) {
+      fetchPlans();
+    }
+  }, [open]);
 
   // Get CSRF token when modal opens
   useEffect(() => {
@@ -664,8 +647,26 @@ export function PaywallModal({
 
         {/* Pricing Plans */}
         <div className="flex-1 min-h-0">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
-            {plans.map((plan) => (
+          {loadingPlans ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardContent className="p-6 space-y-4">
+                    <div className="h-6 bg-gray-200 rounded w-1/2 mx-auto"></div>
+                    <div className="h-8 bg-gray-200 rounded w-3/4 mx-auto"></div>
+                    <div className="space-y-2">
+                      <div className="h-4 bg-gray-200 rounded w-full"></div>
+                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                      <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                    </div>
+                    <div className="h-10 bg-gray-200 rounded w-full"></div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
+              {plans.map((plan: Plan) => (
               <Card key={plan.id} className={`relative flex flex-col ${plan.popular ? 'ring-2 ring-blue-500' : ''}`}>
                 {plan.popular && (
                   <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
@@ -736,9 +737,10 @@ export function PaywallModal({
                   )}
                 </CardContent>
               </Card>
-            ))}
+                ))}
+              </div>
+            )}
           </div>
-        </div>
       </DialogContent>
     </Dialog>
   );

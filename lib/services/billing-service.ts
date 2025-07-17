@@ -15,7 +15,7 @@ import {
   QueryOptions,
   SubscriptionStatus,
   PaymentStatus,
-  PAYMENT_METHODS
+  PaymentMethod
 } from '@/lib/database-types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -77,8 +77,8 @@ export class BillingService {
       const subscription = await query<UserSubscription>(`
         INSERT INTO user_subscriptions (
           id, user_id, plan_id, status, current_period_start, current_period_end,
-          created_at, updated_at, trial_start, trial_end, metadata
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          created_at, updated_at, metadata
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *
       `, [
         id,
@@ -89,8 +89,6 @@ export class BillingService {
         (params.current_period_end || defaultEnd).toISOString(),
         now,
         now,
-        params.trial_start?.toISOString() || null,
-        params.trial_end?.toISOString() || null,
         params.metadata ? JSON.stringify(params.metadata) : null
       ]);
 
@@ -113,7 +111,7 @@ export class BillingService {
                sp.max_queries_per_month, sp.max_tokens_per_query
         FROM user_subscriptions us
         JOIN subscription_plans sp ON us.plan_id = sp.id
-        WHERE us.user_id = $1 AND us.status IN ('active', 'trialing')
+        WHERE us.user_id = $1 AND us.status = 'active'
         ORDER BY us.created_at DESC
         LIMIT 1
       `, [userId]);
@@ -163,14 +161,7 @@ export class BillingService {
         updates.push(`cancelled_at = $${valueIndex++}`);
         values.push(params.cancelled_at?.toISOString() || null);
       }
-      if (params.trial_start !== undefined) {
-        updates.push(`trial_start = $${valueIndex++}`);
-        values.push(params.trial_start?.toISOString() || null);
-      }
-      if (params.trial_end !== undefined) {
-        updates.push(`trial_end = $${valueIndex++}`);
-        values.push(params.trial_end?.toISOString() || null);
-      }
+
       if (params.metadata !== undefined) {
         updates.push(`metadata = $${valueIndex++}`);
         values.push(params.metadata ? JSON.stringify(params.metadata) : null);
@@ -327,6 +318,8 @@ export class BillingService {
     options: QueryOptions = {}
   ): Promise<DatabaseResult<PaginatedResult<Payment>>> {
     try {
+      console.log(`BillingService.getUserPayments called for userId: ${userId}, options:`, options);
+      
       const { 
         page = 1, 
         limit = 20, 
@@ -342,6 +335,7 @@ export class BillingService {
         [userId]
       );
       const total = parseInt(countResult.rows[0].count);
+      console.log(`Found ${total} total payments for user ${userId}`);
 
       // Get payments
       const result = await query<Payment>(`
@@ -350,6 +344,9 @@ export class BillingService {
         ORDER BY ${sort_by} ${sort_order}
         LIMIT $2 OFFSET $3
       `, [userId, limit, offset]);
+
+      console.log(`Retrieved ${result.rows.length} payments for current page`);
+      console.log('Payment IDs:', result.rows.map(p => p.id));
 
       const totalPages = Math.ceil(total / limit);
 
@@ -365,6 +362,60 @@ export class BillingService {
       };
     } catch (error) {
       console.error('Error getting user payments:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  // Delete payment (only if it belongs to the user)
+  static async deletePayment(paymentId: string, userId: string): Promise<DatabaseResult<boolean>> {
+    try {
+      console.log(`BillingService.deletePayment called with paymentId: ${paymentId}, userId: ${userId}`);
+      
+      // First verify the payment belongs to the user
+      console.log('Checking if payment exists and belongs to user...');
+      const checkResult = await query<Payment>(
+        'SELECT id FROM payments WHERE id = $1 AND user_id = $2',
+        [paymentId, userId]
+      );
+      
+      console.log(`Check query result: found ${checkResult.rows.length} rows`);
+
+      if (checkResult.rows.length === 0) {
+        console.log('Payment not found or does not belong to user');
+        return { success: false, error: 'Payment not found' };
+      }
+
+      // Delete the payment
+      console.log('Deleting payment...');
+      const result = await query(
+        'DELETE FROM payments WHERE id = $1 AND user_id = $2',
+        [paymentId, userId]
+      );
+      
+      console.log('Delete query executed successfully');
+      console.log('Delete result rowCount:', result.rowCount);
+      
+      // Verify deletion by checking if payment still exists
+      console.log('Verifying deletion...');
+      const verifyResult = await query<Payment>(
+        'SELECT id FROM payments WHERE id = $1',
+        [paymentId]
+      );
+      
+      console.log(`Verification result: found ${verifyResult.rows.length} rows (should be 0)`);
+      
+      if (verifyResult.rows.length > 0) {
+        console.error('ERROR: Payment still exists after deletion!');
+        return { success: false, error: 'Payment deletion failed - payment still exists' };
+      }
+      
+      console.log('Payment successfully deleted and verified');
+      return { success: true, data: true };
+    } catch (error) {
+      console.error('Error in BillingService.deletePayment:', error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 

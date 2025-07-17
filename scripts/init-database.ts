@@ -105,9 +105,6 @@ async function seedDefaultData(): Promise<void> {
       await query(`
         INSERT INTO subscription_plans (id, name, description, price_monthly, price_yearly, currency, features, max_queries_per_month, max_tokens_per_query, is_active)
         VALUES 
-        (gen_random_uuid(), 'Free', 'Бесплатный план для начинающих', 0, 0, 'RUB', 
-         '["5 запросов в день", "Базовые инструкции", "Поддержка по email"]'::jsonb, 
-         150, 1000, true),
         (gen_random_uuid(), 'Week', 'Недельный доступ ко всем функциям', 1990, NULL, 'RUB',
          '["Полный доступ на 7 дней", "Неограниченные улучшения", "Все функции приложения", "Поддержка 24/7"]'::jsonb,
          NULL, NULL, true),
