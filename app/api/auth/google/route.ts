@@ -3,9 +3,18 @@ import { createSession, createResponseWithSession, SessionData } from '@/lib/ses
 import { UserService } from '@/lib/services/user-service'
 
 export async function GET(request: NextRequest) {
+  console.log('🔐 Google OAuth endpoint called:', request.url)
+  
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
   const error = searchParams.get('error')
+  
+  console.log('📝 OAuth params:', { 
+    hasCode: !!code, 
+    hasError: !!error,
+    referer: request.headers.get('referer'),
+    userAgent: request.headers.get('user-agent')?.substring(0, 50) + '...'
+  })
   
   // Check if required environment variables are configured
   const googleClientId = process.env.GOOGLE_CLIENT_ID
@@ -13,7 +22,11 @@ export async function GET(request: NextRequest) {
   const nextAuthUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
   
   if (!googleClientId || !googleClientSecret) {
-    console.error('Google OAuth: Missing required environment variables')
+    console.error('🚨 Google OAuth Configuration Error:')
+    console.error('❌ GOOGLE_CLIENT_ID exists:', !!googleClientId)
+    console.error('❌ GOOGLE_CLIENT_SECRET exists:', !!googleClientSecret)
+    console.error('💡 Solution: Set these environment variables in .env.local or Vercel settings')
+    console.error('📝 Debug endpoint: /api/auth/debug')
     return NextResponse.redirect(new URL('/auth?error=oauth_not_configured', request.url))
   }
   
@@ -51,6 +64,9 @@ export async function GET(request: NextRequest) {
     googleAuthUrl.searchParams.set('access_type', 'offline')
     // Используем 'select_account' чтобы всегда показывать экран выбора аккаунта
     googleAuthUrl.searchParams.set('prompt', 'select_account')
+    
+    console.log('🚀 Redirecting to Google OAuth:', googleAuthUrl.toString())
+    console.log('📍 Redirect URI configured:', `${nextAuthUrl}/api/auth/google`)
     
     return NextResponse.redirect(googleAuthUrl.toString())
   }

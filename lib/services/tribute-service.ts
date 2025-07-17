@@ -21,6 +21,7 @@ export interface TributePaymentResponse {
     orderId: string;
     amount: number;
     expiresAt: string;
+    serverTime: string;
   };
   error?: string;
 }
@@ -45,7 +46,7 @@ const TRIBUTE_CONFIG = {
   WEBHOOK_SECRET: process.env.TRIBUTE_WEBHOOK_SECRET,
   
   // Payment settings
-  PAYMENT_TIMEOUT: 30 * 60 * 1000, // 30 minutes
+  PAYMENT_TIMEOUT: 15 * 60 * 1000, // 15 minutes
   MIN_AMOUNT: 100, // 100 rubles minimum
   MAX_AMOUNT: 300000, // 300,000 rubles maximum
   
@@ -69,7 +70,8 @@ export class TributeService {
 
       // Generate unique order ID
       const orderId = `tribute_${request.paymentId}_${Date.now()}`;
-      const expiresAt = new Date(Date.now() + TRIBUTE_CONFIG.PAYMENT_TIMEOUT);
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + TRIBUTE_CONFIG.PAYMENT_TIMEOUT);
 
       // Try to call real Tribute API if configured
       if (process.env.TRIBUTE_API_KEY && process.env.TRIBUTE_API_URL) {
@@ -94,7 +96,8 @@ export class TributeService {
                 paymentId: request.paymentId,
                 orderId: orderId,
                 amount: request.amount,
-                expiresAt: expiresAt.toISOString()
+                expiresAt: expiresAt.toISOString(),
+                serverTime: now.toISOString()
               }
             };
           }
@@ -127,7 +130,8 @@ export class TributeService {
           paymentId: request.paymentId,
           orderId: orderId,
           amount: request.amount,
-          expiresAt: expiresAt.toISOString()
+          expiresAt: expiresAt.toISOString(),
+          serverTime: now.toISOString()
         }
       };
 
@@ -234,7 +238,8 @@ export class TributeService {
     try {
       // For subscriptions, we might use a different flow
       const orderId = `tribute_sub_${request.paymentId}_${Date.now()}`;
-      const expiresAt = new Date(Date.now() + TRIBUTE_CONFIG.PAYMENT_TIMEOUT);
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + TRIBUTE_CONFIG.PAYMENT_TIMEOUT);
 
       const subscriptionData = {
         ...request,
@@ -253,7 +258,8 @@ export class TributeService {
           paymentId: request.paymentId,
           orderId: orderId,
           amount: request.amount,
-          expiresAt: expiresAt.toISOString()
+          expiresAt: expiresAt.toISOString(),
+          serverTime: now.toISOString()
         }
       };
 

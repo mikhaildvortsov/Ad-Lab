@@ -93,25 +93,35 @@ export async function middleware(request: NextRequest) {
   const isProtectedRoute = isProtectedPath(pathname)
   const isPublicRoute = isPublicPath(pathname)
   
-  console.log('Middleware:', {
-    pathname,
-    isProtectedRoute,
-    isPublicRoute,
-    hasSessionCookie: !!request.cookies.get('session')?.value,
-    hasLogoutFlag: !!request.cookies.get('logout_flag')?.value
-  })
+  // ИСПРАВЛЕНИЕ: логируем только критичные события для предотвращения спама
+  const isDebugMode = process.env.NODE_ENV === 'development'
+  const shouldLog = isDebugMode && (isProtectedRoute || !request.cookies.get('session')?.value)
+  
+  if (shouldLog) {
+    console.log('Middleware:', {
+      pathname,
+      isProtectedRoute,
+      isPublicRoute,
+      hasSessionCookie: !!request.cookies.get('session')?.value,
+      hasLogoutFlag: !!request.cookies.get('logout_flag')?.value
+    })
+  }
   
   // Get current session
   const session = await validateSession(request)
   
-  console.log('Middleware session validation result:', {
-    hasSession: !!session,
-    userEmail: session?.user?.email || 'none'
-  })
+  if (shouldLog) {
+    console.log('Middleware session validation result:', {
+      hasSession: !!session,
+      userEmail: session?.user?.email || 'none'
+    })
+  }
   
   // If no session and trying to access protected route, redirect to auth
   if (!session && isProtectedRoute) {
-    console.log('Middleware: No session for protected route, redirecting to auth')
+    if (shouldLog) {
+      console.log('Middleware: No session for protected route, redirecting to auth')
+    }
     const response = NextResponse.redirect(new URL('/auth', request.url))
     return applyEnvironmentHeaders(response)
   }
@@ -157,13 +167,10 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // В продакшене: автоматически продлеваем сессию при каждом запросе
-    // Это обеспечивает "вечную" авторизацию для активных пользователей
-    // НО только если нет флага logout (теперь проверяется в validateSession)
-    if (process.env.NODE_ENV === 'production') {
-      needsUpdate = true
-    }
-
+    // ИСПРАВЛЕНИЕ: убираем автоматическое обновление сессии на каждом запросе
+    // Это вызывало бесконечный цикл в middleware
+    // Сессия будет обновляться только при необходимости (например, при рефреше токена)
+    
     // Update session cookie if needed
     if (needsUpdate) {
       const response = NextResponse.next()

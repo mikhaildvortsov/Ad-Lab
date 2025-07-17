@@ -1,7 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { getClientSession, clientLogout, refreshToken, User, isAuthBlocked } from '@/lib/client-session'
+import { getClientSession, clientLogout, refreshToken, User, isAuthBlocked, clearStuckLogoutFlags } from '@/lib/client-session'
 
 interface AuthContextType {
   user: User | null
@@ -33,8 +33,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const login = useCallback(() => {
-    // Редиректим на Google OAuth с параметром намерения
-    window.location.href = '/api/auth/google?intent=login'
+    console.log('AuthContext: login() called - redirecting to auth page')
+    
+    try {
+      // Переадресация на страницу авторизации с множественными вариантами входа
+      window.location.href = '/auth'
+    } catch (error) {
+      console.error('AuthContext: Login redirect error:', error)
+      setError('Ошибка при переходе к авторизации')
+    }
   }, [])
 
   const logout = useCallback(async () => {
@@ -70,9 +77,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  // Добавляем состояние для отслеживания текущей проверки сессии
+  const [isCheckingSession, setIsCheckingSession] = useState(false)
+
   useEffect(() => {
     let timeoutId: NodeJS.Timeout
     let isMounted = true
+
+    // Очищаем застрявшие logout флаги при инициализации
+    clearStuckLogoutFlags()
 
     // КРИТИЧЕСКИ ВАЖНО: проверяем блокировку авторизации в первую очередь
     if (isAuthBlocked()) {
@@ -89,9 +102,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
+    // ИСПРАВЛЕНИЕ: предотвращаем множественные одновременные проверки сессии
+    if (isCheckingSession) {
+      console.log('AuthContext: Session check already in progress, skipping')
+      return
+    }
+
     // Проверяем сессию при загрузке
     const checkSession = async () => {
       try {
+        setIsCheckingSession(true)
         console.log('AuthContext: Checking session...')
         
         // Двойная проверка блокировки перед сетевым запросом
@@ -128,6 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (isMounted) {
           console.log('AuthContext: Setting loading to false')
           setLoading(false)
+          setIsCheckingSession(false)
         }
       }
     }
@@ -139,6 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (isMounted) {
         console.log('AuthContext: Timeout reached, forcing loading to false')
         setLoading(false)
+        setIsCheckingSession(false)
         if (!user) {
           setError('Время ожидания авторизации истекло')
         }
@@ -153,20 +175,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       isMounted = false
+      setIsCheckingSession(false)
       if (timeoutId) {
         clearTimeout(timeoutId)
       }
     }
-  }, [isLoggingOut]) // Добавляем isLoggingOut в зависимости
+  }, [isLoggingOut]) // Убираем isCheckingSession из зависимостей - он используется только внутри эффекта
 
   // Автоматическое обновление токена
-  // В продакшене - каждый час, в разработке - каждые 5 минут
+  // ИСПРАВЛЕНИЕ: увеличиваем интервалы для предотвращения частых запросов
   useEffect(() => {
     if (!user) return
 
     const refreshInterval = process.env.NODE_ENV === 'production' 
-      ? 60 * 60 * 1000  // 1 час для продакшена
-      : 5 * 60 * 1000   // 5 минут для разработки
+      ? 60 * 60 * 1000   // 1 час для продакшена
+      : 15 * 60 * 1000   // 15 минут для разработки (было 5)
 
     const interval = setInterval(async () => {
       try {

@@ -99,9 +99,11 @@ export function PaywallModal({
     orderId: string;
     amount: number;
     expiresAt: string;
+    serverTime: string;
   } | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'completed' | 'failed' | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
+  const [paymentExpired, setPaymentExpired] = useState(false);
   
   const plans = getPlans(t);
 
@@ -234,7 +236,8 @@ export function PaywallModal({
           paymentId: data.paymentId,
           orderId: data.orderId,
           amount: data.amount,
-          expiresAt: data.expiresAt
+          expiresAt: data.expiresAt,
+          serverTime: data.serverTime
         });
 
         setPaymentStatus('pending');
@@ -333,18 +336,33 @@ export function PaywallModal({
     setPaymentStatus(null);
     setCheckingStatus(false);
     setTributeLoading(false);
+    setPaymentExpired(false);
   };
 
-  const formatTimeRemaining = (expiresAt: string) => {
-    const now = new Date().getTime();
-    const expiry = new Date(expiresAt).getTime();
-    const remaining = Math.max(0, expiry - now);
-    
-    const minutes = Math.floor(remaining / (1000 * 60));
-    const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
-    
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
+
+
+  // Timer effect - updates every second when payment data exists
+  useEffect(() => {
+    if (!tributePaymentData || paymentStatus !== 'pending') return;
+
+    const timer = setInterval(() => {
+      const now = Date.now();
+      
+      // Check if payment has expired using server time sync
+      const serverTimestamp = new Date(tributePaymentData.serverTime).getTime();
+      const timeOffset = now - serverTimestamp;
+      const expiry = new Date(tributePaymentData.expiresAt).getTime() - timeOffset;
+      
+      if (now >= expiry) {
+        setPaymentStatus('failed');
+        setError(t('paywallModal.payment.error.timeout'));
+        setPaymentExpired(true);
+        clearInterval(timer);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [tributePaymentData, paymentStatus, t]);
 
   // Close modal when payment is completed
   useEffect(() => {
@@ -477,9 +495,14 @@ export function PaywallModal({
                   <div className="space-y-3">
                     <p className="font-medium">{t('paywallModal.payment.tribute.amount').replace('{amount}', tributePaymentData.amount.toString())}</p>
                     
-                    <div className="text-sm text-gray-600">
-                      {t('paywallModal.payment.tribute.timeRemaining').replace('{time}', formatTimeRemaining(tributePaymentData.expiresAt))}
-                    </div>
+                    {paymentExpired && (
+                      <Alert className="border-red-200 bg-red-50">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertDescription className="text-red-800">
+                          {t('paywallModal.payment.expired')}
+                        </AlertDescription>
+                      </Alert>
+                    )}
                     
                     {tributePaymentData.tributeUrl && (
                       <Button 

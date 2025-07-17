@@ -11,8 +11,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Sparkles, Mail, Lock, Eye, EyeOff } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { getClientSession } from "@/lib/client-session"
-import { useLocale } from "@/lib/use-locale"
-import { useTranslation } from "@/lib/translations"
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -30,8 +28,6 @@ export default function AuthPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { login: googleLogin, updateUser } = useAuth()
-  const { locale } = useLocale()
-  const { t } = useTranslation(locale)
   
   useEffect(() => {
     // Проверяем параметры URL для обработки ошибок авторизации
@@ -46,10 +42,6 @@ export default function AuthPage() {
       setError('Не удалось получить данные пользователя.')
     } else if (authError === 'redirect_uri_mismatch') {
       setError('Ошибка настройки OAuth. Проверьте redirect URI в Google Console.')
-    } else if (authError === 'auth_required') {
-      setError('Для доступа к этой странице требуется авторизация.')
-    } else if (authError === 'auth_blocked') {
-      setError('Авторизация временно заблокирована. Попробуйте еще раз.')
     }
   }, [searchParams])
 
@@ -60,7 +52,7 @@ export default function AuthPage() {
     
     // Check privacy consent for registration
     if (!isLogin && !privacyConsent) {
-      setError(t('auth.required') + ': ' + t('auth.privacyConsent'))
+      setError("Необходимо согласие с политикой конфиденциальности")
       setIsLoading(false)
       return
     }
@@ -70,7 +62,7 @@ export default function AuthPage() {
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register'
       const requestBody = isLogin 
         ? { email, password }
-        : { email, password, name, privacyConsent }
+        : { email, password, name }
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -113,7 +105,10 @@ export default function AuthPage() {
 
   const handleGoogleAuth = () => {
     setIsLoading(true)
-    googleLogin()
+    setError('')
+    
+    // Перенаправляем напрямую на Google OAuth endpoint
+    window.location.href = '/api/auth/google'
   }
 
   return (
@@ -225,21 +220,24 @@ export default function AuthPage() {
               )}
             </div>
 
-            {/* Privacy Policy Consent (only for registration) */}
             {!isLogin && (
               <div className="flex items-start space-x-2">
-                <Checkbox
-                  id="privacy-consent"
+                <Checkbox 
+                  id="privacy-consent" 
                   checked={privacyConsent}
                   onCheckedChange={(checked) => setPrivacyConsent(checked as boolean)}
                   className="mt-1"
                 />
-                <Label htmlFor="privacy-consent" className="text-sm leading-5 text-gray-600">
-                  {t('auth.privacyConsent').split('{privacyPolicyLink}')[0]}
-                  <Link href={`/${locale}/privacy`} target="_blank" className="text-blue-600 hover:text-blue-800 underline">
-                    {t('auth.privacyPolicyLink')}
+                <Label htmlFor="privacy-consent" className="text-sm text-gray-600 leading-5">
+                  Я ознакомлен с{" "}
+                  <Link 
+                    href="/privacy" 
+                    className="text-blue-600 hover:text-blue-800 underline"
+                    target="_blank"
+                  >
+                    политикой конфиденциальности
                   </Link>
-                  {t('auth.privacyConsent').split('{privacyPolicyLink}')[1]}
+                  {" "}и согласен на обработку персональных данных
                 </Label>
               </div>
             )}
@@ -253,10 +251,10 @@ export default function AuthPage() {
             <Button 
               type="submit" 
               className="w-full h-11 sm:h-12" 
-              disabled={isLoading || (!isLogin && !privacyConsent)}
+              disabled={isLoading}
             >
               <span className="text-sm sm:text-base">
-                {isLoading ? t('common.loading') : (isLogin ? t('auth.submitLogin') : t('auth.submitRegister'))}
+                {isLoading ? "Загрузка..." : (isLogin ? "Войти" : "Создать аккаунт")}
               </span>
             </Button>
           </form>

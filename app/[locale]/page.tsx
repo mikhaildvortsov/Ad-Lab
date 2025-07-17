@@ -112,8 +112,13 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
     }
   }, [user, csrfToken]);
 
-  // Пока что простая проверка подписки (в реальном приложении это будет API call)
+  // Проверка подписки с учетом тестового режима
   const hasActiveSubscription = () => {
+    // В тестовом режиме всегда возвращаем true (подписка активна)
+    if (process.env.NEXT_PUBLIC_TEST_MODE === 'true') {
+      return true;
+    }
+    
     // В реальном приложении здесь будет проверка через API
     // Пока что считаем, что у пользователя нет активной подписки
     return false;
@@ -200,10 +205,12 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
         setImprovedText(data.response);
         setImprovementModalOpen(false);
         
-        // Показываем paywall после получения улучшенного текста
-        setTimeout(() => {
-          setShowPaywall(true);
-        }, 1000);
+        // Показываем paywall после получения улучшенного текста (если не тестовый режим)
+        if (process.env.NEXT_PUBLIC_TEST_MODE !== 'true') {
+          setTimeout(() => {
+            setShowPaywall(true);
+          }, 1000);
+        }
       } else {
         console.error('Error improving text:', data.error);
         // Можно показать уведомление об ошибке
@@ -252,10 +259,12 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
         setReformulatedGoal(data.response);
         setGoalModalOpen(false);
         
-        // Показываем paywall после получения переформулированной цели
-        setTimeout(() => {
-          setShowPaywall(true);
-        }, 1000);
+        // Показываем paywall после получения переформулированной цели (если не тестовый режим)
+        if (process.env.NEXT_PUBLIC_TEST_MODE !== 'true') {
+          setTimeout(() => {
+            setShowPaywall(true);
+          }, 1000);
+        }
       } else {
         console.error('Error reformulating goal:', data.error);
       }
@@ -354,6 +363,78 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
           <p className="text-lg sm:text-xl text-gray-600 mb-8 sm:mb-12 max-w-2xl mx-auto">
             {t('hero.subtitle')}
           </p>
+
+          {/* ДКЦП Marketing Framework Section */}
+          <div className="bg-white rounded-2xl shadow-lg border p-6 sm:p-8 mb-8 sm:mb-12 max-w-4xl mx-auto">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
+                {t('dkcpMarketing.title')}
+              </h2>
+              <p className="text-gray-600 text-base sm:text-lg">
+                {t('dkcpMarketing.subtitle')}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Что это такое */}
+              <div className="text-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Sparkles className="h-6 w-6 text-blue-600" />
+                </div>
+                <h3 className="font-semibold text-lg mb-3 text-gray-900">
+                  {t('dkcpMarketing.whatIs.title')}
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  {t('dkcpMarketing.whatIs.description')}
+                </p>
+              </div>
+
+              {/* Пункты анализа */}
+              <div className="text-center">
+                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Target className="h-6 w-6 text-purple-600" />
+                </div>
+                <h3 className="font-semibold text-lg mb-3 text-gray-900">
+                  {t('dkcpMarketing.analysis.title')}
+                </h3>
+                <ul className="text-gray-600 text-sm space-y-1 text-left">
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-600 font-bold">•</span>
+                    {locale === 'en' ? 'Activity - basic needs' : 'Деятельность - базовые потребности'}
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-600 font-bold">•</span>
+                    {locale === 'en' ? 'Jobs - specific customer goals' : 'Задачи - конкретные цели клиентов'}
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-600 font-bold">•</span>
+                    {locale === 'en' ? 'Forces - push/pull factors' : 'Силы - push/pull факторы'}
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-600 font-bold">•</span>
+                    {locale === 'en' ? 'KMC - key contradictions' : 'Конфликты - ключевые противоречия'}
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-600 font-bold">•</span>
+                    {locale === 'en' ? 'Selection - priority issues' : 'Выбор - приоритетные проблемы'}
+                  </li>
+                </ul>
+              </div>
+
+              {/* Как помогает */}
+              <div className="text-center">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <TrendingUp className="h-6 w-6 text-green-600" />
+                </div>
+                <h3 className="font-semibold text-lg mb-3 text-gray-900">
+                  {t('dkcpMarketing.howHelps.title')}
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  {t('dkcpMarketing.howHelps.description')}
+                </p>
+              </div>
+            </div>
+          </div>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button 
@@ -443,6 +524,8 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
 
       </section>
 
+
+
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-8 sm:py-12">
         <div className="container mx-auto px-4 text-center">
@@ -450,7 +533,15 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
             <Sparkles className="h-5 w-5 sm:h-6 sm:w-6" />
             <span className="text-base sm:text-lg font-semibold">{t('header.brand')}</span>
           </div>
-          <p className="text-sm sm:text-base text-gray-400">{t('footer.copyright')}</p>
+          <div className="space-y-2">
+            <Link 
+              href={`/${locale}/privacy`} 
+              className="text-sm text-gray-400 hover:text-white underline transition-colors"
+            >
+              {t('privacy.title')}
+            </Link>
+            <p className="text-sm sm:text-base text-gray-400">{t('footer.copyright')}</p>
+          </div>
         </div>
       </footer>
 

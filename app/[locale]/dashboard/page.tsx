@@ -68,7 +68,7 @@ const plans: Plan[] = [
 export default function Dashboard() {
   const { locale } = useLocale()
   const { t } = useTranslation(locale)
-  const { user, loading, error, logout, clearError } = useAuth()
+  const { user, loading, error, login, logout, clearError } = useAuth()
   const router = useRouter()
   const [showPlanModal, setShowPlanModal] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
@@ -78,7 +78,7 @@ export default function Dashboard() {
   const [copySuccess, setCopySuccess] = useState<number | null>(null)
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null)
   const [subscriptionData, setSubscriptionData] = useState<any>(null)
-  const [clientSideRedirect, setClientSideRedirect] = useState(false)
+
 
   // Check user subscription status
   useEffect(() => {
@@ -120,25 +120,9 @@ export default function Dashboard() {
     checkSubscription()
   }, [user])
 
-  // Client-side fallback redirect если middleware не сработал
-  useEffect(() => {
-    // Не делаем fallback redirect если авторизация заблокирована
-    if (isAuthBlocked()) {
-      console.log('Dashboard: Auth blocked, skipping fallback redirect')
-      return
-    }
-    
-    if (!loading && !user && !error) {
-      // Даем middleware немного времени сработать
-      const timeoutId = setTimeout(() => {
-        console.log('Dashboard: No user found and no error, redirecting to auth (middleware fallback)')
-        setClientSideRedirect(true)
-        router.push('/auth')
-      }, 2000) // 2 секунды на случай если middleware медленно работает
-      
-      return () => clearTimeout(timeoutId)
-    }
-  }, [loading, user, error, router])
+  // ИСПРАВЛЕНИЕ: убираем client-side fallback redirect который конфликтует с middleware
+  // Middleware должен правильно обрабатывать все редиректы
+  // Клиентский fallback может вызывать циклы редиректов
 
   // История запросов пользователя (пустая для новых пользователей)
   const [requests] = useState<Request[]>([])
@@ -243,7 +227,7 @@ export default function Dashboard() {
             }} variant="outline">
               {locale === 'ru' ? 'Попробовать снова' : 'Try Again'}
             </Button>
-            <Button onClick={() => router.push('/auth')}>
+            <Button onClick={login}>
               {locale === 'ru' ? 'Войти заново' : 'Sign In Again'}
             </Button>
           </div>
@@ -252,19 +236,7 @@ export default function Dashboard() {
     )
   }
 
-  // Show redirect message when doing client-side fallback
-  if (clientSideRedirect) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">
-            {locale === 'ru' ? 'Перенаправление...' : 'Redirecting...'}
-          </p>
-        </div>
-      </div>
-    )
-  }
+
 
   // Final fallback - if no user and no loading, show auth prompt
   if (!user) {
@@ -281,7 +253,16 @@ export default function Dashboard() {
               : 'Please sign in to access the dashboard'
             }
           </p>
-          <Button onClick={() => router.push('/auth')}>
+          <Button 
+            onClick={() => {
+              console.log('Login button clicked!')
+              try {
+                login()
+              } catch (error) {
+                console.error('Login error:', error)
+              }
+            }}
+          >
             {locale === 'ru' ? 'Войти в систему' : 'Sign In'}
           </Button>
         </div>
@@ -374,11 +355,7 @@ export default function Dashboard() {
                     </p>
                     <Button 
                       onClick={() => {
-                        if (hasActiveSubscription) {
-                          setChatOpen(true)
-                        } else {
-                          setShowPlanModal(true)
-                        }
+                        setShowPlanModal(true)
                       }}
                       className="mt-2"
                     >

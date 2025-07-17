@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { isUserBlacklisted } from './token-blacklist'
 
 // JWT secret key - lazy initialization for build compatibility
 let JWT_SECRET: Uint8Array | null = null;
@@ -86,12 +87,25 @@ export async function getSession(): Promise<SessionData | null> {
     
     const { payload } = await jwtVerify(token, getJWTSecret())
     
-    return {
+    const sessionData = {
       user: payload.user as SessionData['user'],
       accessToken: payload.accessToken as string,
       refreshToken: payload.refreshToken as string,
       expiresAt: payload.expiresAt as number
     }
+    
+    // Check if user is blacklisted
+    if (isUserBlacklisted(sessionData.user)) {
+      console.log('getSession: User is blacklisted, invalidating session:', sessionData.user.email)
+      
+      // Clear the session cookie
+      const cookieStore = await cookies()
+      cookieStore.delete(SESSION_CONFIG.cookieName)
+      
+      return null
+    }
+    
+    return sessionData
   } catch (error) {
     if (error instanceof Error && 'code' in error && error.code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED') {
       console.warn('JWT signature verification failed. This usually means:')
@@ -125,6 +139,9 @@ export async function updateSession(sessionData: Partial<SessionData>) {
 export async function deleteSession() {
   const cookieStore = await cookies()
   
+  // КРИТИЧЕСКИ ВАЖНО: полностью принудительно удаляем session cookie
+  const sessionCookieName = SESSION_CONFIG.cookieName
+  
   // Удаляем основной cookie с множественными вариантами настроек для надежности
   const cookieOptions = [
     // Основные настройки
@@ -155,21 +172,32 @@ export async function deleteSession() {
     }
   ]
   
-  // Применяем все варианты удаления
+  // Применяем все варианты удаления для session cookie
   for (const options of cookieOptions) {
-    cookieStore.set(SESSION_CONFIG.cookieName, '', options)
+    cookieStore.set(sessionCookieName, '', options)
   }
   
-  // Дополнительно устанавливаем флаг logout для middleware
+  // ПРИНУДИТЕЛЬНОЕ удаление - используем delete метод как дополнительную меру
+  try {
+    cookieStore.delete(sessionCookieName)
+    cookieStore.delete({
+      name: sessionCookieName,
+      path: '/',
+    })
+  } catch (e) {
+    console.warn('Could not use cookie delete method:', e)
+  }
+  
+  // Устанавливаем флаг logout для middleware (УВЕЛИЧИВАЕМ время до 5 минут)
   cookieStore.set('logout_flag', 'true', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax' as const,
-    maxAge: 30, // 30 секунд - достаточно для обработки logout
+    maxAge: 300, // 5 МИНУТ - достаточно для полной очистки всех системных кешей
     path: '/'
   })
   
-  console.log('Session deleted with logout flag set')
+  console.log('Session deleted with logout flag set for 5 minutes')
 }
 
 // Check if session needs refresh
@@ -239,6 +267,12 @@ export async function validateSession(request: NextRequest) {
       accessToken: payload.accessToken as string,
       refreshToken: payload.refreshToken as string,
       expiresAt: payload.expiresAt as number
+    }
+    
+    // Check if user is blacklisted
+    if (isUserBlacklisted(session.user)) {
+      console.log('validateSession: User is blacklisted, invalidating session:', session.user.email)
+      return null
     }
     
     return session

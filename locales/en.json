@@ -79,6 +79,80 @@
       "consulting": "Consulting"
     }
   },
+  "dkcp": {
+    "title": "DKCP Framework - scientific approach to advertising",
+    "subtitle": "Palace of Value Proposition Culture - professional methodology for advertising text analysis from Ad Lab",
+    "description": "DKCP allows systematic analysis of audience motivational conflicts and creates advertising that actually works",
+    "process": {
+      "title": "DKCP analysis process",
+      "steps": {
+        "activity": {
+          "title": "Activity",
+          "description": "Define basic activity without time frames"
+        },
+        "jobs": {
+          "title": "Jobs", 
+          "description": "Identify limited efforts with specific rewards"
+        },
+        "forces": {
+          "title": "Forces",
+          "description": "Map Push, Pull forces and barriers"
+        },
+        "kmc": {
+          "title": "KMC",
+          "description": "Formulate key motivational conflicts"
+        },
+        "selection": {
+          "title": "Selection",
+          "description": "Choose 1-2 strongest conflicts for creative"
+        }
+      }
+    },
+    "scoring": {
+      "title": "Scoring system (25 points)",
+      "criteria": {
+        "force": "Clarity of Push/Pull force (1 point)",
+        "conflict": "Sharpness of key conflict (5 points)",
+        "properties": "Clarity of product properties (3 points)", 
+        "value": "Clarity of value proposition (10 points)",
+        "transition": "Believability of transition (5 points)",
+        "logic": "Adherence to logic (1 point)"
+      }
+    },
+    "benefits": {
+      "title": "DKCP advantages",
+      "items": {
+        "systematic": "Systematic approach to creative analysis",
+        "conflicts": "Identification of deep motivational conflicts",
+        "measurement": "Precise 25-point measurement system",
+        "professional": "Professional Ad Lab June 26 methodology",
+        "proven": "Proven effectiveness on thousands of campaigns"
+      }
+    },
+    "cta": "Try DKCP analysis"
+  },
+  "dkcpMarketing": {
+    "title": "DKCP Framework - Marketing Approach",
+    "subtitle": "Professional methodology for creating high-converting advertising",
+    "whatIs": {
+      "title": "What is it?",
+      "description": "DKCP (Diagnosis of Key Value Contradictions) is a scientifically-based framework for analyzing and creating advertising texts, founded on deep consumer psychology and motivational conflicts"
+    },
+    "analysis": {
+      "title": "Analysis Points",
+      "points": [
+        "Activity - basic needs",
+        "Jobs - specific customer goals", 
+        "Forces - push/pull factors",
+        "KMC - key contradictions",
+        "Selection - priority issues"
+      ]
+    },
+    "howHelps": {
+      "title": "How it improves slogans",
+      "description": "The framework identifies audience pain points, finds emotional triggers and creates powerful calls to action, increasing ad conversion up to 3x"
+    }
+  },
   "scriptImprover": {
     "title": "Improve your ad script",
     "description": "Paste your current ad script, and our professional tools will turn it into a powerful selling text",
@@ -146,6 +220,26 @@
   },
   "footer": {
     "copyright": "© 2024 Ad Lab. All rights reserved."
+  },
+  "cookieConsent": {
+    "title": "Cookie Usage",
+    "description": "We use cookies to enhance your experience, analyze traffic, and personalize content. By continuing to use our site, you agree to our cookie policy.",
+    "details": {
+      "necessary": {
+        "title": "Necessary Cookies",
+        "description": "These cookies are essential for basic site functionality: authentication, security, language settings."
+      },
+      "analytics": {
+        "title": "Analytics Cookies",
+        "description": "Help us understand how visitors interact with the site by collecting anonymous statistics."
+      }
+    },
+    "actions": {
+      "accept": "Accept All",
+      "decline": "Decline",
+      "showDetails": "More Details",
+      "hideDetails": "Hide"
+    }
   },
   "errors": {
     "improveScript": "An error occurred while improving the script",
@@ -262,7 +356,10 @@
           "waiting": "Waiting for payment...",
           "checking": "Checking status...",
           "error": "Payment error"
-        }
+        },
+        "orderNumber": "Order number: {orderId}",
+        "timeRemaining": "Time remaining: {time}",
+        "createNew": "Create New Payment"
       },
       "card": {
         "title": "Card Payment",
@@ -373,5 +470,93 @@
     "loading": "Loading...",
     "authRequired": "Authorization required to access this page.",
     "redirecting": "Redirecting to home page..."
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "lastUpdated": "Last updated",
+    "general": {
+      "title": "1. General Provisions",
+      "description": "This Privacy Policy determines the procedure for processing personal data of Ad Lab service users. Using the service means agreeing to the terms of this policy.",
+      "contact": "The service administrator is not a natural person, legal entity, or self-employed individual. For privacy-related questions, contact us through the feedback forms on the website.",
+      "compliance": "Personal data processing is carried out in accordance with Federal Law No. 152-FZ \"On Personal Data\" and other applicable regulatory acts of the Russian Federation."
+    },
+    "dataCollection": {
+      "title": "2. Data We Collect",
+      "description": "We collect the following categories of personal data:",
+      "personalData": "Personal data: name, email address provided during registration",
+      "technicalData": "Technical data: IP address, browser type, operating system, cookies",
+      "usageData": "Usage data: request history, preferences, service interaction",
+      "paymentData": "Payment data: transaction information through Telegram (Tribute), subscription status"
+    },
+    "purposes": {
+      "title": "3. Data Processing Purposes",
+      "serviceProvision": "Providing and supporting Ad Lab service functionality",
+      "userSupport": "Technical user support and handling inquiries",
+      "paymentProcessing": "Payment processing and subscription management through Telegram (Tribute)",
+      "serviceImprovement": "Service usage analysis for improvement and development",
+      "security": "Ensuring security and preventing fraud",
+      "legal": "Fulfilling legal obligations and protecting legitimate interests"
+    },
+    "legalBasis": {
+      "title": "4. Legal Basis for Processing",
+      "consent": "Consent of the personal data subject to process their personal data",
+      "contract": "Performance of a contract to which the data subject is a party",
+      "legitimate": "Legitimate interests of the personal data controller",
+      "legal": "Performance of legal obligations imposed on the controller"
+    },
+    "payments": {
+      "title": "5. Payment Processing",
+      "description": "Payments are processed through the Telegram platform using the Tribute service. We do not have access to complete payment card data.",
+      "tribute": "Tribute processes payments in accordance with Telegram's privacy policy and applicable payment industry security standards.",
+      "security": "All payment operations are protected by modern encryption methods and comply with international security standards."
+    },
+    "sharing": {
+      "title": "6. Data Sharing with Third Parties",
+      "description": "We may share your personal data with third parties only in the following cases:",
+      "serviceProviders": "Service providers necessary for service operation (hosting, analytics)",
+      "legal": "Upon request of authorized government agencies in cases provided by law",
+      "consent": "With your explicit consent for such sharing"
+    },
+    "storage": {
+      "title": "7. Data Retention Periods",
+      "description": "Personal data is stored no longer than necessary for processing purposes, unless otherwise provided by law.",
+      "retention": "After account deletion, data may be retained for 3 years to fulfill legal obligations, after which it will be permanently deleted."
+    },
+    "rights": {
+      "title": "8. Data Subject Rights",
+      "access": "Right to obtain information about personal data processing",
+      "rectification": "Right to clarification, blocking or destruction of inaccurate data",
+      "erasure": "Right to deletion of personal data",
+      "restriction": "Right to restriction of personal data processing",
+      "portability": "Right to obtain personal data in a structured format",
+      "objection": "Right to object to personal data processing",
+      "withdraw": "Right to withdraw consent to personal data processing"
+    },
+    "cookies": {
+      "title": "9. Use of Cookies",
+      "description": "We use cookies to improve service performance:",
+      "necessary": "Necessary cookies to ensure basic functionality",
+      "analytics": "Analytics cookies to understand user behavior"
+    },
+    "security": {
+      "title": "10. Data Security",
+      "description": "We take technical and organizational measures to protect personal data from unauthorized access, modification, disclosure or destruction.",
+      "measures": "Modern encryption methods, access control and regular security audits are used."
+    },
+    "contact": {
+      "title": "11. Contact Information",
+      "description": "For personal data processing questions, contact us through the feedback forms on the website or in the support section.",
+      "response": "We undertake to review your request within 30 days of receipt."
+    },
+    "changes": {
+      "title": "12. Policy Changes",
+      "description": "We reserve the right to make changes to this Privacy Policy.",
+      "notification": "Material changes will be communicated to users through the website or email at least 10 days before taking effect."
+    },
+    "consent": {
+      "text": "I have read and agree to the",
+      "link": "privacy policy",
+      "required": "Privacy policy agreement is required"
+    }
   }
 } 
