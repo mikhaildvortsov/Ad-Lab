@@ -567,5 +567,42 @@
     "loading": "Загрузка...",
     "authRequired": "Для доступа к этой странице требуется авторизация.",
     "redirecting": "Перенаправление на главную страницу..."
+  },
+  "auth": {
+    "loginTitle": "Войти в аккаунт",
+    "registerTitle": "Создать аккаунт", 
+    "loginSubtitle": "Войдите в свой аккаунт для доступа к аналитике",
+    "registerSubtitle": "Создайте аккаунт для начала работы",
+    "continueWithGoogle": "Продолжить с Google",
+    "or": "или",
+    "name": "Имя",
+    "namePlaceholder": "Ваше имя",
+    "email": "Email",
+    "emailPlaceholder": "your@email.com",
+    "password": "Пароль",
+    "passwordPlaceholder": "••••••••",
+    "passwordRequirements": "Минимум 8 символов, включая заглавную букву, строчную букву и цифру",
+    "privacyConsent": "Я ознакомлен с",
+    "privacyPolicy": "политикой конфиденциальности",
+    "privacyConsentText": "и согласен на обработку персональных данных",
+    "loginButton": "Войти",
+    "registerButton": "Создать аккаунт",
+    "loading": "Загрузка...",
+    "switchToRegister": "Нет аккаунта? Создать",
+    "switchToLogin": "Уже есть аккаунт? Войти",
+    "backToHome": "← Вернуться на главную",
+    "userExistsPrompt": "Войти в существующий аккаунт →",
+    "errors": {
+      "privacyRequired": "Необходимо согласие с политикой конфиденциальности",
+      "sessionError": "Не удалось получить данные сессии",
+      "registrationSuccess": "Регистрация успешна, но не удалось получить данные сессии",
+      "authError": "Ошибка авторизации",
+      "networkError": "Произошла ошибка при авторизации",
+      "googleAuthFailed": "Ошибка авторизации через Google. Попробуйте еще раз.",
+      "oauthNotConfigured": "OAuth не настроен. Обратитесь к администратору.",
+      "invalidUserData": "Ошибка обработки данных пользователя.",
+      "noUserData": "Не удалось получить данные пользователя.",
+      "redirectUriMismatch": "Ошибка настройки OAuth. Проверьте redirect URI в Google Console."
+    }
   }
 } 

@@ -13,7 +13,7 @@ const protectedRoutes = [
 // Public routes that don't require authentication
 const publicRoutes = [
   '/',
-  '/auth',
+  '/auth', // Legacy auth route (redirect will be handled by Next.js)
   '/auth/callback',
   '/api/auth/google',
   '/api/auth/login',
@@ -49,6 +49,10 @@ function isPublicPath(pathname: string): boolean {
     // Для API маршрутов используем startsWith
     if (route.startsWith('/api/')) {
       return pathWithoutLocale.startsWith(route)
+    }
+    // Для auth маршрутов проверяем точное совпадение и вариант с callback
+    if (route === '/auth') {
+      return pathWithoutLocale === '/auth' || pathWithoutLocale.startsWith('/auth/')
     }
     // Для всех остальных - точное совпадение
     return pathWithoutLocale === route
@@ -122,7 +126,9 @@ export async function middleware(request: NextRequest) {
   
   // If no session and trying to access protected route, redirect to auth
   if (!session && isProtectedRoute) {
-    const response = NextResponse.redirect(new URL('/auth', request.url))
+    const locale = getLocaleFromPath(pathname) || defaultLocale
+    const authPath = locale === defaultLocale ? '/auth' : `/${locale}/auth`
+    const response = NextResponse.redirect(new URL(authPath, request.url))
     return applyEnvironmentHeaders(response)
   }
   
@@ -134,8 +140,8 @@ export async function middleware(request: NextRequest) {
     const forceLogin = url.searchParams.get('force_login')
     
     if (!forceLogin) {
-      const locale = getLocaleFromPath(pathname)
-      const dashboardPath = locale && locale !== defaultLocale ? `/${locale}/dashboard` : '/dashboard'
+      const locale = getLocaleFromPath(pathname) || defaultLocale
+      const dashboardPath = locale === defaultLocale ? '/dashboard' : `/${locale}/dashboard`
       const response = NextResponse.redirect(new URL(dashboardPath, request.url))
       return applyEnvironmentHeaders(response)
     }

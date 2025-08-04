@@ -145,7 +145,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
   const handleTryClick = () => {
     if (!isClient || !user) {
       // Если клиент не готов или пользователь не авторизован - перенаправляем на регистрацию
-      router.push('/auth?mode=register');
+      router.push(`/${locale}/auth?mode=register`);
     } else if (!hasActiveSubscription()) {
       // Если авторизован, но нет подписки - показываем paywall
       setShowPaywall(true);
@@ -340,10 +340,10 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
               </div>
             ) : (
               <>
-                <Link href="/auth?mode=login">
+                <Link href={`/${locale}/auth?mode=login`}>
                   <Button variant="ghost" size="sm">{t('header.login')}</Button>
                 </Link>
-                <Link href="/auth?mode=register">
+                <Link href={`/${locale}/auth?mode=register`}>
                   <Button size="sm">{t('header.register')}</Button>
                 </Link>
               </>

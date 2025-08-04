@@ -567,5 +567,42 @@
       "link": "privacy policy",
       "required": "Privacy policy agreement is required"
     }
+  },
+  "auth": {
+    "loginTitle": "Sign In",
+    "registerTitle": "Create Account",
+    "loginSubtitle": "Sign in to your account to access analytics",
+    "registerSubtitle": "Create an account to get started",
+    "continueWithGoogle": "Continue with Google",
+    "or": "or",
+    "name": "Name",
+    "namePlaceholder": "Your name",
+    "email": "Email",
+    "emailPlaceholder": "your@email.com",
+    "password": "Password",
+    "passwordPlaceholder": "••••••••",
+    "passwordRequirements": "Minimum 8 characters, including uppercase letter, lowercase letter and number",
+    "privacyConsent": "I have read the",
+    "privacyPolicy": "privacy policy",
+    "privacyConsentText": "and agree to the processing of personal data",
+    "loginButton": "Sign In",
+    "registerButton": "Create Account",
+    "loading": "Loading...",
+    "switchToRegister": "No account? Create one",
+    "switchToLogin": "Already have an account? Sign in",
+    "backToHome": "← Back to home",
+    "userExistsPrompt": "Sign in to existing account →",
+    "errors": {
+      "privacyRequired": "Privacy policy agreement is required",
+      "sessionError": "Failed to get session data",
+      "registrationSuccess": "Registration successful, but failed to get session data",
+      "authError": "Authorization error",
+      "networkError": "Network error during authorization",
+      "googleAuthFailed": "Google authorization error. Please try again.",
+      "oauthNotConfigured": "OAuth not configured. Contact administrator.",
+      "invalidUserData": "User data processing error.",
+      "noUserData": "Failed to get user data.",
+      "redirectUriMismatch": "OAuth configuration error. Check redirect URI in Google Console."
+    }
   }
 } 
