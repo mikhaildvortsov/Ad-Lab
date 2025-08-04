@@ -131,7 +131,7 @@ export default function PricingPage() {
                 <Button size="sm">Личный кабинет</Button>
               </Link>
             ) : (
-              <Link href="/auth">
+              <Link href="/auth?mode=login">
                 <Button size="sm">Войти</Button>
               </Link>
             )}

@@ -99,12 +99,12 @@ export function MobileNav({ user, onLogout, t }: MobileNavProps) {
               </>
             ) : (
               <div className="space-y-2 pt-4">
-                <Link href="/auth" onClick={() => setIsOpen(false)}>
+                <Link href="/auth?mode=login" onClick={() => setIsOpen(false)}>
                   <Button variant="outline" className="w-full">
                     Войти
                   </Button>
                 </Link>
-                <Link href="/auth" onClick={() => setIsOpen(false)}>
+                <Link href="/auth?mode=register" onClick={() => setIsOpen(false)}>
                   <Button className="w-full">
                     Регистрация
                   </Button>

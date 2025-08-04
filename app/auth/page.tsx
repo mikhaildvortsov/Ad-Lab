@@ -33,6 +33,14 @@ export default function AuthPage() {
   const { locale } = useLocale()
   
   useEffect(() => {
+    // Проверяем параметр mode для переключения между входом и регистрацией
+    const mode = searchParams.get('mode')
+    if (mode === 'register') {
+      setIsLogin(false)
+    } else if (mode === 'login') {
+      setIsLogin(true)
+    }
+    
     // Проверяем параметры URL для обработки ошибок авторизации
     const authError = searchParams.get('error')
     if (authError === 'google_auth_failed') {
