@@ -93,6 +93,13 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
   const [chatOpen, setChatOpen] = useState(false);
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
   const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  
+  // Hydration-safe client detection
+  const [isClient, setIsClient] = useState(false)
+  
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   // Get CSRF token when user is authenticated
   useEffect(() => {
@@ -136,8 +143,8 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
   };
   
   const handleTryClick = () => {
-    if (!user) {
-      // Если пользователь не авторизован - перенаправляем на авторизацию
+    if (!isClient || !user) {
+      // Если клиент не готов или пользователь не авторизован - перенаправляем на авторизацию
       router.push('/auth');
     } else if (!hasActiveSubscription()) {
       // Если авторизован, но нет подписки - показываем paywall
@@ -284,8 +291,8 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
     setChatOpen(true);
   };
 
-  // Show loading while authentication is being checked
-  if (loading) {
+  // Show loading only on client side to prevent hydration mismatch
+  if (isClient && loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
@@ -309,7 +316,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-4">
             <LanguageSelector />
-            {user ? (
+            {isClient && user ? (
               <div className="flex items-center gap-3">
                 <div className="hidden lg:flex items-center gap-2">
                   {user.image ? (
@@ -346,7 +353,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
           {/* Mobile Navigation */}
           <div className="flex md:hidden items-center gap-2">
             <LanguageSelector />
-            <MobileNav user={user} onLogout={handleLogout} t={t} />
+            <MobileNav user={isClient ? user : null} onLogout={handleLogout} t={t} />
           </div>
         </div>
       </header>
@@ -442,7 +449,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
               className="group text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transform transition-all duration-300 ease-out hover:scale-105 hover:shadow-xl active:scale-95 focus:scale-105 focus:shadow-lg"
               onClick={handleTryClick}
             >
-              {user ? t('upgrade') : t('hero.cta')}
+              {isClient && user ? t('upgrade') : t('hero.cta')}
               <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:translate-x-1" />
             </Button>
             
