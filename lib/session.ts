@@ -137,10 +137,12 @@ export async function updateSession(sessionData: Partial<SessionData>) {
 
 // Delete session
 export async function deleteSession() {
+  console.log('=== deleteSession() STARTED ===')
   const cookieStore = await cookies()
   
   // КРИТИЧЕСКИ ВАЖНО: полностью принудительно удаляем session cookie
   const sessionCookieName = SESSION_CONFIG.cookieName
+  console.log('=== deleteSession(): Deleting session cookie:', sessionCookieName, '===')
   
   // Удаляем основной cookie с множественными вариантами настроек для надежности
   const cookieOptions = [
@@ -184,20 +186,22 @@ export async function deleteSession() {
       name: sessionCookieName,
       path: '/',
     })
+    console.log('=== deleteSession(): Session cookie deleted using delete() method ===')
   } catch (e) {
     console.warn('Could not use cookie delete method:', e)
   }
   
-  // Устанавливаем флаг logout для middleware (УВЕЛИЧИВАЕМ время до 5 минут)
+  console.log('=== deleteSession(): Setting logout_flag cookie ===')
+  // Устанавливаем флаг logout для middleware (устанавливаем на 60 секунд)
   cookieStore.set('logout_flag', 'true', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax' as const,
-    maxAge: 300, // 5 МИНУТ - достаточно для полной очистки всех системных кешей
+    maxAge: 60, // 60 СЕКУНД - синхронизировано с клиентской логикой блокировки
     path: '/'
   })
   
-  console.log('Session deleted with logout flag set for 5 minutes')
+  console.log('=== deleteSession() COMPLETED: Session deleted with logout flag set for 60 seconds ===')
 }
 
 // Check if session needs refresh

@@ -1,7 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { getClientSession, clientLogout, refreshToken, User, isAuthBlocked, clearStuckLogoutFlags } from '@/lib/client-session'
+import { getClientSession, clientLogout, refreshToken, User } from '@/lib/client-session'
 
 interface AuthContextType {
   user: User | null
@@ -55,44 +55,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const logout = useCallback(async () => {
+    let shouldRedirect = false
+    let redirectPath = '/'
+    
     try {
       console.log('AuthContext: Starting logout...')
       
       // Устанавливаем флаг logout процесса
       setIsLoggingOut(true)
       
-      // Сначала очищаем локальное состояние
+      // НЕМЕДЛЕННО очищаем локальное состояние пользователя
       setUser(null)
-      setLoading(true)
+      setLoading(false) // Устанавливаем loading в false, чтобы UI обновился
       setError(null)
       
-      // Вызываем улучшенный clientLogout, который сам проверит успешность
+      // Проверяем если мы на protected маршруте - планируем редирект
+      if (typeof window !== 'undefined') {
+        const currentPath = window.location.pathname
+        const isOnDashboard = currentPath.includes('dashboard')
+        
+        if (isOnDashboard) {
+          console.log('AuthContext: On dashboard, will redirect to home after cleanup')
+          shouldRedirect = true
+        }
+      }
+      
+      // Вызываем clientLogout для серверной очистки
       await clientLogout()
       
-      console.log('AuthContext: Logout completed successfully')
-      
-      // После успешного logout принудительно перенаправляем на auth
-      if (typeof window !== 'undefined') {
-        console.log('AuthContext: Redirecting to auth page after logout')
-        window.location.href = '/auth'
-      }
+      console.log('AuthContext: Logout completed successfully, user state cleared')
       
     } catch (error) {
       console.error('AuthContext: Logout error:', error)
       setError('Ошибка при выходе из системы')
       
-      // При ошибке все равно очищаем состояние
+      // При ошибке все равно очищаем состояние пользователя
       setUser(null)
-      
-      // И все равно перенаправляем на auth
-      if (typeof window !== 'undefined') {
-        console.log('AuthContext: Redirecting to auth page after logout error')
-        window.location.href = '/auth'
-      }
-    } finally {
-      // Всегда сбрасываем loading состояние и флаг logout
       setLoading(false)
+      
+      // При ошибке, если на protected маршруте - все равно планируем редирект
+      if (typeof window !== 'undefined') {
+        const currentPath = window.location.pathname
+        const isOnDashboard = currentPath.includes('dashboard')
+        
+        if (isOnDashboard) {
+          console.log('AuthContext: On dashboard with error, will redirect to home')
+          shouldRedirect = true
+        }
+      }
+      
+      console.log('AuthContext: Logout completed with error, user state cleared')
+    } finally {
+      // Всегда сбрасываем флаг logout процесса
       setIsLoggingOut(false)
+      
+      // Выполняем редирект только после всех cleanup операций
+      if (shouldRedirect && typeof window !== 'undefined') {
+        console.log('AuthContext: Performing redirect to:', redirectPath)
+        window.location.href = redirectPath
+      }
     }
   }, [])
 
@@ -103,12 +124,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let timeoutId: NodeJS.Timeout
     let isMounted = true
 
-    // Очищаем застрявшие logout флаги при инициализации
-    clearStuckLogoutFlags()
-
-    // КРИТИЧЕСКИ ВАЖНО: проверяем блокировку авторизации в первую очередь
-    if (isAuthBlocked()) {
-      console.log('AuthContext: Auth blocked by logout flags, skipping session check')
+    // ИСПРАВЛЕНИЕ: добавляем проверку logout_flag перед загрузкой пользователя
+    // Если установлен logout_flag, не загружаем пользователя
+    const logoutFlag = typeof document !== 'undefined' 
+      ? document.cookie.split(';').find(cookie => cookie.trim().startsWith('logout_flag='))?.split('=')[1]
+      : null
+    
+    if (logoutFlag === 'true') {
+      console.log('AuthContext: Logout flag detected, not loading user')
       setUser(null)
       setLoading(false)
       return
@@ -133,41 +156,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsCheckingSession(true)
         console.log('AuthContext: Checking session...') // Включаем обратно для отладки
         
-        // Двойная проверка блокировки перед сетевым запросом
-        if (isAuthBlocked()) {
-          console.log('AuthContext: Auth blocked before session check, aborting')
+        // Дополнительная проверка logout_flag перед API вызовом
+        const currentLogoutFlag = typeof document !== 'undefined' 
+          ? document.cookie.split(';').find(cookie => cookie.trim().startsWith('logout_flag='))?.split('=')[1]
+          : null
+        
+        if (currentLogoutFlag === 'true') {
+          console.log('AuthContext: Logout flag detected during session check, aborting')
           if (isMounted) {
             setUser(null)
+            setError(null)
             setLoading(false)
-            setIsCheckingSession(false)
           }
           return
         }
         
-        const session = await getClientSession()
-        console.log('AuthContext: Session result:', session ? 'found' : 'not found')
+        const sessionData = await getClientSession()
         
-        if (!isMounted) return // Component unmounted
-
-        if (session) {
-          setUser(session.user)
-          setError(null)
-          console.log('AuthContext: User set from session:', session.user.email)
-        } else {
-          console.log('AuthContext: No session found, clearing user')
-          setUser(null)
-          // Don't set error here - no session might be normal
+        if (isMounted) {
+          if (sessionData) {
+            console.log('AuthContext: Session found:', sessionData.user.email)
+            setUser(sessionData.user)
+            setError(null)
+          } else {
+            console.log('AuthContext: No session found')
+            setUser(null)
+            setError(null)
+          }
+          setLoading(false)
         }
       } catch (error) {
-        console.error('AuthContext: Error checking session:', error)
-        if (!isMounted) return
-        
-        setUser(null)
-        setError('Ошибка проверки авторизации')
+        console.error('AuthContext: Session check failed:', error)
+        if (isMounted) {
+          setUser(null)
+          setError('Ошибка при проверке сессии')
+          setLoading(false)
+        }
       } finally {
         if (isMounted) {
-          console.log('AuthContext: Setting loading to false')
-          setLoading(false)
           setIsCheckingSession(false)
         }
       }
@@ -201,6 +227,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
   }, []) // ИСПРАВЛЕНИЕ: пустой массив зависимостей - эффект должен выполняться только один раз при монтировании
+
+  // Дополнительный эффект для мониторинга logout_flag cookie
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const checkLogoutFlag = () => {
+      const logoutFlag = document.cookie
+        .split(';')
+        .find(cookie => cookie.trim().startsWith('logout_flag='))
+        ?.split('=')[1]
+      
+      if (logoutFlag === 'true' && user) {
+        console.log('AuthContext: Logout flag detected in real-time, clearing user')
+        setUser(null)
+        setError(null)
+      }
+    }
+
+    // Проверяем logout_flag каждые 500ms при наличии пользователя
+    const interval = setInterval(checkLogoutFlag, 500)
+
+    return () => clearInterval(interval)
+  }, [user]) // Зависит от user, чтобы мониторить только когда пользователь есть
 
   // Автоматическое обновление токена
   // ИСПРАВЛЕНИЕ: увеличиваем интервалы для предотвращения частых запросов

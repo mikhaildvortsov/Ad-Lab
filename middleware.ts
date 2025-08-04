@@ -66,12 +66,29 @@ export async function middleware(request: NextRequest) {
     return applyEnvironmentHeaders(response)
   }
 
-  // Apply CSRF protection to API routes (except auth callbacks)
+  // ИСПРАВЛЕНИЕ: Проверяем блокировку авторизации ПЕРЕД всеми остальными проверками
+  // Это предотвращает бесконечные редиректы после logout
+  const logoutFlag = request.cookies.get('logout_flag')?.value
+  const isProtectedRoute = isProtectedPath(pathname)
+  const isPublicRoute = isPublicPath(pathname)
+  
+  // Reduced debug logging to prevent console spam
+  
+  if (logoutFlag === 'true' && isProtectedRoute) {
+    console.log('Middleware: Auth blocked by logout flag, redirecting to home page')
+    const response = NextResponse.redirect(new URL('/', request.url))
+    return applyEnvironmentHeaders(response)
+  }
+
+  // Apply CSRF protection to API routes (except auth callbacks and internal APIs)
   if (pathname.startsWith('/api/') && 
       !pathname.startsWith('/api/auth/google') && 
       !pathname.startsWith('/api/auth/callback') &&
       !pathname.startsWith('/api/auth/register') &&
-      !pathname.startsWith('/api/auth/login')) {
+      !pathname.startsWith('/api/auth/login') &&
+      !pathname.startsWith('/api/auth/logout') &&
+      !pathname.startsWith('/api/history') &&
+      !pathname.startsWith('/api/analytics')) {
     
     // Check origin for additional security (skip for auth routes)
     if (!pathname.startsWith('/api/auth/') && !checkOrigin(request)) {
@@ -98,38 +115,13 @@ export async function middleware(request: NextRequest) {
   }
   
   // Check if route requires authentication (support localized routes)
-  const isProtectedRoute = isProtectedPath(pathname)
-  const isPublicRoute = isPublicPath(pathname)
+  // Удаляем дублирующиеся проверки - они уже выполнены выше
   
-  // ИСПРАВЛЕНИЕ: логируем только критичные события для предотвращения спама
-  const isDebugMode = process.env.NODE_ENV === 'development'
-  const shouldLog = isDebugMode && (pathname.includes('dashboard')) // Логируем только dashboard запросы
-  
-  if (shouldLog) {
-    console.log(`[${new Date().toISOString()}] Middleware:`, {
-      pathname,
-      isProtectedRoute,
-      isPublicRoute,
-      hasSessionCookie: !!request.cookies.get('session')?.value,
-      hasLogoutFlag: !!request.cookies.get('logout_flag')?.value
-    })
-  }
-  
-  // Get current session
+  // Get current session ТОЛЬКО если нет блокировки logout
   const session = await validateSession(request)
-  
-  if (shouldLog) {
-    console.log('Middleware session validation result:', {
-      hasSession: !!session,
-      userEmail: session?.user?.email || 'none'
-    })
-  }
   
   // If no session and trying to access protected route, redirect to auth
   if (!session && isProtectedRoute) {
-    if (shouldLog) {
-      console.log('Middleware: No session for protected route, redirecting to auth')
-    }
     const response = NextResponse.redirect(new URL('/auth', request.url))
     return applyEnvironmentHeaders(response)
   }

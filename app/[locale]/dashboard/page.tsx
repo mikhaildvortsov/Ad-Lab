@@ -76,13 +76,7 @@ export default function Dashboard() {
   const [errorAnalytics, setErrorAnalytics] = useState<string | null>(null)
   const [errorPayments, setErrorPayments] = useState<string | null>(null)
   
-  // Debug logging to track re-renders
-  console.log(`[${new Date().toISOString()}] Dashboard render:`, {
-    user: user ? `${user.email} (${user.id})` : 'null',
-    loading,
-    error: error ? error.slice(0, 50) + '...' : 'null',
-    pathname: typeof window !== 'undefined' ? window.location.pathname : 'server'
-  })
+  // Removed debug logging to prevent console spam
 
   // Check user subscription status
   useEffect(() => {
