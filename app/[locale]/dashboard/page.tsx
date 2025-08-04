@@ -46,6 +46,9 @@ export default function Dashboard() {
   const { t } = useTranslation(locale)
   const { user, loading, error, login, logout, clearError } = useAuth()
   const router = useRouter()
+  
+  // ВСЕ useState хуки должны быть объявлены В САМОМ НАЧАЛЕ компонента
+  // перед любыми условными возвратами (Rules of Hooks)
   const [showPlanModal, setShowPlanModal] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [plans, setPlans] = useState<Plan[]>([])
@@ -61,7 +64,25 @@ export default function Dashboard() {
   const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null)
   const [isDeletingPayment, setIsDeletingPayment] = useState(false)
   const [presetText, setPresetText] = useState<string>('')
-
+  
+  // История запросов пользователя - все useState хуки перемещены наверх
+  const [requests, setRequests] = useState<Request[]>([])
+  const [analytics, setAnalytics] = useState<any>(null)
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false)
+  const [loadingPayments, setLoadingPayments] = useState(false)
+  const [errorHistory, setErrorHistory] = useState<string | null>(null)
+  const [errorAnalytics, setErrorAnalytics] = useState<string | null>(null)
+  const [errorPayments, setErrorPayments] = useState<string | null>(null)
+  
+  // Debug logging to track re-renders
+  console.log(`[${new Date().toISOString()}] Dashboard render:`, {
+    user: user ? `${user.email} (${user.id})` : 'null',
+    loading,
+    error: error ? error.slice(0, 50) + '...' : 'null',
+    pathname: typeof window !== 'undefined' ? window.location.pathname : 'server'
+  })
 
   // Check user subscription status
   useEffect(() => {
@@ -103,20 +124,14 @@ export default function Dashboard() {
     checkSubscription()
   }, [user])
 
-  // ИСПРАВЛЕНИЕ: убираем client-side fallback redirect который конфликтует с middleware
-  // Middleware должен правильно обрабатывать все редиректы
-  // Клиентский fallback может вызывать циклы редиректов
-
-  // История запросов пользователя
-  const [requests, setRequests] = useState<Request[]>([])
-  const [analytics, setAnalytics] = useState<any>(null)
-  const [paymentHistory, setPaymentHistory] = useState<any[]>([])
-  const [loadingHistory, setLoadingHistory] = useState(false)
-  const [loadingAnalytics, setLoadingAnalytics] = useState(false)
-  const [loadingPayments, setLoadingPayments] = useState(false)
-  const [errorHistory, setErrorHistory] = useState<string | null>(null)
-  const [errorAnalytics, setErrorAnalytics] = useState<string | null>(null)
-  const [errorPayments, setErrorPayments] = useState<string | null>(null)
+  // Auto-redirect to auth if no user (moved to useEffect to avoid render errors)
+  useEffect(() => {
+    if (!loading && !user) {
+      const authPath = locale && locale !== 'en' ? `/${locale}/auth` : '/auth'
+      console.log('Dashboard: No user found, redirecting to:', authPath)
+      router.push(authPath)
+    }
+  }, [loading, user, locale, router])
 
   // Fetch real data when user is available
   useEffect(() => {
@@ -129,6 +144,60 @@ export default function Dashboard() {
     }
   }, [user, hasActiveSubscription])
 
+  // Show loading spinner
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">{t('dashboard.loading')}</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error state with option to retry or go to auth
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            {locale === 'ru' ? 'Ошибка авторизации' : 'Authorization Error'}
+          </h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button onClick={() => {
+              clearError()
+              window.location.reload()
+            }} variant="outline">
+              {locale === 'ru' ? 'Попробовать снова' : 'Try Again'}
+            </Button>
+            <Button onClick={login}>
+              {locale === 'ru' ? 'Войти заново' : 'Sign In Again'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // If no user, middleware should handle redirect. Show loading state.
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">
+            {locale === 'ru' ? 'Загрузка...' : 'Loading...'}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // Функции fetch data остаются здесь
+  
   const fetchHistoryData = async () => {
     setLoadingHistory(true)
     setErrorHistory(null)
@@ -229,7 +298,9 @@ export default function Dashboard() {
           setPlans(data.data)
           // Set current plan based on subscription
           if (subscriptionData?.subscription?.planName) {
-            const plan = data.data.find((p: Plan) => p.name === subscriptionData.subscription.planName)
+            // Map subscription planName to plan ID for matching
+            const planId = mapPlanNameToId(subscriptionData.subscription.planName);
+            const plan = data.data.find((p: Plan) => p.name === planId)
             if (plan) setCurrentPlan(plan)
           } else if (data.data.length > 0) {
             // Default to first plan if no subscription
@@ -387,78 +458,6 @@ export default function Dashboard() {
   const openDeletePaymentModal = (paymentId: string) => {
     setPaymentToDelete(paymentId)
     setShowDeletePaymentModal(true)
-  }
-
-  // Show loading spinner
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">{t('dashboard.loading')}</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Show error state with option to retry or go to auth
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-6">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            {locale === 'ru' ? 'Ошибка авторизации' : 'Authorization Error'}
-          </h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button onClick={() => {
-              clearError()
-              window.location.reload()
-            }} variant="outline">
-              {locale === 'ru' ? 'Попробовать снова' : 'Try Again'}
-            </Button>
-            <Button onClick={login}>
-              {locale === 'ru' ? 'Войти заново' : 'Sign In Again'}
-            </Button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-
-
-  // Final fallback - if no user and no loading, show auth prompt
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-6">
-          <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            {locale === 'ru' ? 'Требуется авторизация' : 'Authorization Required'}
-          </h2>
-          <p className="text-gray-600 mb-6">
-            {locale === 'ru' 
-              ? 'Для доступа к панели управления необходимо войти в систему' 
-              : 'Please sign in to access the dashboard'
-            }
-          </p>
-          <Button 
-            onClick={() => {
-              console.log('Login button clicked!')
-              try {
-                login()
-              } catch (error) {
-                console.error('Login error:', error)
-              }
-            }}
-          >
-            {locale === 'ru' ? 'Войти в систему' : 'Sign In'}
-          </Button>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -977,4 +976,14 @@ export default function Dashboard() {
       </Dialog>
     </div>
   )
+} 
+
+// Helper function to map plan names to IDs
+function mapPlanNameToId(planName: string): string {
+  const mapping: Record<string, string> = {
+    'Week': 'week',
+    'Month': 'month', 
+    'Quarter': 'quarter'
+  };
+  return mapping[planName] || planName.toLowerCase();
 } 

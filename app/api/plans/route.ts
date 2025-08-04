@@ -28,7 +28,8 @@ export async function GET(request: NextRequest) {
     // Transform database format to frontend format
     const plans = result.rows.map(plan => ({
       id: mapDbNameToFrontendId(plan.name),
-      name: plan.name,
+      // Instead of returning the English name from DB, return the ID for localization
+      name: mapDbNameToFrontendId(plan.name), // This will be the localization key
       price: parseFloat(plan.price),
       originalPrice: plan.price_yearly ? parseFloat(plan.price_yearly) : undefined,
       features: plan.features || [],

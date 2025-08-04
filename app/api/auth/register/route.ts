@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { UserService } from '@/lib/services/user-service';
+import { createSession } from '@/lib/session';
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,7 +56,12 @@ export async function POST(request: NextRequest) {
     const existingUserResult = await UserService.userExistsByEmail(email);
     if (existingUserResult.success && existingUserResult.data) {
       return NextResponse.json(
-        { success: false, error: 'User with this email already exists' },
+        { 
+          success: false, 
+          error: 'Пользователь с таким email уже зарегистрирован',
+          errorCode: 'USER_EXISTS',
+          suggestion: 'Попробуйте войти в аккаунт вместо регистрации'
+        },
         { status: 409 }
       );
     }
@@ -79,14 +85,30 @@ export async function POST(request: NextRequest) {
 
     const user = userResult.data;
 
-    return NextResponse.json({
-      success: true,
-      message: 'User registered successfully',
+    // Create session automatically after successful registration
+    const sessionData = {
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
-        email_verified: user.email_verified
+        image: user.avatar_url || undefined
+      },
+      accessToken: 'local-auth-token',
+      refreshToken: 'local-refresh-token',
+      expiresAt: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60) // 30 days
+    };
+
+    await createSession(sessionData);
+
+    return NextResponse.json({
+      success: true,
+      message: 'User registered successfully and logged in',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        email_verified: user.email_verified,
+        image: user.avatar_url
       }
     }, { status: 201 });
 

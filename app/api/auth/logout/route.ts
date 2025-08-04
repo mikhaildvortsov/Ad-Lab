@@ -9,10 +9,10 @@ export async function GET(request: NextRequest) {
     console.log('Logout endpoint called - session deleted')
     
     // Создаем response с редиректом
-    const response = NextResponse.redirect(new URL('/', request.url))
+    const response = NextResponse.redirect(new URL('/auth', request.url))
     
-    // Множественная очистка cookie для надежности
-    const cookieNames = ['session', 'logout_flag']
+    // Множественная очистка cookie для надежности (БЕЗ logout_flag!)
+    const cookieNames = ['session'] // Убираем 'logout_flag' из списка удаляемых
     const cookieOptions = [
       {
         httpOnly: true,
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       }
     ]
     
-    // Удаляем все возможные варианты cookie
+    // Удаляем все возможные варианты cookie (кроме logout_flag)
     for (const cookieName of cookieNames) {
       for (const options of cookieOptions) {
         response.cookies.set(cookieName, '', options)
@@ -41,20 +41,17 @@ export async function GET(request: NextRequest) {
     return response
   } catch (error) {
     console.error('Logout error:', error)
-    const response = NextResponse.redirect(new URL('/', request.url))
+    const response = NextResponse.redirect(new URL('/auth', request.url))
     
-    // Удаляем cookie даже при ошибке
-    const cookieNames = ['session', 'logout_flag']
-    for (const cookieName of cookieNames) {
-      response.cookies.set(cookieName, '', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax' as const,
-        maxAge: 0,
-        expires: new Date(0),
-        path: '/'
-      })
-    }
+    // Удаляем cookie даже при ошибке (кроме logout_flag)
+    response.cookies.set('session', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+      maxAge: 0,
+      expires: new Date(0),
+      path: '/'
+    })
     
     return response
   }
@@ -73,10 +70,10 @@ export async function POST(request: NextRequest) {
       message: 'Logged out successfully' 
     })
     
-    // АГРЕССИВНАЯ очистка ВСЕХ возможных auth-related cookies
+    // АГРЕССИВНАЯ очистка auth-related cookies (БЕЗ logout_flag!)
     const cookieNames = [
       'session', 
-      'logout_flag', 
+      // Убираем 'logout_flag' из списка! Он нужен для блокировки повторной авторизации
       'auth-token', 
       'refresh-token', 
       'access-token',
@@ -117,7 +114,7 @@ export async function POST(request: NextRequest) {
       }
     ]
     
-    // Удаляем ВСЕ возможные варианты auth cookies
+    // Удаляем ВСЕ возможные варианты auth cookies (кроме logout_flag)
     for (const cookieName of cookieNames) {
       for (const options of cookieOptions) {
         response.cookies.set(cookieName, '', options)
@@ -132,31 +129,17 @@ export async function POST(request: NextRequest) {
     }
     
     // Добавляем заголовки для принудительной очистки кеша
-    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
     response.headers.set('Pragma', 'no-cache')
     response.headers.set('Expires', '0')
+    response.headers.set('Surrogate-Control', 'no-store')
     
     return response
   } catch (error) {
     console.error('Logout error:', error)
-    const response = NextResponse.json({ 
-      success: false, 
-      message: 'Logout failed' 
-    }, { status: 500 })
-    
-    // Удаляем cookie даже при ошибке (упрощенная версия)
-    const cookieNames = ['session', 'logout_flag']
-    for (const cookieName of cookieNames) {
-      response.cookies.set(cookieName, '', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax' as const,
-        maxAge: 0,
-        expires: new Date(0),
-        path: '/'
-      })
-    }
-    
-    return response
+    return NextResponse.json(
+      { error: 'Failed to logout' },
+      { status: 500 }
+    )
   }
 } 

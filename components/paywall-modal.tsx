@@ -113,6 +113,34 @@ export function PaywallModal({
     console.log('PaywallModal auth state:', { user, isAuthenticated, loading });
   }, [user, isAuthenticated, loading]);
 
+  // Safe function to get plan name with fallback
+  const getPlanName = (planId: string) => {
+    try {
+      const translationKey = `paywallModal.plans.${planId}.name`;
+      const translation = t(translationKey);
+      // If translation returns the key itself, it means translation not found
+      if (translation === translationKey) {
+        // Fallback to static mapping
+        const fallbackNames: Record<string, string> = {
+          'week': 'Неделя',
+          'month': 'Месяц', 
+          'quarter': 'Три месяца'
+        };
+        return fallbackNames[planId] || planId;
+      }
+      return translation;
+    } catch (error) {
+      console.error('Error getting plan name:', error);
+      // Ultimate fallback
+      const fallbackNames: Record<string, string> = {
+        'week': 'Неделя',
+        'month': 'Месяц',
+        'quarter': 'Три месяца'
+      };
+      return fallbackNames[planId] || planId;
+    }
+  };
+
   const handleSelectPlan = (plan: Plan) => {
     setSelectedPlan(plan);
     setError(null);
@@ -370,7 +398,7 @@ export function PaywallModal({
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
-              {t('paywallModal.payment.title').replace('{planName}', selectedPlan.name)}
+              {t('paywallModal.payment.title').replace('{planName}', getPlanName(selectedPlan.name))}
               <Button 
                 variant="ghost" 
                 size="sm"
@@ -676,7 +704,7 @@ export function PaywallModal({
                   </div>
                 )}
                 <CardHeader className="text-center pb-2 pt-4">
-                  <CardTitle className="text-xl mb-1">{plan.name}</CardTitle>
+                  <CardTitle className="text-xl mb-1">{getPlanName(plan.name)}</CardTitle>
                   <div className="space-y-1">
                     {plan.originalPrice && (
                       <div className="text-base line-through text-gray-400">

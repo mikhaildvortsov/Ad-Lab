@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Sparkles, Mail, Lock, Eye, EyeOff } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { getClientSession } from "@/lib/client-session"
+import { useLocale } from "@/lib/use-locale"
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -24,10 +25,12 @@ export default function AuthPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [privacyConsent, setPrivacyConsent] = useState(false)
+  const [userExists, setUserExists] = useState(false)
   
   const router = useRouter()
   const searchParams = useSearchParams()
   const { login: googleLogin, updateUser } = useAuth()
+  const { locale } = useLocale()
   
   useEffect(() => {
     // Проверяем параметры URL для обработки ошибок авторизации
@@ -49,10 +52,12 @@ export default function AuthPage() {
     e.preventDefault()
     setIsLoading(true)
     setError("")
+    setUserExists(false)
     
     // Check privacy consent for registration
     if (!isLogin && !privacyConsent) {
       setError("Необходимо согласие с политикой конфиденциальности")
+      setUserExists(false)
       setIsLoading(false)
       return
     }
@@ -84,20 +89,57 @@ export default function AuthPage() {
             router.push('/dashboard')
           } else {
             setError('Не удалось получить данные сессии')
+            setUserExists(false)
           }
         } else {
-          // Registration: show success and switch to login
-          setError('')
-          setIsLogin(true)
-          setPassword('')
-          alert('Регистрация успешна! Теперь вы можете войти в аккаунт.')
+          // Registration: automatically login and redirect to dashboard
+          // Clear any auth blocking flags before getting session
+          if (typeof window !== 'undefined') {
+            try {
+              // Clear localStorage flags
+              window.localStorage.removeItem('logout_in_progress')
+              window.localStorage.removeItem('last_logout_time')
+              window.localStorage.removeItem('emergency_logout')
+              
+              // Clear logout_flag cookie that might block session API
+              document.cookie = 'logout_flag=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
+              
+              console.log('Registration: cleared all auth blocking flags')
+            } catch (e) {
+              console.warn('Could not clear auth flags:', e)
+            }
+          }
+          
+          // Small delay to ensure session is properly set on server
+          await new Promise(resolve => setTimeout(resolve, 500))
+          
+          const session = await getClientSession()
+          console.log('Registration: getClientSession result:', session)
+          if (session) {
+            updateUser(session.user)
+            console.log('Registration: automatically logged in user:', session.user)
+            console.log('Registration: redirecting to dashboard...')
+            router.push('/dashboard')
+          } else {
+            console.error('Registration: Failed to get session after clearing auth flags')
+            setError('Регистрация успешна, но не удалось получить данные сессии')
+            setUserExists(false)
+          }
         }
       } else {
-        setError(data.error || 'Ошибка авторизации')
+        // Handle registration errors with special case for existing user
+        if (!isLogin && data.errorCode === 'USER_EXISTS') {
+          setUserExists(true)
+          setError(data.error)
+        } else {
+          setUserExists(false)
+          setError(data.error || 'Ошибка авторизации')
+        }
       }
     } catch (error) {
       console.error('Email auth error:', error)
       setError("Произошла ошибка при авторизации")
+      setUserExists(false)
     } finally {
       setIsLoading(false)
     }
@@ -109,6 +151,16 @@ export default function AuthPage() {
     
     // Перенаправляем напрямую на Google OAuth endpoint
     window.location.href = '/api/auth/google'
+  }
+
+  const switchToLogin = () => {
+    setIsLogin(true)
+    setError('')
+    setPassword('')
+    setName('')
+    setPrivacyConsent(false)
+    setUserExists(false)
+    // Сохраняем email при переключении с регистрации на вход
   }
 
   return (
@@ -221,17 +273,17 @@ export default function AuthPage() {
             </div>
 
             {!isLogin && (
-              <div className="flex items-start space-x-2">
+              <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg border">
                 <Checkbox 
                   id="privacy-consent" 
                   checked={privacyConsent}
                   onCheckedChange={(checked) => setPrivacyConsent(checked as boolean)}
-                  className="mt-1"
+                  className="mt-1 h-5 w-5 border-2 border-gray-400 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                 />
-                <Label htmlFor="privacy-consent" className="text-sm text-gray-600 leading-5">
+                <Label htmlFor="privacy-consent" className="text-sm text-gray-700 leading-5 cursor-pointer">
                   Я ознакомлен с{" "}
                   <Link 
-                    href="/privacy" 
+                    href={`/${locale}/privacy`}
                     className="text-blue-600 hover:text-blue-800 underline"
                     target="_blank"
                   >
@@ -243,8 +295,18 @@ export default function AuthPage() {
             )}
 
             {error && (
-              <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg border border-red-200">
-                {error}
+              <div className={`text-sm p-3 rounded-lg border ${
+                userExists ? 'text-blue-600 bg-blue-50 border-blue-200' : 'text-red-600 bg-red-50 border-red-200'
+              }`}>
+                <div className="mb-2">{error}</div>
+                {userExists && (
+                  <button
+                    onClick={switchToLogin}
+                    className="text-blue-700 hover:text-blue-900 font-medium underline"
+                  >
+                    Войти в существующий аккаунт →
+                  </button>
+                )}
               </div>
             )}
 
@@ -267,6 +329,11 @@ export default function AuthPage() {
                 setPassword('')
                 setName('')
                 setPrivacyConsent(false)
+                setUserExists(false)
+                // Очищаем email только при переходе с входа на регистрацию
+                if (isLogin) {
+                  setEmail('')
+                }
               }}
               className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
             >
@@ -278,7 +345,7 @@ export default function AuthPage() {
           </div>
 
           <div className="text-center pt-2">
-            <Link href="/" className="text-sm text-gray-600 hover:text-gray-800 transition-colors">
+            <Link href={`/${locale}`} className="text-sm text-gray-600 hover:text-gray-800 transition-colors">
               ← Вернуться на главную
             </Link>
           </div>

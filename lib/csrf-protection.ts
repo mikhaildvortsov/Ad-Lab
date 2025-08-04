@@ -100,6 +100,31 @@ export function checkOrigin(request: NextRequest): boolean {
   const origin = request.headers.get('origin');
   const referer = request.headers.get('referer');
   
+  // In development, allow all localhost origins regardless of port
+  if (process.env.NODE_ENV === 'development') {
+    if (origin) {
+      try {
+        const originUrl = new URL(origin);
+        if (originUrl.hostname === 'localhost' || originUrl.hostname === '127.0.0.1') {
+          return true;
+        }
+      } catch (error) {
+        console.warn('Failed to parse origin URL:', origin);
+      }
+    }
+    
+    if (referer) {
+      try {
+        const refererUrl = new URL(referer);
+        if (refererUrl.hostname === 'localhost' || refererUrl.hostname === '127.0.0.1') {
+          return true;
+        }
+      } catch (error) {
+        console.warn('Failed to parse referer URL:', referer);
+      }
+    }
+  }
+  
   // For same-origin requests, origin might be null
   if (!origin && !referer) {
     return true; // Allow same-origin requests without origin header
@@ -119,6 +144,16 @@ export function checkOrigin(request: NextRequest): boolean {
     } catch {
       return false;
     }
+  }
+
+  // Log failed origin check for debugging
+  if (process.env.NODE_ENV === 'development') {
+    console.warn('Origin check failed:', {
+      origin,
+      referer,
+      safeOrigins: SAFE_ORIGINS,
+      nextAuthUrl: process.env.NEXTAUTH_URL
+    });
   }
 
   return false;

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Check, Sparkles, ArrowLeft } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { useLocale } from "@/lib/use-locale"
+import { useTranslation } from "@/lib/translations"
 
 interface Plan {
   id: string
@@ -22,10 +23,39 @@ interface Plan {
 export default function PricingPage() {
   const { user, loading } = useAuth()
   const { locale } = useLocale()
+  const { t } = useTranslation(locale)
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [plans, setPlans] = useState<Plan[]>([])
   const [loadingPlans, setLoadingPlans] = useState(false)
+
+  // Safe function to get plan name with fallback
+  const getPlanName = (planId: string) => {
+    try {
+      const translationKey = `paywallModal.plans.${planId}.name`;
+      const translation = t(translationKey);
+      // If translation returns the key itself, it means translation not found
+      if (translation === translationKey) {
+        // Fallback to static mapping
+        const fallbackNames: Record<string, string> = {
+          'week': 'Неделя',
+          'month': 'Месяц', 
+          'quarter': 'Три месяца'
+        };
+        return fallbackNames[planId] || planId;
+      }
+      return translation;
+    } catch (error) {
+      console.error('Error getting plan name:', error);
+      // Ultimate fallback
+      const fallbackNames: Record<string, string> = {
+        'week': 'Неделя',
+        'month': 'Месяц',
+        'quarter': 'Три месяца'
+      };
+      return fallbackNames[planId] || planId;
+    }
+  };
 
   // Fetch plans from API
   useEffect(() => {
@@ -130,7 +160,7 @@ export default function PricingPage() {
                 </div>
               )}
               <CardHeader className="text-center pb-6">
-                <CardTitle className="text-xl sm:text-2xl mb-2">{plan.name}</CardTitle>
+                <CardTitle className="text-xl sm:text-2xl mb-2">{getPlanName(plan.name)}</CardTitle>
                 <div className="text-3xl sm:text-4xl font-bold text-gray-900">
                   ₽{plan.price}
                   <span className="text-sm sm:text-base font-normal text-gray-500">/месяц</span>

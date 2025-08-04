@@ -227,10 +227,10 @@ export async function clientLogout(): Promise<void> {
     }
     
     if (!sessionCleared) {
-      console.warn('Session still exists after logout attempts, forcing page reload')
-      // Принудительная перезагрузка как последний резерв
+      console.warn('Session still exists after logout attempts, forcing redirect to auth')
+      // Принудительное перенаправление на страницу авторизации вместо главной
       if (typeof window !== 'undefined') {
-        window.location.href = '/'
+        window.location.href = '/auth'
         return
       }
     }
@@ -258,9 +258,9 @@ export async function clientLogout(): Promise<void> {
         console.warn('Could not clear browser storage:', e)
       }
       
-      // При ошибке принудительно перезагружаем страницу
-      console.log('Forcing page reload due to logout error')
-      window.location.href = '/'
+      // При ошибке принудительно перенаправляем на страницу авторизации
+      console.log('Forcing redirect to auth page due to logout error')
+      window.location.href = '/auth'
       return
     }
     

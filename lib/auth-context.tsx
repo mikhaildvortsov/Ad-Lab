@@ -36,8 +36,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('AuthContext: login() called - redirecting to auth page')
     
     try {
-      // Переадресация на страницу авторизации с множественными вариантами входа
-      window.location.href = '/auth'
+      // Получаем текущую локаль из URL
+      const currentPath = window.location.pathname
+      const localeMatch = currentPath.match(/^\/([a-z]{2})(\/|$)/)
+      const locale = localeMatch ? localeMatch[1] : ''
+      
+      // Переадресация на страницу авторизации с учетом локали
+      const authPath = locale && locale !== 'en' ? `/${locale}/auth?force_login=true` : '/auth?force_login=true'
+      console.log('AuthContext: redirecting to:', authPath)
+      
+      // Принудительная переадресация с полной перезагрузкой страницы
+      window.location.href = authPath
+      
     } catch (error) {
       console.error('AuthContext: Login redirect error:', error)
       setError('Ошибка при переходе к авторизации')
@@ -61,8 +71,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       console.log('AuthContext: Logout completed successfully')
       
-      // Добавляем задержку чтобы logout flag успел обработаться на сервере
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // После успешного logout принудительно перенаправляем на auth
+      if (typeof window !== 'undefined') {
+        console.log('AuthContext: Redirecting to auth page after logout')
+        window.location.href = '/auth'
+      }
       
     } catch (error) {
       console.error('AuthContext: Logout error:', error)
@@ -70,6 +83,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // При ошибке все равно очищаем состояние
       setUser(null)
+      
+      // И все равно перенаправляем на auth
+      if (typeof window !== 'undefined') {
+        console.log('AuthContext: Redirecting to auth page after logout error')
+        window.location.href = '/auth'
+      }
     } finally {
       // Всегда сбрасываем loading состояние и флаг logout
       setLoading(false)
@@ -112,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const checkSession = async () => {
       try {
         setIsCheckingSession(true)
-        console.log('AuthContext: Checking session...')
+        console.log('AuthContext: Checking session...') // Включаем обратно для отладки
         
         // Двойная проверка блокировки перед сетевым запросом
         if (isAuthBlocked()) {
@@ -120,21 +139,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (isMounted) {
             setUser(null)
             setLoading(false)
+            setIsCheckingSession(false)
           }
           return
         }
         
         const session = await getClientSession()
-        console.log('AuthContext: Session result:', session)
+        console.log('AuthContext: Session result:', session ? 'found' : 'not found')
         
         if (!isMounted) return // Component unmounted
 
         if (session) {
           setUser(session.user)
           setError(null)
-          console.log('AuthContext: setting user from session:', session.user)
+          console.log('AuthContext: User set from session:', session.user.email)
         } else {
-          console.log('AuthContext: No session found')
+          console.log('AuthContext: No session found, clearing user')
           setUser(null)
           // Don't set error here - no session might be normal
         }
@@ -154,15 +174,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Add timeout fallback to ensure loading state is cleared
-    // Shorter timeout for development, longer for production
-    const timeoutMs = process.env.NODE_ENV === 'production' ? 10000 : 3000
+    // Короткий таймаут для разработки чтобы быстрее найти проблемы
+    const timeoutMs = process.env.NODE_ENV === 'production' ? 10000 : 5000
     timeoutId = setTimeout(() => {
       if (isMounted) {
         console.log('AuthContext: Timeout reached, forcing loading to false')
         setLoading(false)
         setIsCheckingSession(false)
         if (!user) {
-          setError('Время ожидания авторизации истекло')
+          setError('Время ожидания авторизации истекло. Попробуйте обновить страницу.')
         }
       }
     }, timeoutMs)
@@ -180,7 +200,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         clearTimeout(timeoutId)
       }
     }
-  }, [isLoggingOut]) // Убираем isCheckingSession из зависимостей - он используется только внутри эффекта
+  }, []) // ИСПРАВЛЕНИЕ: пустой массив зависимостей - эффект должен выполняться только один раз при монтировании
 
   // Автоматическое обновление токена
   // ИСПРАВЛЕНИЕ: увеличиваем интервалы для предотвращения частых запросов

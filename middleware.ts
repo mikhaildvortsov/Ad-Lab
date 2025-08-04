@@ -7,8 +7,7 @@ import { locales, defaultLocale } from '@/lib/i18n'
 // Protected routes that require authentication (including localized versions)
 const protectedRoutes = [
   '/dashboard',
-  '/chat',
-  '/pricing'
+  '/chat'
 ]
 
 // Public routes that don't require authentication
@@ -46,7 +45,14 @@ function isProtectedPath(pathname: string): boolean {
 
 function isPublicPath(pathname: string): boolean {
   const pathWithoutLocale = removeLocaleFromPath(pathname)
-  return publicRoutes.some(route => pathWithoutLocale === route || pathWithoutLocale.startsWith(route))
+  return publicRoutes.some(route => {
+    // Для API маршрутов используем startsWith
+    if (route.startsWith('/api/')) {
+      return pathWithoutLocale.startsWith(route)
+    }
+    // Для всех остальных - точное совпадение
+    return pathWithoutLocale === route
+  })
 }
 
 export async function middleware(request: NextRequest) {
@@ -63,10 +69,12 @@ export async function middleware(request: NextRequest) {
   // Apply CSRF protection to API routes (except auth callbacks)
   if (pathname.startsWith('/api/') && 
       !pathname.startsWith('/api/auth/google') && 
-      !pathname.startsWith('/api/auth/callback')) {
+      !pathname.startsWith('/api/auth/callback') &&
+      !pathname.startsWith('/api/auth/register') &&
+      !pathname.startsWith('/api/auth/login')) {
     
-    // Check origin for additional security
-    if (!checkOrigin(request)) {
+    // Check origin for additional security (skip for auth routes)
+    if (!pathname.startsWith('/api/auth/') && !checkOrigin(request)) {
       const response = NextResponse.json(
         { error: 'Invalid request origin' },
         { status: 403 }
@@ -95,10 +103,10 @@ export async function middleware(request: NextRequest) {
   
   // ИСПРАВЛЕНИЕ: логируем только критичные события для предотвращения спама
   const isDebugMode = process.env.NODE_ENV === 'development'
-  const shouldLog = isDebugMode && (isProtectedRoute || !request.cookies.get('session')?.value)
+  const shouldLog = isDebugMode && (pathname.includes('dashboard')) // Логируем только dashboard запросы
   
   if (shouldLog) {
-    console.log('Middleware:', {
+    console.log(`[${new Date().toISOString()}] Middleware:`, {
       pathname,
       isProtectedRoute,
       isPublicRoute,
@@ -128,11 +136,19 @@ export async function middleware(request: NextRequest) {
   
   // If session exists and trying to access auth page, redirect to dashboard
   // Preserve locale in redirect
+  // BUT allow forced login by checking for force_login parameter
   if (session && (pathname === '/auth' || pathname.match(/^\/[a-z]{2}\/auth$/))) {
-    const locale = getLocaleFromPath(pathname)
-    const dashboardPath = locale && locale !== defaultLocale ? `/${locale}/dashboard` : '/dashboard'
-    const response = NextResponse.redirect(new URL(dashboardPath, request.url))
-    return applyEnvironmentHeaders(response)
+    const url = new URL(request.url)
+    const forceLogin = url.searchParams.get('force_login')
+    
+    if (!forceLogin) {
+      const locale = getLocaleFromPath(pathname)
+      const dashboardPath = locale && locale !== defaultLocale ? `/${locale}/dashboard` : '/dashboard'
+      const response = NextResponse.redirect(new URL(dashboardPath, request.url))
+      return applyEnvironmentHeaders(response)
+    }
+    
+    // If force_login=true, allow access to auth page even with existing session
   }
   
   // If session exists, check if token needs refresh or session needs extension
