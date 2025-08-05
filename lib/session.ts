@@ -163,7 +163,7 @@ export async function refreshGoogleToken(refreshToken: string): Promise<{
   expiresAt: number
 } | null> {
   try {
-    const response = await fetch('https:
+    const response = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',

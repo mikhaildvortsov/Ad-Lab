@@ -172,7 +172,7 @@ export class TributeService {
     }
   }
   private static generateTributePaymentUrl(paymentData: any): string {
-    return `https:
+    return `https://t.me/${TRIBUTE_CONFIG.BOT_USERNAME}?start=pay_${paymentData.orderId}`;
   }
   static async createSubscription(request: TributePaymentRequest): Promise<TributePaymentResponse> {
     try {
@@ -216,7 +216,7 @@ export class TributeService {
       planName: subscriptionData.planName,
       type: 'subscription'
     })).toString('base64');
-    return `https:
+    return `https://t.me/${TRIBUTE_CONFIG.BOT_USERNAME}?start=sub_${encodedData}`;
   }
   static validateWebhookSignature(payload: string, signature: string): boolean {
     try {

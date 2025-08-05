@@ -1,41 +1,42 @@
 import { NextResponse } from 'next/server';
+
 const CSP_DIRECTIVES = {
   'default-src': ["'self'"],
   'script-src': [
     "'self'",
     "'unsafe-inline'", 
     "'unsafe-eval'", 
-    'https:
-    'https:
-    'https:
+    'https://vercel.live',
+    'https://cdn.vercel-insights.com',
+    'https://va.vercel-scripts.com'
   ],
   'style-src': [
     "'self'",
     "'unsafe-inline'", 
-    'https:
+    'https://fonts.googleapis.com'
   ],
   'font-src': [
     "'self'",
-    'https:
+    'https://fonts.gstatic.com',
     'data:' 
   ],
   'img-src': [
     "'self'",
     'data:', 
     'blob:', 
-    'https:
-    'https:
+    'https://lh3.googleusercontent.com',
+    'https://vercel.com'
   ],
   'connect-src': [
     "'self'",
-    'https:
-    'https:
-    'https:
-    'https:
+    'https://api.openai.com',
+    'https://accounts.google.com',
+    'https://oauth2.googleapis.com',
+    'https://www.googleapis.com',
     process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL).origin : '', 
   ].filter(Boolean),
   'frame-src': [
-    'https:
+    'https://accounts.google.com'
   ],
   'object-src': ["'none'"],
   'base-uri': ["'self'"],
@@ -44,6 +45,7 @@ const CSP_DIRECTIVES = {
   'block-all-mixed-content': [], 
   'upgrade-insecure-requests': [] 
 };
+
 function generateCSPHeader(): string {
   const directives = Object.entries(CSP_DIRECTIVES)
     .map(([directive, values]) => {
@@ -55,6 +57,7 @@ function generateCSPHeader(): string {
     .join('; ');
   return directives;
 }
+
 export const SECURITY_HEADERS = {
   'Content-Security-Policy': generateCSPHeader(),
   'X-Content-Type-Options': 'nosniff',
@@ -76,12 +79,14 @@ export const SECURITY_HEADERS = {
   'Cross-Origin-Opener-Policy': 'same-origin',
   'Cross-Origin-Resource-Policy': 'same-origin'
 };
+
 export function applySecurityHeaders(response: NextResponse): NextResponse {
   Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
     response.headers.set(key, value);
   });
   return response;
 }
+
 export function getDevelopmentCSP(): string {
   const devDirectives = {
     ...CSP_DIRECTIVES,
@@ -89,21 +94,22 @@ export function getDevelopmentCSP(): string {
       "'self'",
       "'unsafe-inline'",
       "'unsafe-eval'", 
-      'https:
-      'https:
-      'https:
+      'https://vercel.live',
+      'https://cdn.vercel-insights.com',
+      'https://va.vercel-scripts.com'
     ],
     'connect-src': [
       "'self'",
-      'ws:
-      'wss:
-      'http:
-      'https:
-      'https:
-      'https:
-      'https:
+      'ws://localhost:*',
+      'wss://localhost:*',
+      'http://localhost:*',
+      'https://api.openai.com',
+      'https://accounts.google.com',
+      'https://oauth2.googleapis.com',
+      'https://www.googleapis.com'
     ]
   };
+  
   return Object.entries(devDirectives)
     .map(([directive, values]) => {
       if (values.length === 0) {
@@ -113,13 +119,17 @@ export function getDevelopmentCSP(): string {
     })
     .join('; ');
 }
+
 export function applyEnvironmentHeaders(response: NextResponse): NextResponse {
   const headers = { ...SECURITY_HEADERS };
+  
   if (process.env.NODE_ENV === 'development') {
     headers['Content-Security-Policy'] = getDevelopmentCSP();
   }
+  
   Object.entries(headers).forEach(([key, value]) => {
     response.headers.set(key, value);
   });
+  
   return response;
 }

@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(googleAuthUrl.toString())
   }
   try {
-    const tokenResponse = await fetch('https:
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       console.error('Token exchange failed:', tokenData)
       throw new Error('Failed to get access token')
     }
-    const userResponse = await fetch('https:
+    const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: {
         Authorization: `Bearer ${tokenData.access_token}`,
       },

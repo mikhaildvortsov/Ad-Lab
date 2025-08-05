@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     config.validation.issues.push('GOOGLE_CLIENT_SECRET is missing')
   }
   if (!nextAuthUrl) {
-    config.validation.issues.push('NEXTAUTH_URL is missing - should be your domain (e.g., https:
+    config.validation.issues.push('NEXTAUTH_URL is missing - should be your domain (e.g., https://yourdomain.com)')
   }
   if (nextAuthUrl?.includes('localhost') && process.env.NODE_ENV === 'production') {
     config.validation.issues.push('NEXTAUTH_URL is set to localhost in production')

@@ -103,7 +103,7 @@ export function checkOrigin(request: NextRequest): boolean {
   if (referer) {
     try {
       const refererUrl = new URL(referer);
-      const refererOrigin = `${refererUrl.protocol}
+      const refererOrigin = `${refererUrl.protocol}//${refererUrl.host}`;
       return SAFE_ORIGINS.includes(refererOrigin);
     } catch {
       return false;
