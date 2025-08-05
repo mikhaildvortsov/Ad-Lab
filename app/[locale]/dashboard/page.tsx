@@ -1,5 +1,4 @@
 "use client"
-
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -17,10 +16,7 @@ import { useTranslation } from "@/lib/translations"
 import { LanguageSelector } from "@/components/language-selector"
 import { useRouter } from "next/navigation"
 import { isAuthBlocked } from '@/lib/client-session'
-
-// Force dynamic rendering
 export const dynamic = 'force-dynamic'
-
 interface Plan {
   id: string
   name: string
@@ -30,7 +26,6 @@ interface Plan {
   improvements: number
   popular?: boolean
 }
-
 interface Request {
   id: number
   originalText: string
@@ -38,17 +33,11 @@ interface Request {
   date: string
   status: string
 }
-
-// Plans will be fetched from API
-
 export default function Dashboard() {
   const { locale } = useLocale()
   const { t } = useTranslation(locale)
   const { user, loading, error, login, logout, clearError } = useAuth()
   const router = useRouter()
-  
-  // ВСЕ useState хуки должны быть объявлены В САМОМ НАЧАЛЕ компонента
-  // перед любыми условными возвратами (Rules of Hooks)
   const [showPlanModal, setShowPlanModal] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [plans, setPlans] = useState<Plan[]>([])
@@ -64,8 +53,6 @@ export default function Dashboard() {
   const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null)
   const [isDeletingPayment, setIsDeletingPayment] = useState(false)
   const [presetText, setPresetText] = useState<string>('')
-  
-  // История запросов пользователя - все useState хуки перемещены наверх
   const [requests, setRequests] = useState<Request[]>([])
   const [analytics, setAnalytics] = useState<any>(null)
   const [paymentHistory, setPaymentHistory] = useState<any[]>([])
@@ -75,14 +62,9 @@ export default function Dashboard() {
   const [errorHistory, setErrorHistory] = useState<string | null>(null)
   const [errorAnalytics, setErrorAnalytics] = useState<string | null>(null)
   const [errorPayments, setErrorPayments] = useState<string | null>(null)
-  
-  // Removed debug logging to prevent console spam
-
-  // Check user subscription status
   useEffect(() => {
     const checkSubscription = async () => {
       if (user) {
-        // В тестовом режиме всегда считаем подписку активной
         if (process.env.NEXT_PUBLIC_TEST_MODE === 'true') {
           setHasActiveSubscription(true)
           setSubscriptionData({
@@ -97,7 +79,6 @@ export default function Dashboard() {
           })
           return
         }
-        
         try {
           const response = await fetch('/api/auth/subscription')
           if (response.ok) {
@@ -107,7 +88,6 @@ export default function Dashboard() {
               setSubscriptionData(data.data)
             }
           } else {
-            // Если API недоступен, временно считаем подписку активной
             setHasActiveSubscription(true)
             setSubscriptionData({
               hasActiveSubscription: true,
@@ -122,7 +102,6 @@ export default function Dashboard() {
           }
         } catch (error) {
           console.error('Error checking subscription:', error)
-          // Временно считаем подписку активной при ошибке
           setHasActiveSubscription(true)
           setSubscriptionData({
             hasActiveSubscription: true,
@@ -137,11 +116,8 @@ export default function Dashboard() {
         }
       }
     }
-
     checkSubscription()
   }, [user])
-
-  // Auto-redirect to auth if no user (moved to useEffect to avoid render errors)
   useEffect(() => {
     if (!loading && !user) {
       const authPath = locale && locale !== 'en' ? `/${locale}/auth` : '/auth'
@@ -149,8 +125,6 @@ export default function Dashboard() {
       router.push(authPath)
     }
   }, [loading, user, locale, router])
-
-  // Fetch real data when user is available
   useEffect(() => {
     if (user && hasActiveSubscription !== null) {
       fetchHistoryData()
@@ -160,8 +134,6 @@ export default function Dashboard() {
       fetchCurrentUsage()
     }
   }, [user, hasActiveSubscription])
-
-  // Show loading spinner
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
@@ -172,8 +144,6 @@ export default function Dashboard() {
       </div>
     )
   }
-
-  // Show error state with option to retry or go to auth
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
@@ -198,8 +168,6 @@ export default function Dashboard() {
       </div>
     )
   }
-
-  // If no user, middleware should handle redirect. Show loading state.
   if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
@@ -212,9 +180,6 @@ export default function Dashboard() {
       </div>
     )
   }
-
-  // Функции fetch data остаются здесь
-  
   const fetchHistoryData = async () => {
     setLoadingHistory(true)
     setErrorHistory(null)
@@ -223,9 +188,8 @@ export default function Dashboard() {
       if (response.ok) {
         const data = await response.json()
         if (data.success) {
-          // Transform database format to dashboard format
           const transformedRequests = data.data.data.map((query: any, index: number) => ({
-            id: index + 1, // Simple numbering for display
+            id: index + 1, 
             originalText: query.query_text,
             improvedText: query.response_text || 'Processing...',
             date: query.created_at,
@@ -245,7 +209,6 @@ export default function Dashboard() {
       setLoadingHistory(false)
     }
   }
-
   const fetchAnalyticsData = async () => {
     setLoadingAnalytics(true)
     setErrorAnalytics(null)
@@ -268,7 +231,6 @@ export default function Dashboard() {
       setLoadingAnalytics(false)
     }
   }
-
   const fetchPaymentHistory = async () => {
     setLoadingPayments(true)
     setErrorPayments(null)
@@ -291,20 +253,15 @@ export default function Dashboard() {
       setLoadingPayments(false)
     }
   }
-
-  // Retry functions
   const retryFetchHistory = () => {
     fetchHistoryData()
   }
-
   const retryFetchAnalytics = () => {
     fetchAnalyticsData()
   }
-
   const retryFetchPayments = () => {
     fetchPaymentHistory()
   }
-
   const fetchPlansData = async () => {
     setLoadingPlans(true)
     try {
@@ -313,14 +270,11 @@ export default function Dashboard() {
         const data = await response.json()
         if (data.success) {
           setPlans(data.data)
-          // Set current plan based on subscription
           if (subscriptionData?.subscription?.planName) {
-            // Map subscription planName to plan ID for matching
             const planId = mapPlanNameToId(subscriptionData.subscription.planName);
             const plan = data.data.find((p: Plan) => p.name === planId)
             if (plan) setCurrentPlan(plan)
           } else if (data.data.length > 0) {
-            // Default to first plan if no subscription
             setCurrentPlan(data.data[0])
           }
         }
@@ -331,7 +285,6 @@ export default function Dashboard() {
       setLoadingPlans(false)
     }
   }
-
   const fetchCurrentUsage = async () => {
     try {
       const response = await fetch('/api/history?action=stats', {
@@ -349,24 +302,18 @@ export default function Dashboard() {
       console.error('Error fetching current usage:', error)
     }
   }
-
   const handleLogout = async () => {
     try {
       await logout()
-      // Let the auth state change trigger appropriate redirects through middleware
     } catch (error) {
       console.error('Logout error:', error)
-      // Let the auth state change trigger appropriate redirects through middleware
     }
   }
-
   const handleRegenerateText = (requestId: number, originalText: string) => {
-    // Устанавливаем предустановленный текст и открываем чат
     setPresetText(originalText)
     setChatOpen(true)
     console.log('Повторная генерация для запроса:', requestId, originalText)
   }
-
   const handleCopyText = async (text: string, requestId: number) => {
     try {
       await navigator.clipboard.writeText(text)
@@ -377,10 +324,8 @@ export default function Dashboard() {
       alert('Не удалось скопировать текст')
     }
   }
-
   const handleExportText = (request: any) => {
     const content = `${t('dashboard.history.originalText').toUpperCase()}\n${request.originalText}\n\n${t('dashboard.history.improvedText').toUpperCase()}\n${request.improvedText}\n\n${locale === 'en' ? 'Date' : 'Дата'}: ${new Date(request.date).toLocaleDateString(locale === 'en' ? 'en-US' : 'ru-RU')}`
-    
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -391,27 +336,17 @@ export default function Dashboard() {
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
   }
-
   const handlePaymentSuccess = () => {
-    // After successful payment, update subscription status and close modal
     setShowPlanModal(false)
     setHasActiveSubscription(true)
-    // Open chat interface after successful payment
     setChatOpen(true)
   }
-
   const handleCancelSubscription = async () => {
     setIsLoading(true)
     try {
-      // Здесь будет API вызов для отмены подписки
       console.log('Отмена подписки')
-      
-      // Имитация API вызова
       await new Promise(resolve => setTimeout(resolve, 1000))
-      
       setShowCancelModal(false)
-      
-      // Показываем уведомление об отмене подписки
       alert('Подписка отменена. Вы сможете возобновить её в любое время.')
     } catch (error) {
       console.error('Ошибка при отмене подписки:', error)
@@ -420,26 +355,19 @@ export default function Dashboard() {
       setIsLoading(false)
     }
   }
-
   const handleDeletePayment = async () => {
     if (!paymentToDelete) return
-    
     setIsDeletingPayment(true)
     try {
       console.log('Deleting payment:', paymentToDelete)
-      
-      // First get CSRF token
       console.log('Getting CSRF token...')
       const csrfResponse = await fetch('/api/csrf-token')
       if (!csrfResponse.ok) {
         throw new Error('Failed to get CSRF token')
       }
-      
       const csrfData = await csrfResponse.json()
       const csrfToken = csrfData.csrfToken
       console.log('Got CSRF token:', csrfToken ? 'success' : 'failed')
-      
-      // Now make the delete request with CSRF token
       const response = await fetch(`/api/payments/history?id=${paymentToDelete}`, {
         method: 'DELETE',
         headers: {
@@ -447,17 +375,12 @@ export default function Dashboard() {
           'X-CSRF-Token': csrfToken,
         },
       })
-      
       const data = await response.json()
       console.log('Delete response:', response.status, data)
-      
       if (data.success) {
-        // Remove payment from list
         setPaymentHistory(prev => prev.filter(p => p.id !== paymentToDelete))
         setShowDeletePaymentModal(false)
         setPaymentToDelete(null)
-        
-        // Show success message
         console.log('Payment deleted successfully')
       } else {
         const errorMessage = data.details || data.error || (locale === 'ru' ? 'Неизвестная ошибка' : 'Unknown error')
@@ -471,23 +394,20 @@ export default function Dashboard() {
       setIsDeletingPayment(false)
     }
   }
-
   const openDeletePaymentModal = (paymentId: string) => {
     setPaymentToDelete(paymentId)
     setShowDeletePaymentModal(true)
   }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Header */}
+      {}
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <Link href={`/${locale}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
             <span className="text-lg sm:text-xl font-bold text-gray-900">Ad Lab</span>
           </Link>
-          
-          {/* Desktop Navigation */}
+          {}
           <div className="hidden md:flex items-center gap-4">
             <div className="flex items-center gap-2">
               {user.image ? (
@@ -510,21 +430,18 @@ export default function Dashboard() {
               {t('dashboard.header.logout')}
             </Button>
           </div>
-
-          {/* Mobile Navigation */}
+          {}
           <div className="flex md:hidden items-center gap-2">
             <LanguageSelector />
             <MobileNav user={user} onLogout={handleLogout} t={t} />
           </div>
         </div>
       </header>
-
       <div className="container mx-auto px-4 py-6 sm:py-8">
         <div className="mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{t('dashboard.title')}</h1>
           <p className="text-gray-600 text-sm sm:text-base">{t('dashboard.subtitle')}</p>
         </div>
-
         <Tabs defaultValue="history" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 h-auto p-1">
             <TabsTrigger value="history" className="flex items-center gap-2 text-xs sm:text-sm py-2">
@@ -540,15 +457,12 @@ export default function Dashboard() {
               <span className="hidden sm:inline">{t('dashboard.tabs.analytics')}</span>
             </TabsTrigger>
           </TabsList>
-
           <TabsContent value="history" className="space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <h2 className="text-lg sm:text-xl font-semibold">{t('dashboard.history.title')}</h2>
             </div>
-
             <div className="space-y-4">
               {loadingHistory ? (
-                // Loading skeleton
                 <div className="space-y-4">
                   {[1, 2, 3].map((i) => (
                     <Card key={i}>
@@ -699,7 +613,6 @@ export default function Dashboard() {
               )}
             </div>
           </TabsContent>
-
           <TabsContent value="billing" className="space-y-6">
             <div>
               <h2 className="text-lg sm:text-xl font-semibold mb-4">{t('dashboard.billing.management')}</h2>
@@ -711,7 +624,6 @@ export default function Dashboard() {
                   <CreditCard className="h-4 w-4 mr-2" />
                   {t('dashboard.billing.changePlan')}
                 </Button>
-                
                 <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
                   <DialogTrigger asChild>
                     <Button variant="outline" className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50">
@@ -747,14 +659,12 @@ export default function Dashboard() {
                 </Dialog>
               </div>
             </div>
-
             <div>
               <h3 className="text-base sm:text-lg font-semibold mb-4">{t('dashboard.billing.paymentHistory')}</h3>
               <Card>
                 <CardContent className="p-0">
                   <div className="divide-y">
                     {loadingPayments ? (
-                      // Loading skeleton for payments
                       <div className="space-y-0 divide-y">
                         {[1, 2, 3].map((i) => (
                           <div key={i} className="p-4">
@@ -856,7 +766,6 @@ export default function Dashboard() {
               </Card>
             </div>
           </TabsContent>
-
           <TabsContent value="analytics" className="space-y-6">
             {loadingAnalytics ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -897,7 +806,6 @@ export default function Dashboard() {
                     <p className="text-xs text-green-600">{t('dashboard.analytics.monthlyGrowth').replace('{percent}', String(analytics?.monthlyGrowth || 0))}</p>
                   </CardContent>
                 </Card>
-
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-gray-600">{t('dashboard.analytics.averageLength')}</CardTitle>
@@ -907,7 +815,6 @@ export default function Dashboard() {
                     <p className="text-xs text-gray-500">{t('dashboard.analytics.characters')}</p>
                   </CardContent>
                 </Card>
-
                 <Card className="sm:col-span-2 lg:col-span-1">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-gray-600">{t('dashboard.analytics.qualityImprovement')}</CardTitle>
@@ -919,7 +826,6 @@ export default function Dashboard() {
                 </Card>
               </div>
             )}
-
             <Card>
               <CardHeader>
                 <CardTitle className="text-base sm:text-lg">{t('dashboard.analytics.dailyActivity')}</CardTitle>
@@ -950,20 +856,17 @@ export default function Dashboard() {
           </TabsContent>
         </Tabs>
       </div>
-      
       <ChatInterface 
         open={chatOpen} 
         onOpenChange={setChatOpen}
         presetText={presetText}
         onPresetTextUsed={() => setPresetText('')}
       />
-      
       <PaywallModal 
         open={showPlanModal} 
         onOpenChange={setShowPlanModal}
         onPaymentSuccess={handlePaymentSuccess}
       />
-      
       <Dialog open={showDeletePaymentModal} onOpenChange={setShowDeletePaymentModal}>
         <DialogContent>
           <DialogHeader>
@@ -994,8 +897,6 @@ export default function Dashboard() {
     </div>
   )
 } 
-
-// Helper function to map plan names to IDs
 function mapPlanNameToId(planName: string): string {
   const mapping: Record<string, string> = {
     'Week': 'week',
@@ -1003,4 +904,4 @@ function mapPlanNameToId(planName: string): string {
     'Quarter': 'quarter'
   };
   return mapping[planName] || planName.toLowerCase();
-} 
+}

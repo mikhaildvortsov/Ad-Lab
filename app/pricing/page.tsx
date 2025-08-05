@@ -1,5 +1,4 @@
 "use client"
-
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -9,7 +8,6 @@ import { Check, Sparkles, ArrowLeft } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { useLocale } from "@/lib/use-locale"
 import { useTranslation } from "@/lib/translations"
-
 interface Plan {
   id: string
   name: string
@@ -19,7 +17,6 @@ interface Plan {
   improvements: number
   popular?: boolean
 }
-
 export default function PricingPage() {
   const { user, loading } = useAuth()
   const { locale } = useLocale()
@@ -28,15 +25,11 @@ export default function PricingPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [plans, setPlans] = useState<Plan[]>([])
   const [loadingPlans, setLoadingPlans] = useState(false)
-
-  // Safe function to get plan name with fallback
   const getPlanName = (planId: string) => {
     try {
       const translationKey = `paywallModal.plans.${planId}.name`;
       const translation = t(translationKey);
-      // If translation returns the key itself, it means translation not found
       if (translation === translationKey) {
-        // Fallback to static mapping
         const fallbackNames: Record<string, string> = {
           'week': 'Неделя',
           'month': 'Месяц', 
@@ -47,7 +40,6 @@ export default function PricingPage() {
       return translation;
     } catch (error) {
       console.error('Error getting plan name:', error);
-      // Ultimate fallback
       const fallbackNames: Record<string, string> = {
         'week': 'Неделя',
         'month': 'Месяц',
@@ -56,8 +48,6 @@ export default function PricingPage() {
       return fallbackNames[planId] || planId;
     }
   };
-
-  // Fetch plans from API
   useEffect(() => {
     const fetchPlans = async () => {
       setLoadingPlans(true)
@@ -75,21 +65,13 @@ export default function PricingPage() {
         setLoadingPlans(false)
       }
     }
-
     fetchPlans()
   }, [])
-
   const handleSelectPlan = async (plan: Plan) => {
     setIsLoading(true)
     setSelectedPlan(plan)
-    
     try {
-      // Здесь будет логика для обработки выбора тарифа
-      // Пока что просто имитируем задержку
       await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Redirect will be handled by middleware and auth context
-      // For now, just show success message
       console.log('Plan selected successfully:', plan)
     } catch (error) {
       console.error('Ошибка при выборе тарифа:', error)
@@ -97,7 +79,6 @@ export default function PricingPage() {
       setIsLoading(false)
     }
   }
-
   if (loading || loadingPlans) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
@@ -108,17 +89,15 @@ export default function PricingPage() {
       </div>
     )
   }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Header */}
+      {}
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <Link href={`/${locale}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
             <span className="text-lg sm:text-xl font-bold text-gray-900">Ad Lab</span>
           </Link>
-          
           <div className="flex items-center gap-4">
             <Link href={`/${locale}`}>
               <Button variant="ghost" size="sm">
@@ -138,8 +117,7 @@ export default function PricingPage() {
           </div>
         </div>
       </header>
-
-      {/* Main Content */}
+      {}
       <div className="container mx-auto px-4 py-12 sm:py-16 lg:py-20">
         <div className="text-center mb-12 sm:mb-16">
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 sm:mb-6">
@@ -149,8 +127,7 @@ export default function PricingPage() {
             Выберите план, который лучше всего подходит для ваших потребностей
           </p>
         </div>
-
-        {/* Pricing Cards */}
+        {}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
           {plans.map((plan) => (
             <Card key={plan.id} className={`relative ${plan.popular ? 'ring-2 ring-blue-500 scale-105' : ''}`}>
@@ -193,8 +170,7 @@ export default function PricingPage() {
             </Card>
           ))}
         </div>
-
-        {/* Additional Info */}
+        {}
         <div className="mt-12 sm:mt-16 text-center">
           <div className="bg-white rounded-xl shadow-sm border p-6 sm:p-8 max-w-2xl mx-auto">
             <h3 className="text-lg sm:text-xl font-semibold mb-4">Что включено во все планы:</h3>
@@ -221,4 +197,4 @@ export default function PricingPage() {
       </div>
     </div>
   )
-} 
+}

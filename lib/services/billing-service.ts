@@ -18,18 +18,12 @@ import {
   PaymentMethod
 } from '@/lib/database-types';
 import { v4 as uuidv4 } from 'uuid';
-
 export class BillingService {
-  
-  // ================ SUBSCRIPTION PLANS ================
-  
-  // Get all active subscription plans
   static async getSubscriptionPlans(): Promise<DatabaseResult<SubscriptionPlan[]>> {
     try {
       const result = await query<SubscriptionPlan>(
         'SELECT * FROM subscription_plans WHERE is_active = true ORDER BY price_monthly ASC'
       );
-
       return { success: true, data: result.rows };
     } catch (error) {
       console.error('Error getting subscription plans:', error);
@@ -39,19 +33,15 @@ export class BillingService {
       };
     }
   }
-
-  // Get subscription plan by ID
   static async getSubscriptionPlan(planId: string): Promise<DatabaseResult<SubscriptionPlan>> {
     try {
       const result = await query<SubscriptionPlan>(
         'SELECT * FROM subscription_plans WHERE id = $1 AND is_active = true',
         [planId]
       );
-
       if (result.rows.length === 0) {
         return { success: false, error: 'Subscription plan not found' };
       }
-
       return { success: true, data: result.rows[0] };
     } catch (error) {
       console.error('Error getting subscription plan:', error);
@@ -61,19 +51,12 @@ export class BillingService {
       };
     }
   }
-
-  // ================ USER SUBSCRIPTIONS ================
-  
-  // Create a new user subscription
   static async createUserSubscription(params: CreateUserSubscriptionParams): Promise<DatabaseResult<UserSubscription>> {
     try {
       const id = uuidv4();
       const now = new Date().toISOString();
-      
-      // Set default period if not provided (1 month from now)
       const defaultEnd = new Date();
       defaultEnd.setMonth(defaultEnd.getMonth() + 1);
-      
       const subscription = await query<UserSubscription>(`
         INSERT INTO user_subscriptions (
           id, user_id, plan_id, status, current_period_start, current_period_end,
@@ -91,7 +74,6 @@ export class BillingService {
         now,
         params.metadata ? JSON.stringify(params.metadata) : null
       ]);
-
       return { success: true, data: subscription.rows[0] };
     } catch (error) {
       console.error('Error creating user subscription:', error);
@@ -101,8 +83,6 @@ export class BillingService {
       };
     }
   }
-
-  // Get user's current subscription
   static async getUserSubscription(userId: string): Promise<DatabaseResult<UserSubscription & { plan: SubscriptionPlan }>> {
     try {
       const result = await query<UserSubscription & { plan: SubscriptionPlan }>(`
@@ -115,11 +95,9 @@ export class BillingService {
         ORDER BY us.created_at DESC
         LIMIT 1
       `, [userId]);
-
       if (result.rows.length === 0) {
         return { success: false, error: 'No active subscription found' };
       }
-
       return { success: true, data: result.rows[0] };
     } catch (error) {
       console.error('Error getting user subscription:', error);
@@ -129,8 +107,6 @@ export class BillingService {
       };
     }
   }
-
-  // Update user subscription
   static async updateUserSubscription(
     subscriptionId: string, 
     params: UpdateUserSubscriptionParams
@@ -139,8 +115,6 @@ export class BillingService {
       const updates: string[] = [];
       const values: any[] = [];
       let valueIndex = 1;
-
-      // Build dynamic update query
       if (params.plan_id !== undefined) {
         updates.push(`plan_id = $${valueIndex++}`);
         values.push(params.plan_id);
@@ -161,34 +135,25 @@ export class BillingService {
         updates.push(`cancelled_at = $${valueIndex++}`);
         values.push(params.cancelled_at?.toISOString() || null);
       }
-
       if (params.metadata !== undefined) {
         updates.push(`metadata = $${valueIndex++}`);
         values.push(params.metadata ? JSON.stringify(params.metadata) : null);
       }
-
       if (updates.length === 0) {
         return { success: false, error: 'No fields to update' };
       }
-
-      // Always update the updated_at field
       updates.push(`updated_at = $${valueIndex++}`);
       values.push(new Date().toISOString());
-
-      // Add subscription ID as the last parameter
       values.push(subscriptionId);
-
       const result = await query<UserSubscription>(`
         UPDATE user_subscriptions 
         SET ${updates.join(', ')}
         WHERE id = $${valueIndex}
         RETURNING *
       `, values);
-
       if (result.rows.length === 0) {
         return { success: false, error: 'Subscription not found or update failed' };
       }
-
       return { success: true, data: result.rows[0] };
     } catch (error) {
       console.error('Error updating user subscription:', error);
@@ -198,8 +163,6 @@ export class BillingService {
       };
     }
   }
-
-  // Cancel user subscription
   static async cancelUserSubscription(userId: string): Promise<DatabaseResult<UserSubscription>> {
     try {
       const result = await query<UserSubscription>(`
@@ -208,11 +171,9 @@ export class BillingService {
         WHERE user_id = $2 AND status = 'active'
         RETURNING *
       `, [new Date().toISOString(), userId]);
-
       if (result.rows.length === 0) {
         return { success: false, error: 'No active subscription found to cancel' };
       }
-
       return { success: true, data: result.rows[0] };
     } catch (error) {
       console.error('Error canceling user subscription:', error);
@@ -222,15 +183,10 @@ export class BillingService {
       };
     }
   }
-
-  // ================ PAYMENTS ================
-  
-  // Create a new payment record
   static async createPayment(params: CreatePaymentParams): Promise<DatabaseResult<Payment>> {
     try {
       const id = uuidv4();
       const now = new Date().toISOString();
-      
       const payment = await query<Payment>(`
         INSERT INTO payments (
           id, user_id, subscription_id, amount, currency, status,
@@ -249,7 +205,6 @@ export class BillingService {
         now,
         params.metadata ? JSON.stringify(params.metadata) : null
       ]);
-
       return { success: true, data: payment.rows[0] };
     } catch (error) {
       console.error('Error creating payment:', error);
@@ -259,14 +214,11 @@ export class BillingService {
       };
     }
   }
-
-  // Update payment status
   static async updatePayment(paymentId: string, params: UpdatePaymentParams): Promise<DatabaseResult<Payment>> {
     try {
       const updates: string[] = [];
       const values: any[] = [];
       let valueIndex = 1;
-
       if (params.status !== undefined) {
         updates.push(`status = $${valueIndex++}`);
         values.push(params.status);
@@ -279,29 +231,21 @@ export class BillingService {
         updates.push(`metadata = $${valueIndex++}`);
         values.push(params.metadata ? JSON.stringify(params.metadata) : null);
       }
-
       if (updates.length === 0) {
         return { success: false, error: 'No fields to update' };
       }
-
-      // Always update the updated_at field
       updates.push(`updated_at = $${valueIndex++}`);
       values.push(new Date().toISOString());
-
-      // Add payment ID as the last parameter
       values.push(paymentId);
-
       const result = await query<Payment>(`
         UPDATE payments 
         SET ${updates.join(', ')}
         WHERE id = $${valueIndex}
         RETURNING *
       `, values);
-
       if (result.rows.length === 0) {
         return { success: false, error: 'Payment not found or update failed' };
       }
-
       return { success: true, data: result.rows[0] };
     } catch (error) {
       console.error('Error updating payment:', error);
@@ -311,45 +255,34 @@ export class BillingService {
       };
     }
   }
-
-  // Get user's payment history
   static async getUserPayments(
     userId: string, 
     options: QueryOptions = {}
   ): Promise<DatabaseResult<PaginatedResult<Payment>>> {
     try {
       console.log(`BillingService.getUserPayments called for userId: ${userId}, options:`, options);
-      
       const { 
         page = 1, 
         limit = 20, 
         sort_by = 'created_at', 
         sort_order = 'DESC' 
       } = options;
-
       const offset = (page - 1) * limit;
-
-      // Get total count
       const countResult = await query(
         'SELECT COUNT(*) as count FROM payments WHERE user_id = $1',
         [userId]
       );
       const total = parseInt(countResult.rows[0].count);
       console.log(`Found ${total} total payments for user ${userId}`);
-
-      // Get payments
       const result = await query<Payment>(`
         SELECT * FROM payments 
         WHERE user_id = $1
         ORDER BY ${sort_by} ${sort_order}
         LIMIT $2 OFFSET $3
       `, [userId, limit, offset]);
-
       console.log(`Retrieved ${result.rows.length} payments for current page`);
       console.log('Payment IDs:', result.rows.map(p => p.id));
-
       const totalPages = Math.ceil(total / limit);
-
       return {
         success: true,
         data: {
@@ -368,50 +301,36 @@ export class BillingService {
       };
     }
   }
-
-  // Delete payment (only if it belongs to the user)
   static async deletePayment(paymentId: string, userId: string): Promise<DatabaseResult<boolean>> {
     try {
       console.log(`BillingService.deletePayment called with paymentId: ${paymentId}, userId: ${userId}`);
-      
-      // First verify the payment belongs to the user
       console.log('Checking if payment exists and belongs to user...');
       const checkResult = await query<Payment>(
         'SELECT id FROM payments WHERE id = $1 AND user_id = $2',
         [paymentId, userId]
       );
-      
       console.log(`Check query result: found ${checkResult.rows.length} rows`);
-
       if (checkResult.rows.length === 0) {
         console.log('Payment not found or does not belong to user');
         return { success: false, error: 'Payment not found' };
       }
-
-      // Delete the payment
       console.log('Deleting payment...');
       const result = await query(
         'DELETE FROM payments WHERE id = $1 AND user_id = $2',
         [paymentId, userId]
       );
-      
       console.log('Delete query executed successfully');
       console.log('Delete result rowCount:', result.rowCount);
-      
-      // Verify deletion by checking if payment still exists
       console.log('Verifying deletion...');
       const verifyResult = await query<Payment>(
         'SELECT id FROM payments WHERE id = $1',
         [paymentId]
       );
-      
       console.log(`Verification result: found ${verifyResult.rows.length} rows (should be 0)`);
-      
       if (verifyResult.rows.length > 0) {
         console.error('ERROR: Payment still exists after deletion!');
         return { success: false, error: 'Payment deletion failed - payment still exists' };
       }
-      
       console.log('Payment successfully deleted and verified');
       return { success: true, data: true };
     } catch (error) {
@@ -422,30 +341,21 @@ export class BillingService {
       };
     }
   }
-
-  // ================ USAGE STATISTICS ================
-  
-  // Get or create usage statistics for a user/month
   static async getOrCreateUsageStats(userId: string, month: string): Promise<DatabaseResult<UsageStatistics>> {
     try {
-      // Try to get existing stats
       let result = await query<UsageStatistics>(
         'SELECT * FROM usage_statistics WHERE user_id = $1 AND month = $2',
         [userId, month]
       );
-
       if (result.rows.length === 0) {
-        // Create new stats record
         const id = uuidv4();
         const now = new Date().toISOString();
-        
         result = await query<UsageStatistics>(`
           INSERT INTO usage_statistics (id, user_id, month, queries_count, tokens_used, created_at, updated_at)
           VALUES ($1, $2, $3, 0, 0, $4, $5)
           RETURNING *
         `, [id, userId, month, now, now]);
       }
-
       return { success: true, data: result.rows[0] };
     } catch (error) {
       console.error('Error getting/creating usage stats:', error);
@@ -455,8 +365,6 @@ export class BillingService {
       };
     }
   }
-
-  // Update usage statistics
   static async updateUsageStats(
     userId: string, 
     month: string, 
@@ -472,12 +380,9 @@ export class BillingService {
         WHERE user_id = $4 AND month = $5
         RETURNING *
       `, [queriesIncrement, tokensIncrement, new Date().toISOString(), userId, month]);
-
       if (result.rows.length === 0) {
-        // If no record exists, create one
         return await this.getOrCreateUsageStats(userId, month);
       }
-
       return { success: true, data: result.rows[0] };
     } catch (error) {
       console.error('Error updating usage stats:', error);
@@ -487,11 +392,9 @@ export class BillingService {
       };
     }
   }
-
-  // Get user's usage for current month
   static async getCurrentMonthUsage(userId: string): Promise<DatabaseResult<UsageStatistics>> {
     try {
-      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+      const currentMonth = new Date().toISOString().slice(0, 7); 
       return await this.getOrCreateUsageStats(userId, currentMonth);
     } catch (error) {
       console.error('Error getting current month usage:', error);
@@ -501,8 +404,6 @@ export class BillingService {
       };
     }
   }
-
-  // Check if user has exceeded their plan limits
   static async checkUsageLimits(userId: string): Promise<DatabaseResult<{
     withinLimits: boolean;
     currentUsage: UsageStatistics;
@@ -510,23 +411,19 @@ export class BillingService {
     remainingQueries: number;
   }>> {
     try {
-      // Get current subscription and usage
       const subscriptionResult = await this.getUserSubscription(userId);
       if (!subscriptionResult.success) {
         return { success: false, error: 'No active subscription found' };
       }
-
       const currentUsageResult = await this.getCurrentMonthUsage(userId);
       if (!currentUsageResult.success) {
         return { success: false, error: 'Failed to get usage stats' };
       }
-
       const subscription = subscriptionResult.data!;
       const usage = currentUsageResult.data!;
       const maxQueries = (subscription.plan?.max_queries_per_month ?? Infinity);
       const remainingQueries = Math.max(0, maxQueries - (usage.queries_count ?? 0));
       const withinLimits = (usage.queries_count ?? 0) < maxQueries;
-
       return {
         success: true,
         data: {
@@ -544,4 +441,4 @@ export class BillingService {
       };
     }
   }
-} 
+}

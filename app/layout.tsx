@@ -3,10 +3,7 @@ import './globals.css'
 import { Toaster } from "@/components/ui/toaster"
 import { LocaleProvider } from '@/components/locale-provider'
 import { AuthProvider } from '@/lib/auth-context'
-
-// Force dynamic rendering
 export const dynamic = 'force-dynamic'
-
 export const metadata: Metadata = {
   title: 'Ad Lab - Профессиональные инструменты для рекламных текстов',
   description: 'Превратите обычные рекламные скрипты в мощные продающие тексты с помощью профессиональных техник копирайтинга',
@@ -15,13 +12,11 @@ export const metadata: Metadata = {
     icon: '/favicons/favicon-32x32.png',
   },
 }
-
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
 }
-
 export default function RootLayout({
   children,
 }: Readonly<{

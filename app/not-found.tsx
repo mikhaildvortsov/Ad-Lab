@@ -1,10 +1,6 @@
 "use client"
-
 import Link from 'next/link'
-
-// Force dynamic rendering
 export const dynamic = 'force-dynamic'
-
 export default function NotFound() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
@@ -18,4 +14,4 @@ export default function NotFound() {
       </Link>
     </div>
   )
-} 
+}

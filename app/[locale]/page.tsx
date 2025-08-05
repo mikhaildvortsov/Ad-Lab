@@ -23,7 +23,6 @@ import { TextValidator } from '@/components/text-validator'
 
 import { getAvailableNiches, getAvailableNichesWithTranslation, type NicheType } from '@/lib/ai-instructions'
 
-// Force dynamic rendering
 export const dynamic = 'force-dynamic'
 
 interface Plan {
@@ -95,15 +94,13 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
   const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
   const [subscriptionData, setSubscriptionData] = useState<any>(null);
-  
-  // Hydration-safe client detection
+
   const [isClient, setIsClient] = useState(false)
-  
+
   useEffect(() => {
     setIsClient(true)
   }, [])
 
-  // Get CSRF token when user is authenticated
   useEffect(() => {
     if (user && !csrfToken) {
       const fetchCsrfToken = async () => {
@@ -121,11 +118,10 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
     }
   }, [user, csrfToken]);
 
-  // Проверка статуса подписки через API
   useEffect(() => {
     const checkSubscription = async () => {
       if (user) {
-        // В тестовом режиме всегда считаем подписку активной
+
         if (process.env.NEXT_PUBLIC_TEST_MODE === 'true') {
           setHasActiveSubscription(true);
           setSubscriptionData({
@@ -140,13 +136,13 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
           });
           return;
         }
-        
+
         try {
           const response = await fetch('/api/auth/subscription');
           if (response.ok) {
             const data = await response.json();
             if (data.success) {
-              // Устанавливаем статус подписки: true если активна, false если нет
+
               setHasActiveSubscription(data.data.hasActiveSubscription);
               setSubscriptionData(data.data);
             } else {
@@ -154,18 +150,18 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
               setSubscriptionData(null);
             }
           } else {
-            // API недоступен - считаем что подписки нет
+
             setHasActiveSubscription(false);
             setSubscriptionData(null);
           }
         } catch (error) {
           console.error('Error checking subscription:', error);
-          // При ошибке считаем что подписки нет
+
           setHasActiveSubscription(false);
           setSubscriptionData(null);
         }
       } else {
-        // Если пользователь не авторизован - подписки точно нет
+
         setHasActiveSubscription(false);
         setSubscriptionData(null);
       }
@@ -174,31 +170,28 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
     checkSubscription();
   }, [user]);
 
-  // Removed auto-redirect to allow authenticated users to view the homepage
-
   const handleLogout = async () => {
     try {
       await logout()
-      // Остаемся на главной странице, так как мы уже здесь
-      // Состояние обновится автоматически через AuthContext
+
     } catch (error) {
       console.error('Logout error:', error)
-      // Даже при ошибке состояние обновится через AuthContext
+
     }
   };
-  
+
   const handleTryClick = () => {
     if (!isClient || !user) {
-      // Если клиент не готов или пользователь не авторизован - перенаправляем на регистрацию
+
       router.push(`/${locale}/auth?mode=register`);
     } else if (hasActiveSubscription === null) {
-      // Если статус подписки еще загружается - ничего не делаем
+
       return;
     } else if (hasActiveSubscription === false) {
-      // Если авторизован, но нет подписки - показываем paywall
+
       setShowPaywall(true);
     } else {
-      // Если авторизован и есть подписка - перенаправляем на дашборд
+
       router.push(`/${locale}/dashboard`);
     }
   };
@@ -209,15 +202,14 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
     }
 
     setIsProcessing(true);
-    
+
     try {
-      // Check if we have CSRF token
+
       if (!csrfToken) {
         console.error('No CSRF token available');
         return;
       }
 
-      // Сначала анализируем конверсионность, затем улучшаем
       const analysisResponse = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -233,12 +225,11 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
       });
 
       const analysisData = await analysisResponse.json();
-      
+
       if (!analysisResponse.ok) {
         throw new Error(analysisData.error || 'Ошибка анализа');
       }
 
-      // Затем улучшаем текст с учетом анализа
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -246,7 +237,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
         },
         body: JSON.stringify({ 
           message: `На основе анализа конверсии улучши этот рекламный текст, добавив боли, преимущества и сильные CTA: ${initialText}
-          
+
 Анализ конверсии: ${analysisData.response}`,
           instructionType: 'copywriting',
           locale: locale,
@@ -259,8 +250,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
       if (response.ok) {
         setImprovedText(data.response);
         setImprovementModalOpen(false);
-        
-        // Показываем paywall после получения улучшенного текста (если не тестовый режим)
+
         if (process.env.NEXT_PUBLIC_TEST_MODE !== 'true') {
           setTimeout(() => {
             setShowPaywall(true);
@@ -268,11 +258,11 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
         }
       } else {
         console.error('Error improving text:', data.error);
-        // Можно показать уведомление об ошибке
+
       }
     } catch (error) {
       console.error('Error improving text:', error);
-      // Можно показать уведомление об ошибке
+
     } finally {
       setIsProcessing(false);
     }
@@ -284,9 +274,9 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
     }
 
     setIsProcessingGoal(true);
-    
+
     try {
-      // Check if we have CSRF token
+
       if (!csrfToken) {
         console.error('No CSRF token available');
         return;
@@ -313,8 +303,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
       if (response.ok) {
         setReformulatedGoal(data.response);
         setGoalModalOpen(false);
-        
-        // Показываем paywall после получения переформулированной цели (если не тестовый режим)
+
         if (process.env.NEXT_PUBLIC_TEST_MODE !== 'true') {
           setTimeout(() => {
             setShowPaywall(true);
@@ -331,17 +320,14 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
   };
 
   const handlePaymentSuccess = () => {
-    // После успешной оплаты закрываем paywall и перенаправляем на дашборд
+
     setShowPaywall(false);
-    
-    // Обновляем статус подписки
+
     setHasActiveSubscription(true);
-    
-    // После оплаты перенаправляем на дашборд для полного доступа
+
     router.push(`/${locale}/dashboard`);
   };
 
-  // Show loading only on client side to prevent hydration mismatch
   if (isClient && loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
@@ -355,15 +341,15 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Header */}
+      {}
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
             <span className="text-lg sm:text-xl font-bold text-gray-900">{t('header.brand')}</span>
           </Link>
-          
-          {/* Desktop Navigation */}
+
+          {}
           <div className="hidden md:flex items-center gap-4">
             <LanguageSelector />
             {isClient && user ? (
@@ -400,7 +386,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
             )}
           </div>
 
-          {/* Mobile Navigation */}
+          {}
           <div className="flex md:hidden items-center gap-2">
             <LanguageSelector />
             <MobileNav user={isClient ? user : null} onLogout={handleLogout} t={t} />
@@ -408,7 +394,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
         </div>
       </header>
 
-      {/* Hero Section */}
+      {}
       <section className="container mx-auto px-4 py-12 sm:py-16 lg:py-20">
         <div className="text-center max-w-4xl mx-auto">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 sm:mb-8">
@@ -421,7 +407,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
             {t('hero.subtitle')}
           </p>
 
-          {/* ДКЦП Marketing Framework Section */}
+          {}
           <div className="bg-white rounded-2xl shadow-lg border p-6 sm:p-8 mb-8 sm:mb-12 max-w-4xl mx-auto">
             <div className="text-center mb-6">
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
@@ -433,7 +419,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Что это такое */}
+              {}
               <div className="text-center">
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Sparkles className="h-6 w-6 text-blue-600" />
@@ -446,7 +432,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
                 </p>
               </div>
 
-              {/* Пункты анализа */}
+              {}
               <div className="text-center">
                 <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Target className="h-6 w-6 text-purple-600" />
@@ -478,7 +464,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
                 </ul>
               </div>
 
-              {/* Как помогает */}
+              {}
               <div className="text-center">
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <TrendingUp className="h-6 w-6 text-green-600" />
@@ -492,7 +478,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
               </div>
             </div>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button 
               size="lg"
@@ -502,7 +488,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
               {isClient && user ? t('upgrade') : t('hero.cta')}
               <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:translate-x-1" />
             </Button>
-            
+
             <Button 
               size="lg"
               variant="outline"
@@ -516,7 +502,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
         </div>
       </section>
 
-      {/* Features Section */}
+      {}
       <section className="container mx-auto px-4 py-12 sm:py-16">
         <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
@@ -545,10 +531,9 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
           </div>
         </div>
 
-
       </section>
 
-      {/* Niche Customization Section */}
+      {}
       <section className="container mx-auto px-4 py-12 sm:py-16">
         <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
@@ -578,12 +563,9 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
           })}
         </div>
 
-
       </section>
 
-
-
-      {/* Footer */}
+      {}
       <footer className="bg-gray-900 text-white py-8 sm:py-12">
         <div className="container mx-auto px-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
@@ -607,7 +589,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
           onOpenChange={setChatOpen}
         />
 
-      {/* Script Improvement Modal */}
+      {}
       <Dialog open={improvementModalOpen} onOpenChange={setImprovementModalOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -616,7 +598,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
               {t('scriptImprover.description')}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-6">
             <div>
               <Label htmlFor="script-text" className="text-sm font-medium">
@@ -630,7 +612,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
                 className="min-h-[200px] mt-2"
                 disabled={isProcessing}
               />
-              {/* Замена простой валидации на TextValidator */}
+              {}
               <TextValidator 
                 text={initialText}
                 textType="script"
@@ -717,7 +699,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
         </DialogContent>
       </Dialog>
 
-      {/* Goal Reformulation Modal */}
+      {}
       <Dialog open={goalModalOpen} onOpenChange={setGoalModalOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -726,7 +708,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
               {t('goalReformulation.modalDescription')}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-6">
             <div>
               <Label htmlFor="goal-text" className="text-sm font-medium">
@@ -825,7 +807,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
         </DialogContent>
       </Dialog>
 
-      {/* Paywall Modal */}
+      {}
       <PaywallModal
         open={showPaywall}
         onOpenChange={setShowPaywall}
@@ -834,7 +816,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
         onPaymentSuccess={handlePaymentSuccess}
       />
 
-      {/* Pricing Modal */}
+      {}
       <Dialog open={improvementModalOpen} onOpenChange={setImprovementModalOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -879,8 +861,8 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
               </Card>
             ))}
           </div>
-          
-          {/* Additional Info */}
+
+          {}
           <div className="mt-8">
             <div className="bg-gray-50 rounded-xl p-6 max-w-2xl mx-auto">
               <h3 className="text-lg sm:text-xl font-semibold mb-4">{t('pricingModal.whatsIncluded')}</h3>
@@ -923,4 +905,4 @@ export default function HomePage({ params }: { params: { locale: Locale } }) {
       <HomePageContent params={params} />
     </Suspense>
   )
-} 
+}

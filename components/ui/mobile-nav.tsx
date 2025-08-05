@@ -1,29 +1,24 @@
 "use client"
-
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Menu, X, User, LogOut, Home, Sparkles, Bot } from "lucide-react"
 import { useLocale } from "@/lib/use-locale"
-
 interface User {
   id: string
   name: string
   email: string
   image?: string
 }
-
 interface MobileNavProps {
   user: User | null
   onLogout: () => void
   t: (key: string) => string
 }
-
 export function MobileNav({ user, onLogout, t }: MobileNavProps) {
   const [isOpen, setIsOpen] = useState(false)
   const { locale } = useLocale()
-
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
@@ -38,7 +33,6 @@ export function MobileNav({ user, onLogout, t }: MobileNavProps) {
             <Sparkles className="h-6 w-6 text-blue-600" />
             <span className="text-lg font-bold text-gray-900">Ad Lab</span>
           </div>
-          
           <nav className="flex-1 space-y-4">
             <Link 
               href={`/${locale}`}
@@ -48,7 +42,6 @@ export function MobileNav({ user, onLogout, t }: MobileNavProps) {
               <Home className="h-4 w-4" />
               Главная
             </Link>
-            
             {user ? (
               <>
                 <Link 
@@ -60,7 +53,7 @@ export function MobileNav({ user, onLogout, t }: MobileNavProps) {
                   Личный кабинет
                 </Link>
                 <Link 
-                  href="/pricing" 
+                  href={`/${locale}/pricing`} 
                   className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
@@ -116,4 +109,4 @@ export function MobileNav({ user, onLogout, t }: MobileNavProps) {
       </SheetContent>
     </Sheet>
   )
-} 
+}

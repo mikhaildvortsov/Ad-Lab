@@ -8,17 +8,11 @@ import {
   QueryOptions 
 } from '@/lib/database-types';
 import { v4 as uuidv4 } from 'uuid';
-
 export class QueryService {
-  
-  // ================ QUERY CRUD OPERATIONS ================
-  
-  // Create a new query record
   static async createQuery(params: CreateQueryParams): Promise<DatabaseResult<QueryHistory>> {
     try {
       const id = uuidv4();
       const now = new Date().toISOString();
-      
       const queryRecord = await query<QueryHistory>(`
         INSERT INTO query_history (
           id, user_id, session_id, query_text, response_text, tokens_used,
@@ -43,7 +37,6 @@ export class QueryService {
         params.metadata ? JSON.stringify(params.metadata) : null,
         now
       ]);
-
       return { success: true, data: queryRecord.rows[0] };
     } catch (error) {
       console.error('Error creating query:', error);
@@ -53,19 +46,15 @@ export class QueryService {
       };
     }
   }
-
-  // Get query by ID
   static async getQueryById(queryId: string): Promise<DatabaseResult<QueryHistory>> {
     try {
       const result = await query<QueryHistory>(
         'SELECT * FROM query_history WHERE id = $1',
         [queryId]
       );
-
       if (result.rows.length === 0) {
         return { success: false, error: 'Query not found' };
       }
-
       return { success: true, data: result.rows[0] };
     } catch (error) {
       console.error('Error getting query by ID:', error);
@@ -75,8 +64,6 @@ export class QueryService {
       };
     }
   }
-
-  // Update query response and metadata
   static async updateQueryResponse(
     queryId: string, 
     responseText: string, 
@@ -90,11 +77,9 @@ export class QueryService {
         WHERE id = $4
         RETURNING *
       `, [responseText, tokensUsed || 0, processingTime || null, queryId]);
-
       if (result.rows.length === 0) {
         return { success: false, error: 'Query not found or update failed' };
       }
-
       return { success: true, data: result.rows[0] };
     } catch (error) {
       console.error('Error updating query response:', error);
@@ -104,8 +89,6 @@ export class QueryService {
       };
     }
   }
-
-  // Mark query as failed
   static async markQueryFailed(queryId: string, errorMessage: string): Promise<DatabaseResult<QueryHistory>> {
     try {
       const result = await query<QueryHistory>(`
@@ -114,11 +97,9 @@ export class QueryService {
         WHERE id = $2
         RETURNING *
       `, [errorMessage, queryId]);
-
       if (result.rows.length === 0) {
         return { success: false, error: 'Query not found or update failed' };
       }
-
       return { success: true, data: result.rows[0] };
     } catch (error) {
       console.error('Error marking query as failed:', error);
@@ -128,8 +109,6 @@ export class QueryService {
       };
     }
   }
-
-  // Get user's query history with pagination
   static async getUserQueries(
     userId: string, 
     options: QueryOptions = {}
@@ -143,13 +122,10 @@ export class QueryService {
         start_date,
         end_date
       } = options;
-
       const offset = (page - 1) * limit;
       const conditions = ['user_id = $1'];
       const params = [userId];
       let paramIndex = 2;
-
-      // Add date filters if provided
       if (start_date) {
         conditions.push(`created_at >= $${paramIndex++}`);
         params.push(start_date.toISOString());
@@ -158,26 +134,19 @@ export class QueryService {
         conditions.push(`created_at <= $${paramIndex++}`);
         params.push(end_date.toISOString());
       }
-
       const whereClause = conditions.join(' AND ');
-
-      // Get total count
       const countResult = await query(
         `SELECT COUNT(*) as count FROM query_history WHERE ${whereClause}`,
         params
       );
       const total = parseInt(countResult.rows[0].count);
-
-      // Get queries
       const result = await query<QueryHistory>(`
         SELECT * FROM query_history 
         WHERE ${whereClause}
         ORDER BY ${sort_by} ${sort_order}
         LIMIT $${paramIndex++} OFFSET $${paramIndex}
       `, [...params, limit, offset]);
-
       const totalPages = Math.ceil(total / limit);
-
       return {
         success: true,
         data: {
@@ -196,15 +165,12 @@ export class QueryService {
       };
     }
   }
-
-  // Get queries by session ID
   static async getSessionQueries(sessionId: string): Promise<DatabaseResult<QueryHistory[]>> {
     try {
       const result = await query<QueryHistory>(
         'SELECT * FROM query_history WHERE session_id = $1 ORDER BY created_at ASC',
         [sessionId]
       );
-
       return { success: true, data: result.rows };
     } catch (error) {
       console.error('Error getting session queries:', error);
@@ -214,8 +180,6 @@ export class QueryService {
       };
     }
   }
-
-  // Get query statistics for a user
   static async getUserQueryStats(userId: string): Promise<DatabaseResult<{
     totalQueries: number;
     successfulQueries: number;
@@ -227,7 +191,6 @@ export class QueryService {
     averageProcessingTime: number;
   }>> {
     try {
-      // Get basic stats
       const statsResult = await query(`
         SELECT 
           COUNT(*) as total_queries,
@@ -239,16 +202,12 @@ export class QueryService {
         FROM query_history 
         WHERE user_id = $1
       `, [userId]);
-
-      // Get queries this month
-      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+      const currentMonth = new Date().toISOString().slice(0, 7); 
       const monthlyResult = await query(`
         SELECT COUNT(*) as count 
         FROM query_history 
         WHERE user_id = $1 AND created_at >= $2
       `, [userId, `${currentMonth}-01`]);
-
-      // Get most used model
       const modelResult = await query(`
         SELECT model_used, COUNT(*) as count
         FROM query_history 
@@ -257,10 +216,8 @@ export class QueryService {
         ORDER BY count DESC
         LIMIT 1
       `, [userId]);
-
       const stats = statsResult.rows[0];
       const mostUsedModel = modelResult.rows[0]?.model_used || 'N/A';
-
       return {
         success: true,
         data: {
@@ -282,15 +239,12 @@ export class QueryService {
       };
     }
   }
-
-  // Delete query (hard delete)
   static async deleteQuery(queryId: string): Promise<DatabaseResult<boolean>> {
     try {
       const result = await query(
         'DELETE FROM query_history WHERE id = $1',
         [queryId]
       );
-
       return { success: true, data: !!result.rowCount };
     } catch (error) {
       console.error('Error deleting query:', error);
@@ -300,15 +254,12 @@ export class QueryService {
       };
     }
   }
-
-  // Delete all queries for a user
   static async deleteUserQueries(userId: string): Promise<DatabaseResult<number>> {
     try {
       const result = await query(
         'DELETE FROM query_history WHERE user_id = $1',
         [userId]
       );
-
       return { success: true, data: typeof result.rowCount === 'number' ? result.rowCount : 0 };
     } catch (error) {
       console.error('Error deleting user queries:', error);
@@ -318,8 +269,6 @@ export class QueryService {
       };
     }
   }
-
-  // Get recent queries across all users (admin function)
   static async getRecentQueries(limit: number = 50): Promise<DatabaseResult<QueryHistory[]>> {
     try {
       const result = await query<QueryHistory>(`
@@ -329,7 +278,6 @@ export class QueryService {
         ORDER BY qh.created_at DESC
         LIMIT $1
       `, [limit]);
-
       return { success: true, data: result.rows };
     } catch (error) {
       console.error('Error getting recent queries:', error);
@@ -339,8 +287,6 @@ export class QueryService {
       };
     }
   }
-
-  // Get popular niches/topics
   static async getPopularNiches(limit: number = 10): Promise<DatabaseResult<Array<{
     niche: string;
     count: number;
@@ -354,7 +300,6 @@ export class QueryService {
         ORDER BY count DESC
         LIMIT $1
       `, [limit]);
-
       return { 
         success: true, 
         data: result.rows.map(row => ({
@@ -370,8 +315,6 @@ export class QueryService {
       };
     }
   }
-
-  // Update query metadata
   static async updateQueryMetadata(
     queryId: string, 
     metadata: Record<string, any>
@@ -383,11 +326,9 @@ export class QueryService {
         WHERE id = $2
         RETURNING *
       `, [JSON.stringify(metadata), queryId]);
-
       if (result.rows.length === 0) {
         return { success: false, error: 'Query not found or update failed' };
       }
-
       return { success: true, data: result.rows[0] };
     } catch (error) {
       console.error('Error updating query metadata:', error);
@@ -397,4 +338,4 @@ export class QueryService {
       };
     }
   }
-} 
+}

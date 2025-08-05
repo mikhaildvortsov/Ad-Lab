@@ -1,14 +1,9 @@
 import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
-
-// Database connection configuration
 function createDbConfig() {
   if (!process.env.DATABASE_URL) {
     throw new Error('DATABASE_URL is required');
   }
-  
   const url = new URL(process.env.DATABASE_URL);
-  
-  // Для Neon.tech используем отдельные параметры вместо connectionString
   if (url.hostname.includes('neon.tech')) {
     return {
       host: url.hostname,
@@ -24,8 +19,6 @@ function createDbConfig() {
       query_timeout: 30000,
     };
   }
-  
-  // Для localhost используем connectionString
   return {
     connectionString: process.env.DATABASE_URL,
     ssl: false,
@@ -36,42 +29,29 @@ function createDbConfig() {
     query_timeout: 30000,
   };
 }
-
-// Create a connection pool
 let pool: Pool | null = null;
-
 function getPool(): Pool {
   if (!pool) {
     if (!process.env.DATABASE_URL) {
       throw new Error('DATABASE_URL environment variable is required for database connection!');
     }
-    
     const dbConfig = createDbConfig();
-    
     pool = new Pool(dbConfig);
-    
-    // Handle pool errors
     pool.on('error', (err) => {
       console.error('Unexpected error on idle database client', err);
       process.exit(-1);
     });
-    
-    // Log successful connection
     pool.on('connect', () => {
       console.log('Connected to PostgreSQL database');
     });
   }
-  
   return pool;
 }
-
-// Generic query function
 export async function query<T extends QueryResultRow = any>(
   text: string, 
   params?: any[]
 ): Promise<QueryResult<T>> {
   const pool = getPool();
-  
   try {
     const result = await pool.query<T>(text, params);
     return result;
@@ -80,14 +60,11 @@ export async function query<T extends QueryResultRow = any>(
     throw error;
   }
 }
-
-// Transaction support
 export async function transaction<T>(
   callback: (client: PoolClient) => Promise<T>
 ): Promise<T> {
   const pool = getPool();
   const client = await pool.connect();
-  
   try {
     await client.query('BEGIN');
     const result = await callback(client);
@@ -100,8 +77,6 @@ export async function transaction<T>(
     client.release();
   }
 }
-
-// Health check function
 export async function healthCheck(): Promise<boolean> {
   try {
     const result = await query('SELECT NOW() as current_time');
@@ -111,35 +86,25 @@ export async function healthCheck(): Promise<boolean> {
     return false;
   }
 }
-
-// Close all connections
 export async function closePool(): Promise<void> {
   if (pool) {
     await pool.end();
     pool = null;
   }
 }
-
-
-
-// Initialize database with schema
 export async function initializeDatabase(): Promise<void> {
   try {
-    // Check if tables exist
     const result = await query(`
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_schema = 'public'
     `);
-    
     console.log(`Found ${result.rows.length} tables in database`);
-    
     if (result.rows.length === 0) {
       console.log('No tables found. Database may need initialization.');
     }
-    
   } catch (error) {
     console.error('Error checking database state:', error);
     throw error;
   }
-} 
+}

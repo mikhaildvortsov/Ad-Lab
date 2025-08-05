@@ -1,31 +1,26 @@
 'use client'
-
 import React from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CheckCircle, AlertTriangle, XCircle, Info } from 'lucide-react'
-
 interface TextValidatorProps {
   text: string
   textType?: 'script' | 'goal' | 'creative' | 'general'
   showRecommendations?: boolean
   className?: string
 }
-
 interface ValidationResult {
   status: 'error' | 'warning' | 'success' | 'info'
   message: string
   score: number
 }
-
 export function TextValidator({ 
   text, 
   textType = 'script', 
   showRecommendations = true,
   className = '' 
 }: TextValidatorProps) {
-  
   const getValidationRules = () => {
     switch (textType) {
       case 'script':
@@ -62,14 +57,11 @@ export function TextValidator({
         }
     }
   }
-
   const validateText = (): ValidationResult[] => {
     const rules = getValidationRules()
     const results: ValidationResult[] = []
     const words = text.trim().split(/\s+/).filter(word => word.length > 0)
     const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0)
-
-    // Валидация длины
     if (text.length < rules.minLength) {
       results.push({
         status: 'error',
@@ -101,8 +93,6 @@ export function TextValidator({
         score: 100
       })
     }
-
-    // Анализ структуры
     if (sentences.length === 0) {
       results.push({
         status: 'error',
@@ -122,13 +112,10 @@ export function TextValidator({
         score: 90
       })
     }
-
-    // Анализ ключевых слов (для рекламных скриптов)
     if (textType === 'script' && rules.keywords.length > 0) {
       const foundKeywords = rules.keywords.filter(keyword => 
         text.toLowerCase().includes(keyword.toLowerCase())
       )
-      
       if (foundKeywords.length === 0) {
         results.push({
           status: 'warning',
@@ -143,8 +130,6 @@ export function TextValidator({
         })
       }
     }
-
-    // Анализ читаемости
     const avgWordsPerSentence = sentences.length > 0 ? words.length / sentences.length : 0
     if (avgWordsPerSentence > 20) {
       results.push({
@@ -165,21 +150,17 @@ export function TextValidator({
         score: 90
       })
     }
-
     return results
   }
-
   const getOverallScore = (results: ValidationResult[]): number => {
     if (results.length === 0) return 0
     return Math.round(results.reduce((acc, result) => acc + result.score, 0) / results.length)
   }
-
   const getScoreColor = (score: number): string => {
     if (score >= 80) return 'text-green-600'
     if (score >= 60) return 'text-yellow-600'
     return 'text-red-600'
   }
-
   const getScoreIcon = (status: ValidationResult['status']) => {
     switch (status) {
       case 'success': return <CheckCircle className="h-4 w-4 text-green-600" />
@@ -188,44 +169,35 @@ export function TextValidator({
       default: return <Info className="h-4 w-4 text-blue-600" />
     }
   }
-
   const getRecommendations = (): string[] => {
     const rules = getValidationRules()
     const recommendations: string[] = []
-    
     if (textType === 'script') {
       if (text.length < rules.optimalLength[0]) {
         recommendations.push('Добавьте больше деталей о продукте и его преимуществах')
         recommendations.push('Включите социальные доказательства (отзывы, статистику)')
         recommendations.push('Опишите проблему, которую решает ваш продукт')
       }
-      
       if (!text.toLowerCase().includes('скидк') && !text.toLowerCase().includes('акци')) {
         recommendations.push('Рассмотрите добавление срочности (ограниченное время, количество)')
       }
-      
       if (!text.includes('?')) {
         recommendations.push('Добавьте вопросы для вовлечения аудитории')
       }
     }
-
     if (textType === 'goal') {
       if (!text.toLowerCase().includes('увелич') && !text.toLowerCase().includes('повыс')) {
         recommendations.push('Сформулируйте цель как улучшение показателей')
       }
-      
       if (!text.match(/\d+/)) {
         recommendations.push('Добавьте конкретные цифры и метрики')
       }
     }
-
     return recommendations
   }
-
   const validationResults = validateText()
   const overallScore = getOverallScore(validationResults)
   const recommendations = getRecommendations()
-
   if (!text.trim()) {
     return (
       <div className={`space-y-3 ${className}`}>
@@ -236,10 +208,9 @@ export function TextValidator({
       </div>
     )
   }
-
   return (
     <div className={`space-y-3 ${className}`}>
-      {/* Общий балл */}
+      {}
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-gray-700">Качество текста</span>
         <div className="flex items-center gap-2">
@@ -251,11 +222,9 @@ export function TextValidator({
           </Badge>
         </div>
       </div>
-
-      {/* Прогресс-бар */}
+      {}
       <Progress value={overallScore} className="h-2" />
-
-      {/* Детальные результаты */}
+      {}
       <div className="space-y-2">
         {validationResults.map((result, index) => (
           <Alert key={index} className="py-2">
@@ -268,8 +237,7 @@ export function TextValidator({
           </Alert>
         ))}
       </div>
-
-      {/* Рекомендации */}
+      {}
       {showRecommendations && recommendations.length > 0 && (
         <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
           <h4 className="text-sm font-medium text-blue-900 mb-2">
@@ -285,8 +253,7 @@ export function TextValidator({
           </ul>
         </div>
       )}
-
-      {/* Статистика */}
+      {}
       <div className="flex gap-4 text-xs text-gray-500">
         <span>{text.length} символов</span>
         <span>{text.trim().split(/\s+/).filter(word => word.length > 0).length} слов</span>
@@ -294,4 +261,4 @@ export function TextValidator({
       </div>
     </div>
   )
-} 
+}

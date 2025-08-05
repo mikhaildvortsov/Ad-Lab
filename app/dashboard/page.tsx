@@ -11,12 +11,10 @@ export default function DashboardRedirect() {
   const [hasRedirected, setHasRedirected] = useState(false)
   const [isClient, setIsClient] = useState(false)
 
-  // ИСПРАВЛЕНИЕ: решаем hydration mismatch - используем состояние для клиентской информации
   useEffect(() => {
     setIsClient(true)
   }, [])
 
-  // Логирование только на клиенте для предотвращения hydration mismatch
   useEffect(() => {
     if (isClient) {
       console.log(`[${new Date().toISOString()}] DashboardRedirect:`, {
@@ -29,22 +27,20 @@ export default function DashboardRedirect() {
   }, [user, loading, hasRedirected, isClient])
 
   useEffect(() => {
-    // Выполняем логику только на клиенте
+
     if (!isClient) return
 
-    // ИСПРАВЛЕНИЕ: проверяем logout_flag для немедленного редиректа
     const logoutFlag = document.cookie
       .split(';')
       .find(cookie => cookie.trim().startsWith('logout_flag='))
       ?.split('=')[1]
-    
+
     if (logoutFlag === 'true') {
       console.log('DashboardRedirect: Logout flag detected, redirecting to home page immediately')
       router.replace('/')
       return
     }
-    
-    // Если загрузка завершена и пользователь найден - перенаправляем на локализованный dashboard
+
     if (!loading && user && !hasRedirected) {
       const preferredLocale = getPreferredLocale()
       console.log(`DashboardRedirect: User found, redirecting to /${preferredLocale}/dashboard`)
@@ -53,8 +49,6 @@ export default function DashboardRedirect() {
       return
     }
 
-    // Если загрузка завершена, но пользователя нет - немедленно редиректим на auth
-    // (но только если нет logout_flag)
     if (!loading && !user) {
       console.log('DashboardRedirect: No user found, redirecting to auth')
       router.replace('/auth')
@@ -62,7 +56,6 @@ export default function DashboardRedirect() {
     }
   }, [isClient, loading, user, hasRedirected, router])
 
-  // Показать timeout ошибку если загрузка длится слишком долго
   useEffect(() => {
     if (!isClient) return
 
@@ -71,12 +64,11 @@ export default function DashboardRedirect() {
         console.log('DashboardRedirect: Loading timeout, forcing redirect to auth')
         router.replace('/auth')
       }
-    }, 15000) // Увеличиваем timeout до 15 секунд
+    }, 15000) 
 
     return () => clearTimeout(timeoutId)
   }, [isClient, loading, user, router])
 
-  // ИСПРАВЛЕНИЕ: одинаковый контент на сервере и клиенте
   if (!isClient) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
@@ -101,4 +93,3 @@ export default function DashboardRedirect() {
     </div>
   )
 }
-

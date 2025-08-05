@@ -1,15 +1,8 @@
-// Database Types for Ad Lab Application
-
-// =============================================================================
-// SHARED TYPES
-// =============================================================================
-
 export interface DatabaseResult<T> {
   success: boolean;
   data?: T;
   error?: string;
 }
-
 export interface PaginatedResult<T> {
   data: T[];
   page: number;
@@ -17,7 +10,6 @@ export interface PaginatedResult<T> {
   total: number;
   total_pages: number;
 }
-
 export interface QueryOptions {
   page?: number;
   limit?: number;
@@ -26,11 +18,6 @@ export interface QueryOptions {
   start_date?: Date;
   end_date?: Date;
 }
-
-// =============================================================================
-// USER MANAGEMENT
-// =============================================================================
-
 export interface User {
   id: string;
   email: string;
@@ -38,7 +25,7 @@ export interface User {
   avatar_url?: string | null;
   provider: string;
   provider_id?: string | null;
-  password_hash?: string | null; // For local authentication
+  password_hash?: string | null; 
   email_verified: boolean;
   created_at: string;
   updated_at: string;
@@ -46,18 +33,16 @@ export interface User {
   is_active: boolean;
   preferred_language: string;
 }
-
 export interface CreateUserParams {
   email: string;
   name: string;
   avatar_url?: string;
   provider?: string;
   provider_id?: string;
-  password?: string; // For local authentication - will be hashed
+  password?: string; 
   email_verified?: boolean;
   preferred_language?: string;
 }
-
 export interface UpdateUserParams {
   name?: string;
   avatar_url?: string;
@@ -66,11 +51,6 @@ export interface UpdateUserParams {
   is_active?: boolean;
   preferred_language?: string;
 }
-
-// =============================================================================
-// SUBSCRIPTION MANAGEMENT
-// =============================================================================
-
 export interface SubscriptionPlan {
   id: string;
   name: string;
@@ -84,9 +64,7 @@ export interface SubscriptionPlan {
   is_active: boolean;
   created_at: string;
 }
-
 export type SubscriptionStatus = 'active' | 'inactive' | 'cancelled' | 'expired' | 'pending';
-
 export interface UserSubscription {
   id: string;
   user_id: string;
@@ -99,7 +77,6 @@ export interface UserSubscription {
   cancelled_at?: string | null;
   metadata?: Record<string, any> | null;
 }
-
 export interface CreateUserSubscriptionParams {
   user_id: string;
   plan_id: string;
@@ -108,7 +85,6 @@ export interface CreateUserSubscriptionParams {
   current_period_end?: Date;
   metadata?: Record<string, any>;
 }
-
 export interface UpdateUserSubscriptionParams {
   plan_id?: string;
   status?: SubscriptionStatus;
@@ -117,21 +93,14 @@ export interface UpdateUserSubscriptionParams {
   cancelled_at?: Date;
   metadata?: Record<string, any>;
 }
-
-// =============================================================================
-// PAYMENT MANAGEMENT
-// =============================================================================
-
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'cancelled' | 'refunded';
 export type PaymentMethod = 'tribute' | 'card' | 'yookassa' | 'other';
-
 export const PAYMENT_METHOD_NAMES: Record<PaymentMethod, string> = {
   tribute: 'Tribute',
   card: 'Карта',
   yookassa: 'ЮKassa',
   other: 'Другое'
 };
-
 export interface Payment {
   id: string;
   user_id: string;
@@ -148,7 +117,6 @@ export interface Payment {
   failure_reason?: string | null;
   metadata?: Record<string, any> | null;
 }
-
 export interface CreatePaymentParams {
   user_id: string;
   subscription_id?: string;
@@ -159,17 +127,11 @@ export interface CreatePaymentParams {
   external_payment_id?: string;
   metadata?: Record<string, any>;
 }
-
 export interface UpdatePaymentParams {
   status?: PaymentStatus;
   external_payment_id?: string;
   metadata?: Record<string, any>;
 }
-
-// =============================================================================
-// QUERY HISTORY
-// =============================================================================
-
 export interface QueryHistory {
   id: string;
   user_id: string;
@@ -187,7 +149,6 @@ export interface QueryHistory {
   metadata?: Record<string, any> | null;
   created_at: string;
 }
-
 export interface CreateQueryParams {
   user_id: string;
   session_id?: string;
@@ -203,7 +164,6 @@ export interface CreateQueryParams {
   error_message?: string;
   metadata?: Record<string, any>;
 }
-
 export interface UpdateQueryParams {
   response_text?: string;
   tokens_used?: number;
@@ -212,37 +172,25 @@ export interface UpdateQueryParams {
   error_message?: string;
   metadata?: Record<string, any>;
 }
-
-// =============================================================================
-// USAGE STATISTICS
-// =============================================================================
-
 export interface UsageStatistics {
   id: string;
   user_id: string;
-  month: string; // YYYY-MM format
+  month: string; 
   queries_count: number;
   tokens_used: number;
   created_at: string;
   updated_at: string;
 }
-
 export interface CreateUsageStatisticsParams {
   user_id: string;
   month: string;
   queries_count?: number;
   tokens_used?: number;
 }
-
 export interface UpdateUsageStatisticsParams {
   queries_count?: number;
   tokens_used?: number;
 }
-
-// =============================================================================
-// FRONTEND TYPES
-// =============================================================================
-
 export interface FrontendPlan {
   id: string;
   name: string;
@@ -251,16 +199,13 @@ export interface FrontendPlan {
   improvements: number;
   popular?: boolean;
 }
-
-// Plan mapping constants
 export const PLAN_ID_TO_NAME: Record<string, string> = {
   'week': 'Week',
   'month': 'Month',
   'quarter': 'Quarter'
 };
-
 export const PLAN_NAME_TO_ID: Record<string, string> = {
   'Week': 'week', 
   'Month': 'month',
   'Quarter': 'quarter'
-}; 
+};

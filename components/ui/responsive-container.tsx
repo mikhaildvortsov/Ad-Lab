@@ -1,11 +1,9 @@
 import { ReactNode } from "react"
 import { cn } from "@/lib/utils"
-
 interface ResponsiveContainerProps {
   children: ReactNode
   className?: string
 }
-
 export function ResponsiveContainer({ 
   children, 
   className
@@ -19,7 +17,6 @@ export function ResponsiveContainer({
     </div>
   )
 }
-
 export function ResponsiveSection({ 
   children, 
   className
@@ -35,7 +32,6 @@ export function ResponsiveSection({
     </section>
   )
 }
-
 export function ResponsiveGrid({ 
   children, 
   className
@@ -48,4 +44,4 @@ export function ResponsiveGrid({
       {children}
     </div>
   )
-} 
+}

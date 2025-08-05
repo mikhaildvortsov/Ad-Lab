@@ -1,20 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { UserService } from '@/lib/services/user-service';
 import { createSession } from '@/lib/session';
-
 export async function POST(request: NextRequest) {
   try {
     const { email, password, name } = await request.json();
-
-    // Input validation
     if (!email || !password || !name) {
       return NextResponse.json(
         { success: false, error: 'Email, password, and name are required' },
         { status: 400 }
       );
     }
-
-    // Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return NextResponse.json(
@@ -22,37 +17,28 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Password strength validation
     if (password.length < 8) {
       return NextResponse.json(
         { success: false, error: 'Password must be at least 8 characters long' },
         { status: 400 }
       );
     }
-
-    // Additional password requirements
     const hasUpperCase = /[A-Z]/.test(password);
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumbers = /\d/.test(password);
     const hasNonalphas = /\W/.test(password);
-
     if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
       return NextResponse.json(
         { success: false, error: 'Password must contain at least one uppercase letter, one lowercase letter, and one number' },
         { status: 400 }
       );
     }
-
-    // Name validation
     if (name.trim().length < 2) {
       return NextResponse.json(
         { success: false, error: 'Name must be at least 2 characters long' },
         { status: 400 }
       );
     }
-
-    // Check if user already exists
     const existingUserResult = await UserService.userExistsByEmail(email);
     if (existingUserResult.success && existingUserResult.data) {
       return NextResponse.json(
@@ -65,27 +51,21 @@ export async function POST(request: NextRequest) {
         { status: 409 }
       );
     }
-
-    // Create new user
     const userResult = await UserService.createUser({
       email: email.toLowerCase().trim(),
       name: name.trim(),
-      password: password, // Will be hashed in UserService
+      password: password, 
       provider: 'local',
       email_verified: false,
       preferred_language: 'ru'
     });
-
     if (!userResult.success || !userResult.data) {
       return NextResponse.json(
         { success: false, error: userResult.error || 'Failed to create user' },
         { status: 500 }
       );
     }
-
     const user = userResult.data;
-
-    // Create session automatically after successful registration
     const sessionData = {
       user: {
         id: user.id,
@@ -95,11 +75,9 @@ export async function POST(request: NextRequest) {
       },
       accessToken: 'local-auth-token',
       refreshToken: 'local-refresh-token',
-      expiresAt: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60) // 30 days
+      expiresAt: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60) 
     };
-
     await createSession(sessionData);
-
     return NextResponse.json({
       success: true,
       message: 'User registered successfully and logged in',
@@ -111,7 +89,6 @@ export async function POST(request: NextRequest) {
         image: user.avatar_url
       }
     }, { status: 201 });
-
   } catch (error) {
     console.error('Registration error:', error);
     return NextResponse.json(
@@ -119,4 +96,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

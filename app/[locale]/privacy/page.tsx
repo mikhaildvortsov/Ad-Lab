@@ -1,30 +1,24 @@
 "use client"
-
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Sparkles, ArrowLeft } from "lucide-react"
 import { useLocale } from "@/lib/use-locale"
 import { useTranslation } from "@/lib/translations"
-
-// Force dynamic rendering
 export const dynamic = 'force-dynamic'
-
 export default function PrivacyPolicyPage() {
   const { locale } = useLocale()
   const { t } = useTranslation(locale)
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Header */}
+      {}
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <Link href={`/${locale}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
             <span className="text-lg sm:text-xl font-bold text-gray-900">{t('header.brand')}</span>
           </Link>
-          
-          <Link href="/">
+          <Link href={`/${locale}`}>
             <Button variant="ghost" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               {t('common.back')}
@@ -32,8 +26,7 @@ export default function PrivacyPolicyPage() {
           </Link>
         </div>
       </header>
-
-      {/* Main Content */}
+      {}
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <Card>
           <CardHeader>
@@ -44,10 +37,9 @@ export default function PrivacyPolicyPage() {
               <p>{t('privacy.lastUpdated')}: 16 июля 2025 г.</p>
             </div>
           </CardHeader>
-          
           <CardContent className="prose prose-lg max-w-none">
             <div className="space-y-8">
-              {/* Общие положения */}
+              {}
               <section>
                 <h2 className="text-2xl font-semibold text-gray-900 mb-4">
                   {t('privacy.general.title')}
@@ -58,8 +50,7 @@ export default function PrivacyPolicyPage() {
                   <p>{t('privacy.general.compliance')}</p>
                 </div>
               </section>
-
-              {/* Сбор и обработка данных */}
+              {}
               <section>
                 <h2 className="text-2xl font-semibold text-gray-900 mb-4">
                   {t('privacy.dataCollection.title')}
@@ -74,8 +65,7 @@ export default function PrivacyPolicyPage() {
                   </ul>
                 </div>
               </section>
-
-              {/* Цели обработки */}
+              {}
               <section>
                 <h2 className="text-2xl font-semibold text-gray-900 mb-4">
                   {t('privacy.purposes.title')}
@@ -89,8 +79,7 @@ export default function PrivacyPolicyPage() {
                   <li>{t('privacy.purposes.legal')}</li>
                 </ul>
               </section>
-
-              {/* Правовые основания */}
+              {}
               <section>
                 <h2 className="text-2xl font-semibold text-gray-900 mb-4">
                   {t('privacy.legalBasis.title')}
@@ -102,8 +91,7 @@ export default function PrivacyPolicyPage() {
                   <li>{t('privacy.legalBasis.legal')}</li>
                 </ul>
               </section>
-
-              {/* Обработка платежей */}
+              {}
               <section>
                 <h2 className="text-2xl font-semibold text-gray-900 mb-4">
                   {t('privacy.payments.title')}
@@ -114,8 +102,7 @@ export default function PrivacyPolicyPage() {
                   <p>{t('privacy.payments.security')}</p>
                 </div>
               </section>
-
-              {/* Передача данных */}
+              {}
               <section>
                 <h2 className="text-2xl font-semibold text-gray-900 mb-4">
                   {t('privacy.sharing.title')}
@@ -129,8 +116,7 @@ export default function PrivacyPolicyPage() {
                   </ul>
                 </div>
               </section>
-
-              {/* Хранение данных */}
+              {}
               <section>
                 <h2 className="text-2xl font-semibold text-gray-900 mb-4">
                   {t('privacy.storage.title')}
@@ -140,8 +126,7 @@ export default function PrivacyPolicyPage() {
                   <p>{t('privacy.storage.retention')}</p>
                 </div>
               </section>
-
-              {/* Права субъектов данных */}
+              {}
               <section>
                 <h2 className="text-2xl font-semibold text-gray-900 mb-4">
                   {t('privacy.rights.title')}
@@ -156,8 +141,7 @@ export default function PrivacyPolicyPage() {
                   <li>{t('privacy.rights.withdraw')}</li>
                 </ul>
               </section>
-
-              {/* Cookies */}
+              {}
               <section>
                 <h2 className="text-2xl font-semibold text-gray-900 mb-4">
                   {t('privacy.cookies.title')}
@@ -170,8 +154,7 @@ export default function PrivacyPolicyPage() {
                   </ul>
                 </div>
               </section>
-
-              {/* Безопасность */}
+              {}
               <section>
                 <h2 className="text-2xl font-semibold text-gray-900 mb-4">
                   {t('privacy.security.title')}
@@ -181,8 +164,7 @@ export default function PrivacyPolicyPage() {
                   <p>{t('privacy.security.measures')}</p>
                 </div>
               </section>
-
-              {/* Контактная информация */}
+              {}
               <section>
                 <h2 className="text-2xl font-semibold text-gray-900 mb-4">
                   {t('privacy.contact.title')}
@@ -192,8 +174,7 @@ export default function PrivacyPolicyPage() {
                   <p>{t('privacy.contact.response')}</p>
                 </div>
               </section>
-
-              {/* Изменения */}
+              {}
               <section>
                 <h2 className="text-2xl font-semibold text-gray-900 mb-4">
                   {t('privacy.changes.title')}
@@ -207,8 +188,7 @@ export default function PrivacyPolicyPage() {
           </CardContent>
         </Card>
       </main>
-
-      {/* Footer */}
+      {}
       <footer className="bg-gray-900 text-white py-8 mt-12">
         <div className="container mx-auto px-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
@@ -220,4 +200,4 @@ export default function PrivacyPolicyPage() {
       </footer>
     </div>
   )
-} 
+}

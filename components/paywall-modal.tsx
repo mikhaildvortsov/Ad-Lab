@@ -1,30 +1,24 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Check, CreditCard, Smartphone, X, RefreshCw, AlertTriangle, CheckCircle, LogIn } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useLocale } from '@/lib/use-locale';
 import { useTranslation } from '@/lib/translations';
-
 interface Plan {
   id: string;
   name: string;
   price: number;
-  originalPrice?: number; // Для зачеркнутой цены
+  originalPrice?: number; 
   features: string[];
   improvements: number;
   popular?: boolean;
 }
-
-// Plans will be fetched from API
-
 interface PaywallModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -32,7 +26,6 @@ interface PaywallModalProps {
   originalText?: string;
   onPaymentSuccess?: () => void;
 }
-
 export function PaywallModal({ 
   open, 
   onOpenChange, 
@@ -65,8 +58,6 @@ export function PaywallModal({
   const [paymentExpired, setPaymentExpired] = useState(false);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loadingPlans, setLoadingPlans] = useState(false);
-
-  // Fetch plans from API
   useEffect(() => {
     const fetchPlans = async () => {
       setLoadingPlans(true);
@@ -84,13 +75,10 @@ export function PaywallModal({
         setLoadingPlans(false);
       }
     };
-
     if (open) {
       fetchPlans();
     }
   }, [open]);
-
-  // Get CSRF token when modal opens
   useEffect(() => {
     if (open && isAuthenticated && !csrfToken) {
       const fetchCsrfToken = async () => {
@@ -107,20 +95,14 @@ export function PaywallModal({
       fetchCsrfToken();
     }
   }, [open, isAuthenticated, csrfToken]);
-
-  // Debug authentication state
   useEffect(() => {
     console.log('PaywallModal auth state:', { user, isAuthenticated, loading });
   }, [user, isAuthenticated, loading]);
-
-  // Safe function to get plan name with fallback
   const getPlanName = (planId: string) => {
     try {
       const translationKey = `paywallModal.plans.${planId}.name`;
       const translation = t(translationKey);
-      // If translation returns the key itself, it means translation not found
       if (translation === translationKey) {
-        // Fallback to static mapping
         const fallbackNames: Record<string, string> = {
           'week': 'Неделя',
           'month': 'Месяц', 
@@ -131,7 +113,6 @@ export function PaywallModal({
       return translation;
     } catch (error) {
       console.error('Error getting plan name:', error);
-      // Ultimate fallback
       const fallbackNames: Record<string, string> = {
         'week': 'Неделя',
         'month': 'Месяц',
@@ -140,35 +121,25 @@ export function PaywallModal({
       return fallbackNames[planId] || planId;
     }
   };
-
   const handleSelectPlan = (plan: Plan) => {
     setSelectedPlan(plan);
     setError(null);
-    
-    // Wait for authentication data to load
     if (loading) {
       setError(t('paywallModal.payment.error.checking'));
       return;
     }
-    
-    // Check authentication before proceeding to payment
     if (!isAuthenticated) {
       setError(t('paywallModal.payment.error.authRequired'));
       return;
     }
-    
     setShowPayment(true);
-    // Reset Tribute data when selecting a new plan
     setTributePaymentData(null);
     setPaymentStatus(null);
   };
-
   const handlePayment = async () => {
     if (!selectedPlan) return;
-    
     setIsLoading(true);
     setError(null);
-    
     try {
       if (paymentMethod === 'tribute') {
         await handleTributePayment();
@@ -182,27 +153,20 @@ export function PaywallModal({
       setIsLoading(false);
     }
   };
-
   const handleTributePayment = async () => {
     if (!selectedPlan) return;
-
-    // Check if we have CSRF token
     if (!csrfToken) {
       setError('Отсутствует токен безопасности. Попробуйте перезагрузить страницу.');
       return;
     }
-
     setTributeLoading(true);
     setError(null);
-    
     try {
       console.log('Creating Tribute payment with data:', {
         planId: selectedPlan.id,
         planName: selectedPlan.name,
         amount: selectedPlan.price
       });
-
-      // Create payment through API
       const response = await fetch('/api/payments/tribute', {
         method: 'POST',
         headers: {
@@ -215,31 +179,24 @@ export function PaywallModal({
           amount: selectedPlan.price
         }),
       });
-
       console.log('API Response status:', response.status);
       console.log('API Response headers:', response.headers);
-
       let data;
       try {
         const responseText = await response.text();
         console.log('API Response text:', responseText);
-        
         if (!responseText) {
           throw new Error('Empty response from server');
         }
-        
         data = JSON.parse(responseText);
       } catch (parseError) {
         console.error('JSON parse error:', parseError);
         throw new Error('Invalid response format from server');
       }
-
       console.log('Parsed API Response:', data);
-
       if (!response.ok) {
         throw new Error(data?.error || `HTTP error! status: ${response.status}`);
       }
-
       if (data?.success) {
         setTributePaymentData({
           paymentUrl: data.paymentUrl,
@@ -250,10 +207,7 @@ export function PaywallModal({
           expiresAt: data.expiresAt,
           serverTime: data.serverTime
         });
-
         setPaymentStatus('pending');
-
-        // Start periodic payment status checking
         checkPaymentStatus(data.paymentId);
       } else {
         throw new Error(data?.error || 'Failed to create payment');
@@ -266,37 +220,29 @@ export function PaywallModal({
       setTributeLoading(false);
     }
   };
-
   const checkPaymentStatus = async (paymentId: string) => {
     let attempts = 0;
-    const maxAttempts = 60; // 5 minutes maximum
-    
+    const maxAttempts = 60; 
     const checkStatus = async () => {
       try {
         setCheckingStatus(true);
-        
         const response = await fetch(`/api/payments/tribute?paymentId=${paymentId}`, {
           headers: {
             'X-CSRF-Token': csrfToken || '',
           }
         });
         const data = await response.json();
-
         if (data.success) {
           const status = data.status;
-          
           if (status === 'completed') {
             setPaymentStatus('completed');
             setCheckingStatus(false);
-            
-            // Auto-close modal after successful payment
             setTimeout(() => {
               resetModal();
               if (onPaymentSuccess) {
                 onPaymentSuccess();
               }
             }, 5000);
-            
             return;
           } else if (status === 'failed') {
             setPaymentStatus('failed');
@@ -305,10 +251,8 @@ export function PaywallModal({
             return;
           }
         }
-
         attempts++;
         if (attempts < maxAttempts) {
-          // Continue checking every 5 seconds
           setTimeout(checkStatus, 5000);
         } else {
           setPaymentStatus('failed');
@@ -327,16 +271,11 @@ export function PaywallModal({
         }
       }
     };
-
-    // Start checking after 3 seconds
     setTimeout(checkStatus, 3000);
   };
-
   const handleCardPayment = async () => {
-    // Card payment is disabled for now
     setError(t('paywallModal.payment.card.useTribute'));
   };
-
   const resetModal = () => {
     setSelectedPlan(null);
     setShowPayment(false);
@@ -349,21 +288,13 @@ export function PaywallModal({
     setTributeLoading(false);
     setPaymentExpired(false);
   };
-
-
-
-  // Timer effect - updates every second when payment data exists
   useEffect(() => {
     if (!tributePaymentData || paymentStatus !== 'pending') return;
-
     const timer = setInterval(() => {
       const now = Date.now();
-      
-      // Check if payment has expired using server time sync
       const serverTimestamp = new Date(tributePaymentData.serverTime).getTime();
       const timeOffset = now - serverTimestamp;
       const expiry = new Date(tributePaymentData.expiresAt).getTime() - timeOffset;
-      
       if (now >= expiry) {
         setPaymentStatus('failed');
         setError(t('paywallModal.payment.error.timeout'));
@@ -371,11 +302,8 @@ export function PaywallModal({
         clearInterval(timer);
       }
     }, 1000);
-
     return () => clearInterval(timer);
   }, [tributePaymentData, paymentStatus, t]);
-
-  // Close modal when payment is completed
   useEffect(() => {
     if (paymentStatus === 'completed') {
       const timer = setTimeout(() => {
@@ -388,7 +316,6 @@ export function PaywallModal({
       return () => clearTimeout(timer);
     }
   }, [paymentStatus, onOpenChange, onPaymentSuccess]);
-
   if (showPayment && selectedPlan) {
     return (
       <Dialog open={open} onOpenChange={(open) => {
@@ -421,14 +348,12 @@ export function PaywallModal({
               </span>
             </DialogDescription>
           </DialogHeader>
-
           {error && (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          
           <Tabs value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as 'card' | 'tribute')}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="tribute" className="flex items-center gap-2">
@@ -440,10 +365,8 @@ export function PaywallModal({
                 {locale === 'en' ? 'Card (soon)' : 'Карта (скоро)'}
               </TabsTrigger>
             </TabsList>
-            
             <TabsContent value="tribute" className="space-y-4">
               {paymentStatus === 'completed' ? (
-                // Успешная оплата
                 <div className="text-center space-y-4">
                   <div className="bg-green-50 rounded-lg p-6">
                     <CheckCircle className="h-16 w-16 mx-auto text-green-500 mb-3" />
@@ -457,7 +380,6 @@ export function PaywallModal({
                   </p>
                 </div>
               ) : !tributePaymentData ? (
-                // Начальное состояние - кнопка создания платежа
                 <div className="text-center space-y-4">
                   <div className="bg-gray-50 rounded-lg p-6">
                     <Smartphone className="h-16 w-16 mx-auto text-blue-500 mb-3" />
@@ -467,7 +389,6 @@ export function PaywallModal({
                     </p>
                     <p className="font-medium text-lg">{t('paywallModal.payment.tribute.amount').replace('{amount}', selectedPlan.price.toString())}</p>
                   </div>
-                  
                   <Button 
                     onClick={handleTributePayment}
                     disabled={tributeLoading}
@@ -482,13 +403,11 @@ export function PaywallModal({
                       t('paywallModal.payment.tribute.createPayment')
                     )}
                   </Button>
-                  
                   <div className="text-xs text-gray-500">
                     {t('paywallModal.payment.tribute.afterCreation')}
                   </div>
                 </div>
               ) : (
-                // Состояние с ссылкой на Tribute
                 <div className="text-center space-y-4">
                   <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
                     <div className="h-48 w-48 mx-auto mb-3 bg-blue-50 rounded-lg flex items-center justify-center">
@@ -502,10 +421,8 @@ export function PaywallModal({
                       {t('paywallModal.payment.tribute.orderNumber').replace('{orderId}', tributePaymentData.orderId.slice(-8))}
                     </p>
                   </div>
-                  
                   <div className="space-y-3">
                     <p className="font-medium">{t('paywallModal.payment.tribute.amount').replace('{amount}', tributePaymentData.amount.toString())}</p>
-                    
                     {paymentExpired && (
                       <Alert className="border-red-200 bg-red-50">
                         <AlertTriangle className="h-4 w-4" />
@@ -514,7 +431,6 @@ export function PaywallModal({
                         </AlertDescription>
                       </Alert>
                     )}
-                    
                     {tributePaymentData.tributeUrl && (
                       <Button 
                         variant="default" 
@@ -526,7 +442,6 @@ export function PaywallModal({
                         {t('paywallModal.payment.tribute.openInTelegram')}
                       </Button>
                     )}
-                    
                     <div className={`border rounded-lg p-3 ${
                       paymentStatus === 'failed' 
                         ? 'bg-red-50 border-red-200' 
@@ -554,7 +469,6 @@ export function PaywallModal({
                         </span>
                       </div>
                     </div>
-                    
                     <Button 
                       onClick={() => setTributePaymentData(null)}
                       variant="ghost"
@@ -567,7 +481,6 @@ export function PaywallModal({
                 </div>
               )}
             </TabsContent>
-            
             <TabsContent value="card" className="space-y-4">
               <div className="text-center p-6 text-gray-500">
                 <CreditCard className="h-12 w-12 mx-auto mb-3 text-gray-400" />
@@ -576,7 +489,6 @@ export function PaywallModal({
               </div>
             </TabsContent>
           </Tabs>
-          
           <div className="text-xs text-gray-500 text-center">
             {t('paywallModal.payment.security')}
           </div>
@@ -584,7 +496,6 @@ export function PaywallModal({
       </Dialog>
     );
   }
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl h-[95vh] overflow-hidden flex flex-col">
@@ -602,8 +513,7 @@ export function PaywallModal({
             }
           </DialogDescription>
         </DialogHeader>
-
-        {/* Authentication Warning */}
+        {}
         {!loading && !isAuthenticated && (
           <Alert className="border-blue-200 bg-blue-50 py-2">
             <LogIn className="h-3 w-3 text-blue-600" />
@@ -612,16 +522,14 @@ export function PaywallModal({
             </AlertDescription>
           </Alert>
         )}
-
-        {/* Error Alert */}
+        {}
         {error && (
           <Alert variant="destructive" className="py-2">
             <AlertTriangle className="h-3 w-3" />
             <AlertDescription className="text-xs">{error}</AlertDescription>
           </Alert>
         )}
-
-        {/* Preview Results */}
+        {}
         {originalText && improvedText && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
             <div>
@@ -645,8 +553,7 @@ export function PaywallModal({
             </div>
           </div>
         )}
-
-        {/* Что включено во все планы */}
+        {}
         {(!originalText || !improvedText) && (
           <div className="mb-4">
             <div className="bg-gray-50 rounded-lg p-3 mx-auto">
@@ -672,8 +579,7 @@ export function PaywallModal({
             </div>
           </div>
         )}
-
-        {/* Pricing Plans */}
+        {}
         <div className="flex-1 min-h-0">
           {loadingPlans ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
@@ -728,7 +634,6 @@ export function PaywallModal({
                     }
                   </CardDescription>
                 </CardHeader>
-                
                 <CardContent className="text-center flex-1 flex flex-col justify-between p-3">
                   <ul className="space-y-2 mb-4 flex-1">
                     {plan.features.map((feature, index) => (
@@ -772,4 +677,4 @@ export function PaywallModal({
       </DialogContent>
     </Dialog>
   );
-} 
+}

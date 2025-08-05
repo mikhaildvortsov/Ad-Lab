@@ -7,7 +7,6 @@
     text-wrap: balance;
   }
   
-  /* Responsive text utilities */
   .text-responsive-xs {
     @apply text-xs sm:text-sm;
   }
@@ -36,17 +35,14 @@
     @apply text-3xl sm:text-4xl lg:text-5xl;
   }
   
-  /* Touch-friendly spacing */
   .touch-target {
     @apply min-h-[44px] min-w-[44px];
   }
   
-  /* Mobile-first container */
   .container-responsive {
     @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
   
-  /* Responsive grid utilities */
   .grid-responsive-1 {
     @apply grid-cols-1;
   }
@@ -64,7 +60,6 @@
   }
 }
 
-/* Custom smooth dialog animations */
 @keyframes smoothFadeIn {
   from {
     opacity: 0;
@@ -108,24 +103,19 @@
   animation: smoothFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Mobile-specific improvements */
 @media (max-width: 640px) {
-  /* Improve touch targets on mobile */
   button, a, [role="button"] {
     @apply touch-target;
   }
   
-  /* Better spacing for mobile */
   .mobile-spacing {
     @apply space-y-4;
   }
   
-  /* Improved text readability on mobile */
   body {
     @apply text-base leading-relaxed;
   }
   
-  /* Better form elements on mobile */
   input, textarea, select {
     @apply text-base;
   }
@@ -214,17 +204,14 @@
     -moz-osx-font-smoothing: grayscale;
   }
   
-  /* Improve focus styles for accessibility */
   *:focus-visible {
     @apply outline-2 outline-offset-2 outline-blue-500;
   }
   
-  /* Better scrolling on mobile */
   html {
     scroll-behavior: smooth;
   }
   
-  /* Prevent horizontal scroll on mobile */
   body {
     overflow-x: hidden;
   }

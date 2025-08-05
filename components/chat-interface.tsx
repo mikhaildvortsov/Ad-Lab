@@ -44,18 +44,16 @@ export const ChatInterface = forwardRef<any, {
       clearMessages: () => setMessages([])
     }));
 
-    // Set preset text when dialog opens and preset text is provided
     useEffect(() => {
       if (props.open && props.presetText && !input) {
         setInput(props.presetText);
-        // Notify parent that preset text was used
+
         if (props.onPresetTextUsed) {
           props.onPresetTextUsed();
         }
       }
     }, [props.open, props.presetText, input, props.onPresetTextUsed]);
 
-    // Get CSRF token when component mounts
     useEffect(() => {
       const fetchCsrfToken = async () => {
         try {
@@ -80,7 +78,6 @@ export const ChatInterface = forwardRef<any, {
     const sendMessage = async () => {
       if (!input.trim() || isLoading) return;
 
-      // Check if we have CSRF token
       if (!csrfToken) {
         console.error('No CSRF token available');
         return;
@@ -93,7 +90,7 @@ export const ChatInterface = forwardRef<any, {
         timestamp: new Date(),
       };
 
-      const currentInput = input.trim(); // Сохраняем input перед очисткой
+      const currentInput = input.trim(); 
       setMessages(prev => [...prev, userMessage]);
       setLastUserMessage(currentInput);
       setInput('');
@@ -126,25 +123,22 @@ export const ChatInterface = forwardRef<any, {
           };
           setMessages(prev => [...prev, assistantMessage]);
           setLastAssistantMessage(data.response);
-          
-          // Показываем paywall после получения ответа
-          // Проверяем, что это был запрос на улучшение текста (простая проверка)
+
           const isTextImprovement = currentInput.toLowerCase().includes('улучш') || 
                                    currentInput.toLowerCase().includes('измени') ||
                                    currentInput.toLowerCase().includes('прокач') ||
                                    currentInput.toLowerCase().includes('анализ') ||
                                    currentInput.toLowerCase().includes('скрипт');
-          
+
           if (isTextImprovement && data.response.length > 100) {
-            // Небольшая задержка для лучшего UX
+
             setTimeout(() => {
               setShowPaywall(true);
             }, 1500);
           }
         } else {
           let errorContent = 'Произошла ошибка. Попробуйте ещё раз.';
-          
-          // Специальная обработка для rate limit ошибок
+
           if (response.status === 429 && data.type === 'rate_limit') {
             errorContent = `⚠️ ${data.error}\n\nЛимиты защищают от злоупотребления API и экономят ваши токены.`;
           } else if (data.error) {
@@ -186,7 +180,7 @@ export const ChatInterface = forwardRef<any, {
     };
 
     const handlePaymentSuccess = () => {
-      // После успешной оплаты показываем полный результат
+
       if (lastAssistantMessage) {
         const successMessage: Message = {
           id: Date.now().toString(),
@@ -208,8 +202,8 @@ export const ChatInterface = forwardRef<any, {
               <DialogDescription className="sr-only">
                 Интерактивный AI помощник для работы с текстами и креативными задачами
               </DialogDescription>
-              
-              {/* Header */}
+
+              {}
               <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-t-lg">
                 <div className="flex items-center gap-3">
                   <Bot className="h-6 w-6" />
@@ -222,7 +216,7 @@ export const ChatInterface = forwardRef<any, {
                 </div>
               </div>
 
-              {/* Settings */}
+              {}
               <div className="p-4 border-b bg-gray-50">
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="flex-1">
@@ -247,7 +241,7 @@ export const ChatInterface = forwardRef<any, {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div className="flex-1">
                     <label className="text-xs font-medium text-gray-700 mb-1 block">
                       <Target className="h-3 w-3 inline mr-1" />
@@ -270,7 +264,7 @@ export const ChatInterface = forwardRef<any, {
                 </div>
               </div>
 
-              {/* Messages */}
+              {}
               <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
                 {messages.length === 0 ? (
                   <div className="text-center text-gray-500 mt-8">
@@ -331,7 +325,7 @@ export const ChatInterface = forwardRef<any, {
                             <Bot className="h-4 w-4 text-white" />
                           </div>
                         )}
-                        
+
                         <Card className={`max-w-[80%] ${
                           message.role === 'user' 
                             ? 'bg-blue-500 text-white' 
@@ -361,7 +355,7 @@ export const ChatInterface = forwardRef<any, {
                             </div>
                           </CardContent>
                         </Card>
-                        
+
                         {message.role === 'user' && (
                           <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
                             <User className="h-4 w-4 text-gray-600" />
@@ -369,7 +363,7 @@ export const ChatInterface = forwardRef<any, {
                         )}
                       </div>
                     ))}
-                    
+
                     {isLoading && (
                       <div className="flex gap-3 justify-start">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
@@ -389,7 +383,7 @@ export const ChatInterface = forwardRef<any, {
                 )}
               </ScrollArea>
 
-              {/* Input */}
+              {}
               <div className="p-4 border-t bg-white">
                 <div className="flex gap-2">
                   <Input
@@ -427,7 +421,7 @@ export const ChatInterface = forwardRef<any, {
           </DialogContent>
         </Dialog>
 
-        {/* Paywall Modal */}
+        {}
         <PaywallModal
           open={showPaywall}
           onOpenChange={setShowPaywall}
@@ -440,4 +434,4 @@ export const ChatInterface = forwardRef<any, {
   }
 );
 
-ChatInterface.displayName = 'ChatInterface'; 
+ChatInterface.displayName = 'ChatInterface';

@@ -1,5 +1,4 @@
 "use client"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,52 +13,37 @@ import { useRouter, usePathname } from "next/navigation"
 import type { Locale } from "@/lib/i18n"
 import { setStoredLocale } from "@/lib/locale-storage"
 import { locales, defaultLocale } from "@/lib/i18n"
-
 const languages = [
   { code: "ru", name: "Русский", flag: "🇷🇺" },
   { code: "en", name: "English", flag: "🇺🇸" },
 ]
-
 export function LanguageSelector() {
   const [isOpen, setIsOpen] = useState(false)
   const { locale } = useLocale()
   const router = useRouter()
   const pathname = usePathname()
-
   const currentLanguage = languages.find(lang => lang.code === locale) || languages[0]
-
   const removeLocaleFromPath = (path: string): string => {
     const segments = path.split('/').filter(Boolean)
     const firstSegment = segments[0]
-    
     if (locales.includes(firstSegment as Locale)) {
-      // Remove the locale segment
       const pathWithoutLocale = '/' + segments.slice(1).join('/')
       return pathWithoutLocale === '/' ? '/' : pathWithoutLocale
     }
-    
     return path
   }
-
   const handleLanguageChange = (newLocale: Locale) => {
-    // Save the language preference immediately
     setStoredLocale(newLocale)
-    
-    // Get the path without any locale
     const pathWithoutLocale = removeLocaleFromPath(pathname)
-    
-    // Build new path with the new locale
     let newPath: string
     if (newLocale === defaultLocale) {
       newPath = pathWithoutLocale
     } else {
       newPath = `/${newLocale}${pathWithoutLocale}`
     }
-    
     router.push(newPath)
     setIsOpen(false)
   }
-
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
@@ -87,4 +71,4 @@ export function LanguageSelector() {
       </DropdownMenuContent>
     </DropdownMenu>
   )
-} 
+}

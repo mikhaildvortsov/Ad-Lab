@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { query } from '@/lib/database';
-
 export async function GET(request: NextRequest) {
   try {
     console.log('DEBUG: Payment debug endpoint called');
-    
-    // Get current user session
     const session = await getSession();
-    
     if (!session?.user?.id) {
       return NextResponse.json({
         error: 'Authentication required',
@@ -18,24 +14,17 @@ export async function GET(request: NextRequest) {
         }
       }, { status: 401 });
     }
-
     const userId = session.user.id;
     console.log('DEBUG: User ID:', userId);
-
-    // Get all payments for this user
     const paymentsResult = await query(
       'SELECT id, user_id, amount, currency, status, payment_method, created_at, metadata FROM payments WHERE user_id = $1 ORDER BY created_at DESC',
       [userId]
     );
-
     console.log('DEBUG: Found payments:', paymentsResult.rows.length);
-
-    // Also get total count
     const countResult = await query(
       'SELECT COUNT(*) as total FROM payments WHERE user_id = $1',
       [userId]
     );
-
     return NextResponse.json({
       success: true,
       debug: {
@@ -45,7 +34,6 @@ export async function GET(request: NextRequest) {
         databaseConnection: 'working'
       }
     });
-
   } catch (error) {
     console.error('DEBUG: Error in payment debug endpoint:', error);
     return NextResponse.json({
@@ -56,4 +44,4 @@ export async function GET(request: NextRequest) {
       }
     }, { status: 500 });
   }
-} 
+}

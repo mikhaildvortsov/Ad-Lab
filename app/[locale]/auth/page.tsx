@@ -1,5 +1,4 @@
 "use client"
-
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -14,10 +13,7 @@ import { getClientSession } from "@/lib/client-session"
 import { useLocale } from "@/lib/use-locale"
 import { useTranslation } from "@/lib/translations"
 import type { Locale } from "@/lib/i18n"
-
-// Force dynamic rendering
 export const dynamic = 'force-dynamic'
-
 export default function AuthPage({ params }: { params: { locale: Locale } }) {
   const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState("")
@@ -28,23 +24,18 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
   const [error, setError] = useState("")
   const [privacyConsent, setPrivacyConsent] = useState(false)
   const [userExists, setUserExists] = useState(false)
-  
   const router = useRouter()
   const searchParams = useSearchParams()
   const { login: googleLogin, updateUser } = useAuth()
   const { locale } = useLocale()
   const { t } = useTranslation(locale)
-  
   useEffect(() => {
-    // Проверяем параметр mode для переключения между входом и регистрацией
     const mode = searchParams.get('mode')
     if (mode === 'register') {
       setIsLogin(false)
     } else if (mode === 'login') {
       setIsLogin(true)
     }
-    
-    // Проверяем параметры URL для обработки ошибок авторизации
     const authError = searchParams.get('error')
     if (authError === 'google_auth_failed') {
       setError(t('auth.errors.googleAuthFailed'))
@@ -58,28 +49,22 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
       setError(t('auth.errors.redirectUriMismatch'))
     }
   }, [searchParams, t])
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError("")
     setUserExists(false)
-    
-    // Check privacy consent for registration
     if (!isLogin && !privacyConsent) {
       setError(t('auth.errors.privacyRequired'))
       setUserExists(false)
       setIsLoading(false)
       return
     }
-    
     try {
-      // Choose the correct endpoint based on login/register mode
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register'
       const requestBody = isLogin 
         ? { email, password }
         : { email, password, name }
-
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -87,12 +72,9 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
         },
         body: JSON.stringify(requestBody),
       })
-
       const data = await response.json()
-
       if (data.success) {
         if (isLogin) {
-          // Login: get session and redirect to dashboard
           const session = await getClientSession()
           if (session) {
             updateUser(session.user)
@@ -103,27 +85,18 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
             setUserExists(false)
           }
         } else {
-          // Registration: automatically login and redirect to dashboard
-          // Clear any auth blocking flags before getting session
           if (typeof window !== 'undefined') {
             try {
-              // Clear localStorage flags
               window.localStorage.removeItem('logout_in_progress')
               window.localStorage.removeItem('last_logout_time')
               window.localStorage.removeItem('emergency_logout')
-              
-              // Clear logout_flag cookie that might block session API
               document.cookie = 'logout_flag=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
-              
               console.log('Registration: cleared all auth blocking flags')
             } catch (e) {
               console.warn('Could not clear auth flags:', e)
             }
           }
-          
-          // Small delay to ensure session is properly set on server
           await new Promise(resolve => setTimeout(resolve, 500))
-          
           const session = await getClientSession()
           console.log('Registration: getClientSession result:', session)
           if (session) {
@@ -138,7 +111,6 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
           }
         }
       } else {
-        // Handle registration errors with special case for existing user
         if (!isLogin && data.errorCode === 'USER_EXISTS') {
           setUserExists(true)
           setError(data.error)
@@ -155,15 +127,11 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
       setIsLoading(false)
     }
   }
-
   const handleGoogleAuth = () => {
     setIsLoading(true)
     setError('')
-    
-    // Перенаправляем напрямую на Google OAuth endpoint
     window.location.href = '/api/auth/google'
   }
-
   const switchToLogin = () => {
     setIsLogin(true)
     setError('')
@@ -171,9 +139,7 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
     setName('')
     setPrivacyConsent(false)
     setUserExists(false)
-    // Сохраняем email при переключении с регистрации на вход
   }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-sm sm:max-w-md">
@@ -189,9 +155,8 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
             {isLogin ? t('auth.loginSubtitle') : t('auth.registerSubtitle')}
           </CardDescription>
         </CardHeader>
-        
         <CardContent className="space-y-4 px-4 sm:px-6 pb-6">
-          {/* Google Auth Button */}
+          {}
           <Button 
             onClick={handleGoogleAuth}
             disabled={isLoading}
@@ -208,7 +173,6 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
               {isLoading ? t('auth.loading') : t('auth.continueWithGoogle')}
             </span>
           </Button>
-          
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
@@ -219,7 +183,6 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
               </span>
             </div>
           </div>
-
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <div className="space-y-2">
@@ -235,7 +198,6 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
                 />
               </div>
             )}
-            
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm sm:text-base">{t('auth.email')}</Label>
               <div className="relative">
@@ -251,7 +213,6 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
                 />
               </div>
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="password" className="text-sm sm:text-base">{t('auth.password')}</Label>
               <div className="relative">
@@ -279,7 +240,6 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
                 </p>
               )}
             </div>
-
             {!isLogin && (
               <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg border">
                 <Checkbox 
@@ -301,7 +261,6 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
                 </Label>
               </div>
             )}
-
             {error && (
               <div className={`text-sm p-3 rounded-lg border ${
                 userExists ? 'text-blue-600 bg-blue-50 border-blue-200' : 'text-red-600 bg-red-50 border-red-200'
@@ -317,7 +276,6 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
                 )}
               </div>
             )}
-
             <Button 
               type="submit" 
               className="w-full h-11 sm:h-12" 
@@ -328,7 +286,6 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
               </span>
             </Button>
           </form>
-
           <div className="text-center pt-2">
             <button
               onClick={() => {
@@ -338,7 +295,6 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
                 setName('')
                 setPrivacyConsent(false)
                 setUserExists(false)
-                // Очищаем email только при переходе с входа на регистрацию
                 if (isLogin) {
                   setEmail('')
                 }
@@ -348,7 +304,6 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
               {isLogin ? t('auth.switchToRegister') : t('auth.switchToLogin')}
             </button>
           </div>
-
           <div className="text-center pt-2">
             <Link href={`/${locale}`} className="text-sm text-gray-600 hover:text-gray-800 transition-colors">
               {t('auth.backToHome')}
@@ -358,4 +313,4 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
       </Card>
     </div>
   )
-} 
+}

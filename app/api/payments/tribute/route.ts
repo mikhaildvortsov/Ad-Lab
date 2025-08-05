@@ -2,13 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { BillingService } from '@/lib/services/billing-service';
 import { TributeService } from '@/lib/services/tribute-service';
 import { getSession } from '@/lib/session';
-
 export async function POST(request: NextRequest) {
   console.log('POST request received');
   try {
     const session = await getSession();
     console.log('Session:', session?.user?.id ? 'Found' : 'Not found');
-    
     if (!session?.user?.id) {
       console.log('Unauthorized: No valid session');
       return NextResponse.json(
@@ -16,7 +14,6 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
-
     let requestData;
     try {
       requestData = await request.json();
@@ -28,10 +25,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
     const { planId, planName, amount } = requestData;
-
-    // Validate input data
     if (!planId || !planName || !amount) {
       console.log('Missing required fields:', { planId, planName, amount });
       return NextResponse.json(
@@ -39,7 +33,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
     if (amount <= 0) {
       console.log('Invalid amount:', amount);
       return NextResponse.json(
@@ -47,8 +40,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Create payment record in database
     console.log('Creating payment record...');
     const paymentResult = await BillingService.createPayment({
       user_id: session.user.id,
@@ -62,9 +53,7 @@ export async function POST(request: NextRequest) {
         payment_type: 'subscription'
       }
     });
-
     console.log('Payment result:', paymentResult);
-
     if (!paymentResult.success) {
       console.error('Failed to create payment record:', paymentResult.error);
       return NextResponse.json(
@@ -72,9 +61,7 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-
     const payment = paymentResult.data;
-
     if (!payment?.id) {
       console.error('Payment ID is missing from result');
       return NextResponse.json(
@@ -82,8 +69,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-
-    // Create Tribute payment through new service
     console.log('Creating Tribute payment...');
     const tributePaymentData = await TributeService.createPayment({
       paymentId: payment.id,
@@ -95,9 +80,7 @@ export async function POST(request: NextRequest) {
       returnUrl: `${process.env.NEXTAUTH_URL}/dashboard`,
       webhookUrl: `${process.env.NEXTAUTH_URL}/api/payments/webhook`
     });
-
     console.log('Tribute payment result:', tributePaymentData);
-
     if (!tributePaymentData.success) {
       console.error('Tribute service error:', tributePaymentData.error);
       return NextResponse.json(
@@ -105,13 +88,11 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-
     console.log('Returning success response');
     return NextResponse.json({
       success: true,
       ...tributePaymentData.data
     });
-
   } catch (error) {
     console.error('Tribute payment creation error:', error);
     return NextResponse.json(
@@ -120,7 +101,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
@@ -130,38 +110,29 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
-
     const { searchParams } = new URL(request.url);
     const paymentId = searchParams.get('paymentId');
-
     if (!paymentId) {
       return NextResponse.json(
         { error: 'Payment ID is required' },
         { status: 400 }
       );
     }
-
-    // Get payment information from database
     const payments = await BillingService.getUserPayments(session.user.id);
     const payment = payments.success && payments.data ? payments.data.data.find(p => p.id === paymentId) : null;
-
     if (!payment) {
       return NextResponse.json(
         { error: 'Payment not found' },
         { status: 404 }
       );
     }
-
-    // Check payment status through Tribute
     const statusResult = await TributeService.checkPaymentStatus(paymentId, payment.external_payment_id || '');
-
     if (!statusResult.success) {
       return NextResponse.json(
         { error: statusResult.error },
         { status: 500 }
       );
     }
-
     return NextResponse.json({
       success: true,
       status: statusResult.data?.status || 'pending',
@@ -174,4 +145,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

@@ -1,22 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { BillingService } from '@/lib/services/billing-service';
-
 export async function POST(request: NextRequest) {
   try {
-    // Get current user session
     const session = await getSession();
-    
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
-
     const userId = session.user.id;
-
-    // Create test payments
     const testPayments = [
       {
         user_id: userId,
@@ -55,19 +49,16 @@ export async function POST(request: NextRequest) {
         }
       }
     ];
-
     const results = [];
     for (const paymentData of testPayments) {
       const result = await BillingService.createPayment(paymentData);
       results.push(result);
     }
-
     return NextResponse.json({
       success: true,
       message: 'Test payments created',
       data: results
     });
-
   } catch (error) {
     console.error('Error creating test payments:', error);
     return NextResponse.json(
@@ -75,4 +66,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}
