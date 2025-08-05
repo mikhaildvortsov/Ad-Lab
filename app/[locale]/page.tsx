@@ -344,7 +344,7 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
       {}
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <Link href={`/${locale}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
             <span className="text-lg sm:text-xl font-bold text-gray-900">{t('header.brand')}</span>
           </Link>

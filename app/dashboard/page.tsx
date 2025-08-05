@@ -37,7 +37,8 @@ export default function DashboardRedirect() {
 
     if (logoutFlag === 'true') {
       console.log('DashboardRedirect: Logout flag detected, redirecting to home page immediately')
-      router.replace('/')
+      const preferredLocale = getPreferredLocale()
+      router.replace(`/${preferredLocale}`)
       return
     }
 
@@ -51,7 +52,8 @@ export default function DashboardRedirect() {
 
     if (!loading && !user) {
       console.log('DashboardRedirect: No user found, redirecting to auth')
-      router.replace('/auth')
+      const preferredLocale = getPreferredLocale()
+      router.replace(`/${preferredLocale}/auth`)
       return
     }
   }, [isClient, loading, user, hasRedirected, router])
@@ -62,7 +64,8 @@ export default function DashboardRedirect() {
     const timeoutId = setTimeout(() => {
       if (loading || !user) {
         console.log('DashboardRedirect: Loading timeout, forcing redirect to auth')
-        router.replace('/auth')
+        const preferredLocale = getPreferredLocale()
+        router.replace(`/${preferredLocale}/auth`)
       }
     }, 15000) 
 
