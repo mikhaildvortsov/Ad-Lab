@@ -65,8 +65,8 @@ export async function checkCSRFProtection(request: NextRequest, sessionId?: stri
   return { valid: true };
 }
 const SAFE_ORIGINS = [
-  'http:
-  'https:
+  'http://localhost:3000',
+  'https://localhost:3000',
   process.env.NEXTAUTH_URL,
 ].filter(Boolean);
 export function checkOrigin(request: NextRequest): boolean {

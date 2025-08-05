@@ -35,7 +35,7 @@ export interface TributeStatusResponse {
 }
 const TRIBUTE_CONFIG = {
   BOT_USERNAME: '@tribute', 
-  API_URL: process.env.TRIBUTE_API_URL || 'https:
+  API_URL: process.env.TRIBUTE_API_URL || 'https://api.tribute.com',
   WEBHOOK_SECRET: process.env.TRIBUTE_WEBHOOK_SECRET,
   PAYMENT_TIMEOUT: 15 * 60 * 1000, 
   MIN_AMOUNT: 100, 

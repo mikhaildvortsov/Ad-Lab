@@ -4,7 +4,7 @@ import { checkRateLimit } from '@/lib/rate-limiter';
 import { getSession } from '@/lib/session';
 import { QueryService } from '@/lib/services/query-service';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const SITE_URL = process.env.NEXTAUTH_URL || 'http:
+const SITE_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
 const SITE_NAME = 'Ad Lab';
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
     if (process.env.NODE_ENV === 'development') {
       console.log('[OpenAI] Request body:', JSON.stringify(body, null, 2));
     }
-    const response = await fetch('https:
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${OPENAI_API_KEY}`,

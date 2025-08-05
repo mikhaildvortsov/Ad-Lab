@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   })
   const googleClientId = process.env.GOOGLE_CLIENT_ID
   const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
-  const nextAuthUrl = process.env.NEXTAUTH_URL || 'http:
+  const nextAuthUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
   if (!googleClientId || !googleClientSecret) {
     console.error('🚨 Google OAuth Configuration Error:')
     console.error('❌ GOOGLE_CLIENT_ID exists:', !!googleClientId)
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       console.log('Google OAuth: Blocking bot/crawler from OAuth')
       return NextResponse.redirect(new URL('/auth?error=auth_blocked', request.url))
     }
-    const googleAuthUrl = new URL('https:
+    const googleAuthUrl = new URL('https://accounts.google.com/o/oauth2/auth')
     googleAuthUrl.searchParams.set('client_id', googleClientId)
     googleAuthUrl.searchParams.set('redirect_uri', `${nextAuthUrl}/api/auth/google`)
     googleAuthUrl.searchParams.set('response_type', 'code')

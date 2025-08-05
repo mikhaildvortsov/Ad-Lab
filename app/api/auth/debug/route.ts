@@ -25,9 +25,9 @@ export async function GET(request: NextRequest) {
       node_env: process.env.NODE_ENV,
     },
     oauth_urls: {
-      redirect_uri: `${nextAuthUrl || 'http:
+      redirect_uri: `${nextAuthUrl || 'http://localhost:3000'}/api/auth/google`,
       google_auth_url: googleClientId ? 
-        `https:
+        `https://accounts.google.com/o/oauth2/auth?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(`${nextAuthUrl || 'http://localhost:3000'}/api/auth/google`)}&response_type=code&scope=openid%20email%20profile&access_type=offline&prompt=select_account`
         : 'GOOGLE_CLIENT_ID not set'
     },
     validation: {
