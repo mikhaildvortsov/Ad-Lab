@@ -93,6 +93,8 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
   const [chatOpen, setChatOpen] = useState(false);
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
   const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
+  const [subscriptionData, setSubscriptionData] = useState<any>(null);
   
   // Hydration-safe client detection
   const [isClient, setIsClient] = useState(false)
@@ -119,17 +121,60 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
     }
   }, [user, csrfToken]);
 
-  // Проверка подписки с учетом тестового режима
-  const hasActiveSubscription = () => {
-    // В тестовом режиме всегда возвращаем true (подписка активна)
-    if (process.env.NEXT_PUBLIC_TEST_MODE === 'true') {
-      return true;
-    }
-    
-    // В реальном приложении здесь будет проверка через API
-    // Пока что считаем, что у пользователя нет активной подписки
-    return false;
-  };
+  // Проверка статуса подписки через API
+  useEffect(() => {
+    const checkSubscription = async () => {
+      if (user) {
+        // В тестовом режиме всегда считаем подписку активной
+        if (process.env.NEXT_PUBLIC_TEST_MODE === 'true') {
+          setHasActiveSubscription(true);
+          setSubscriptionData({
+            hasActiveSubscription: true,
+            subscription: {
+              id: 'test-subscription',
+              planName: 'Test Plan',
+              status: 'active',
+              expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+              isExpired: false
+            }
+          });
+          return;
+        }
+        
+        try {
+          const response = await fetch('/api/auth/subscription');
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              // Устанавливаем статус подписки: true если активна, false если нет
+              setHasActiveSubscription(data.data.hasActiveSubscription);
+              setSubscriptionData(data.data);
+            } else {
+              setHasActiveSubscription(false);
+              setSubscriptionData(null);
+            }
+          } else {
+            // API недоступен - считаем что подписки нет
+            setHasActiveSubscription(false);
+            setSubscriptionData(null);
+          }
+        } catch (error) {
+          console.error('Error checking subscription:', error);
+          // При ошибке считаем что подписки нет
+          setHasActiveSubscription(false);
+          setSubscriptionData(null);
+        }
+      } else {
+        // Если пользователь не авторизован - подписки точно нет
+        setHasActiveSubscription(false);
+        setSubscriptionData(null);
+      }
+    };
+
+    checkSubscription();
+  }, [user]);
+
+  // Removed auto-redirect to allow authenticated users to view the homepage
 
   const handleLogout = async () => {
     try {
@@ -146,12 +191,15 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
     if (!isClient || !user) {
       // Если клиент не готов или пользователь не авторизован - перенаправляем на регистрацию
       router.push(`/${locale}/auth?mode=register`);
-    } else if (!hasActiveSubscription()) {
+    } else if (hasActiveSubscription === null) {
+      // Если статус подписки еще загружается - ничего не делаем
+      return;
+    } else if (hasActiveSubscription === false) {
       // Если авторизован, но нет подписки - показываем paywall
       setShowPaywall(true);
     } else {
-      // Если авторизован и есть подписка - открываем чат
-      setChatOpen(true);
+      // Если авторизован и есть подписка - перенаправляем на дашборд
+      router.push(`/${locale}/dashboard`);
     }
   };
 
@@ -283,12 +331,14 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
   };
 
   const handlePaymentSuccess = () => {
-    // После успешной оплаты закрываем paywall и открываем чат
+    // После успешной оплаты закрываем paywall и перенаправляем на дашборд
     setShowPaywall(false);
     
-    // В реальном приложении здесь бы обновился статус подписки
-    // После оплаты открываем чат для создания текста
-    setChatOpen(true);
+    // Обновляем статус подписки
+    setHasActiveSubscription(true);
+    
+    // После оплаты перенаправляем на дашборд для полного доступа
+    router.push(`/${locale}/dashboard`);
   };
 
   // Show loading only on client side to prevent hydration mismatch
