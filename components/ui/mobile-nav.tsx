@@ -2,7 +2,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { Menu, X, User, LogOut, Home, Sparkles, Bot } from "lucide-react"
 import { useLocale } from "@/lib/use-locale"
 interface User {
@@ -28,6 +28,10 @@ export function MobileNav({ user, onLogout, t }: MobileNavProps) {
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="w-[280px] sm:w-[350px]">
+        <SheetTitle className="sr-only">Навигационное меню</SheetTitle>
+        <SheetDescription className="sr-only">
+          Основные разделы сайта и пользовательские функции
+        </SheetDescription>
         <div className="flex flex-col h-full">
           <div className="flex items-center gap-2 mb-6">
             <Sparkles className="h-6 w-6 text-blue-600" />
