@@ -501,6 +501,7 @@
     },
     "history": {
       "title": "История запросов",
+      "newRequest": "Создать новый запрос",
       "requestNumber": "Запрос #{id}",
       "completed": "Завершен",
       "inProgress": "В процессе",
@@ -592,6 +593,20 @@
     "switchToLogin": "Уже есть аккаунт? Войти",
     "backToHome": "← Вернуться на главную",
     "userExistsPrompt": "Войти в существующий аккаунт →",
+    "forgotPassword": "Забыли пароль?",
+    "resetPassword": "Сбросить пароль",
+    "resetPasswordTitle": "Восстановление пароля",
+    "resetPasswordSubtitle": "Введите ваш email для получения ссылки на восстановление пароля",
+    "sendResetLink": "Отправить ссылку",
+    "resetEmailSent": "Ссылка для восстановления пароля отправлена на ваш email",
+    "backToLogin": "← Вернуться к входу",
+    "newPassword": "Новый пароль",
+    "confirmPassword": "Подтвердите пароль",
+    "newPasswordPlaceholder": "Введите новый пароль",
+    "confirmPasswordPlaceholder": "Повторите новый пароль",
+    "setNewPassword": "Установить новый пароль",
+    "passwordResetSuccess": "Пароль успешно изменен! Теперь вы можете войти с новым паролем.",
+    "resetPasswordPageTitle": "Установка нового пароля",
     "errors": {
       "privacyRequired": "Необходимо согласие с политикой конфиденциальности",
       "sessionError": "Не удалось получить данные сессии",
@@ -602,7 +617,30 @@
       "oauthNotConfigured": "OAuth не настроен. Обратитесь к администратору.",
       "invalidUserData": "Ошибка обработки данных пользователя.",
       "noUserData": "Не удалось получить данные пользователя.",
-      "redirectUriMismatch": "Ошибка настройки OAuth. Проверьте redirect URI в Google Console."
+      "redirectUriMismatch": "Ошибка настройки OAuth. Проверьте redirect URI в Google Console.",
+      "invalidPassword": "Неверный пароль",
+      "resetPasswordError": "Не удалось отправить ссылку для восстановления. Попробуйте позже.",
+      "passwordMismatch": "Пароли не совпадают",
+      "invalidResetToken": "Недействительная или истекшая ссылка для сброса пароля",
+      "passwordResetFailed": "Не удалось сбросить пароль. Попробуйте позже."
+    }
+  },
+  "promoCode": {
+    "title": "Промо-код",
+    "description": "Введите промо-код для получения бесплатного доступа",
+    "placeholder": "Введите промо-код",
+    "activate": "Активировать",
+    "activating": "Активация...",
+    "success": "Промо-код успешно активирован!",
+    "hasActiveAccess": "У вас есть активный промо доступ",
+    "expiresAt": "Действует до",
+    "errors": {
+      "required": "Введите промо-код",
+      "notFound": "Промо-код не найден",
+      "expired": "Срок действия промо-кода истек",
+      "limitExceeded": "Промо-код исчерпал лимит использований",
+      "alreadyUsed": "Вы уже использовали этот промо-код",
+      "activationFailed": "Не удалось активировать промо-код"
     }
   }
 } 

@@ -282,4 +282,31 @@ export class UserService {
       };
     }
   }
+
+  /**
+   * Обновляет пароль пользователя
+   */
+  static async updateUserPassword(userId: string, passwordHash: string): Promise<DatabaseResult<void>> {
+    try {
+      const now = new Date().toISOString();
+      
+      const result = await query(`
+        UPDATE users 
+        SET password_hash = $1, updated_at = $2 
+        WHERE id = $3
+      `, [passwordHash, now, userId]);
+
+      if (result.rowCount === 0) {
+        return { success: false, error: 'User not found' };
+      }
+
+      return { success: true, data: undefined };
+    } catch (error) {
+      console.error('Error updating user password:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
 }

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Sparkles, History, CreditCard, Settings, LogOut, FileText, Calendar, TrendingUp, User, Check, X, RefreshCw, Copy, Download, AlertCircle, Trash2 } from "lucide-react"
+import { Sparkles, History, CreditCard, Settings, LogOut, FileText, Calendar, TrendingUp, User, Check, X, RefreshCw, Copy, Download, AlertCircle, Trash2, Lock, Plus } from "lucide-react"
 import { MobileNav } from "@/components/ui/mobile-nav"
 import { useAuth } from "@/lib/auth-context"
 import { ChatInterface } from "@/components/chat-interface"
@@ -39,6 +39,11 @@ export default function Dashboard() {
   const { user, loading, error, login, logout, clearError } = useAuth()
   const router = useRouter()
   const [showPlanModal, setShowPlanModal] = useState(false)
+  
+  // Promo code state
+  const [promoCodeInput, setPromoCodeInput] = useState('')
+  const [isActivatingPromo, setIsActivatingPromo] = useState(false)
+  const [promoError, setPromoError] = useState<string | null>(null)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [plans, setPlans] = useState<Plan[]>([])
   const [currentPlan, setCurrentPlan] = useState<Plan | null>(null)
@@ -62,6 +67,7 @@ export default function Dashboard() {
   const [errorHistory, setErrorHistory] = useState<string | null>(null)
   const [errorAnalytics, setErrorAnalytics] = useState<string | null>(null)
   const [errorPayments, setErrorPayments] = useState<string | null>(null)
+  const [csrfToken, setCsrfToken] = useState<string | null>(null)
   useEffect(() => {
     const checkSubscription = async () => {
       if (user) {
@@ -88,31 +94,13 @@ export default function Dashboard() {
               setSubscriptionData(data.data)
             }
           } else {
-            setHasActiveSubscription(true)
-            setSubscriptionData({
-              hasActiveSubscription: true,
-              subscription: {
-                id: 'fallback-subscription',
-                planName: 'Active Plan',
-                status: 'active',
-                expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-                isExpired: false
-              }
-            })
+            setHasActiveSubscription(false)
+            setSubscriptionData(null)
           }
         } catch (error) {
           console.error('Error checking subscription:', error)
-          setHasActiveSubscription(true)
-          setSubscriptionData({
-            hasActiveSubscription: true,
-            subscription: {
-              id: 'fallback-subscription',
-              planName: 'Active Plan',
-              status: 'active',
-              expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-              isExpired: false
-            }
-          })
+          setHasActiveSubscription(false)
+          setSubscriptionData(null)
         }
       }
     }
@@ -125,6 +113,9 @@ export default function Dashboard() {
       router.push(authPath)
     }
   }, [loading, user, locale, router])
+
+  // Removed automatic redirect for users without subscription
+  // Users should be able to access dashboard to see their status and purchase subscription
   useEffect(() => {
     if (user && hasActiveSubscription !== null) {
       fetchHistoryData()
@@ -134,6 +125,25 @@ export default function Dashboard() {
       fetchCurrentUsage()
     }
   }, [user, hasActiveSubscription])
+
+  // Fetch CSRF token when user is authenticated
+  useEffect(() => {
+    if (user && !csrfToken) {
+      const fetchCsrfToken = async () => {
+        try {
+          const response = await fetch('/api/csrf-token');
+          if (response.ok) {
+            const data = await response.json();
+            setCsrfToken(data.csrfToken);
+          }
+        } catch (error) {
+          console.error('Failed to get CSRF token:', error);
+        }
+      };
+      fetchCsrfToken();
+    }
+  }, [user, csrfToken]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
@@ -286,10 +296,17 @@ export default function Dashboard() {
     }
   }
   const fetchCurrentUsage = async () => {
+    if (!csrfToken) {
+      console.error('No CSRF token available for stats request');
+      return;
+    }
     try {
       const response = await fetch('/api/history?action=stats', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify({ action: 'stats' })
       })
       if (response.ok) {
@@ -313,6 +330,12 @@ export default function Dashboard() {
     setPresetText(originalText)
     setChatOpen(true)
     console.log('Повторная генерация для запроса:', requestId, originalText)
+  }
+  
+  const handleNewRequest = () => {
+    setPresetText('')
+    setChatOpen(true)
+    console.log('Создание нового запроса')
   }
   const handleCopyText = async (text: string, requestId: number) => {
     try {
@@ -341,6 +364,62 @@ export default function Dashboard() {
     setHasActiveSubscription(true)
     setChatOpen(true)
   }
+
+  const handleActivatePromoCode = async () => {
+    if (!promoCodeInput.trim()) {
+      setPromoError(t('promoCode.errors.required'))
+      return
+    }
+
+    if (!csrfToken) {
+      setPromoError('Отсутствует токен безопасности. Попробуйте перезагрузить страницу.')
+      return
+    }
+
+    setIsActivatingPromo(true)
+    setPromoError(null)
+
+    try {
+      const response = await fetch('/api/promo/activate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
+        body: JSON.stringify({ code: promoCodeInput.trim() }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setPromoCodeInput('')
+        setHasActiveSubscription(true)
+        // Refresh subscription data
+        const checkSubscription = async () => {
+          try {
+            const response = await fetch('/api/auth/subscription')
+            if (response.ok) {
+              const data = await response.json()
+              if (data.success) {
+                setHasActiveSubscription(data.data.hasActiveSubscription)
+                setSubscriptionData(data.data)
+              }
+            }
+          } catch (error) {
+            console.error('Error checking subscription:', error)
+          }
+        }
+        checkSubscription()
+      } else {
+        setPromoError(data.error || t('promoCode.errors.activationFailed'))
+      }
+    } catch (error) {
+      console.error('Error activating promo code:', error)
+      setPromoError(t('promoCode.errors.activationFailed'))
+    } finally {
+      setIsActivatingPromo(false)
+    }
+  }
   const handleCancelSubscription = async () => {
     setIsLoading(true)
     try {
@@ -357,17 +436,13 @@ export default function Dashboard() {
   }
   const handleDeletePayment = async () => {
     if (!paymentToDelete) return
+    if (!csrfToken) {
+      alert(locale === 'ru' ? 'Отсутствует токен безопасности. Попробуйте перезагрузить страницу.' : 'Security token missing. Please refresh the page.');
+      return;
+    }
     setIsDeletingPayment(true)
     try {
       console.log('Deleting payment:', paymentToDelete)
-      console.log('Getting CSRF token...')
-      const csrfResponse = await fetch('/api/csrf-token')
-      if (!csrfResponse.ok) {
-        throw new Error('Failed to get CSRF token')
-      }
-      const csrfData = await csrfResponse.json()
-      const csrfToken = csrfData.csrfToken
-      console.log('Got CSRF token:', csrfToken ? 'success' : 'failed')
       const response = await fetch(`/api/payments/history?id=${paymentToDelete}`, {
         method: 'DELETE',
         headers: {
@@ -442,6 +517,58 @@ export default function Dashboard() {
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{t('dashboard.title')}</h1>
           <p className="text-gray-600 text-sm sm:text-base">{t('dashboard.subtitle')}</p>
         </div>
+
+        {hasActiveSubscription === false ? (
+          <div className="text-center py-12">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 max-w-md mx-auto">
+              <Lock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                {locale === 'ru' ? 'Требуется подписка' : 'Subscription Required'}
+              </h2>
+              <p className="text-gray-600 mb-6">
+                {locale === 'ru' 
+                  ? 'Для доступа к личному кабинету необходима активная подписка или промо-код'
+                  : 'An active subscription or promo code is required to access the dashboard'
+                }
+              </p>
+              
+              {/* Promo Code Section */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <h3 className="text-sm font-medium text-gray-900 mb-3">
+                  {t('promoCode.title')}
+                </h3>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder={t('promoCode.placeholder')}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={promoCodeInput}
+                    onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase())}
+                    disabled={isActivatingPromo}
+                  />
+                  <Button 
+                    onClick={handleActivatePromoCode}
+                    disabled={!promoCodeInput.trim() || isActivatingPromo}
+                    size="sm"
+                  >
+                    {isActivatingPromo ? t('promoCode.activating') : t('promoCode.activate')}
+                  </Button>
+                </div>
+                {promoError && (
+                  <p className="text-red-600 text-xs mt-2">{promoError}</p>
+                )}
+              </div>
+
+              <div className="text-sm text-gray-500 mb-4">
+                {locale === 'ru' ? 'или' : 'or'}
+              </div>
+
+              <Button onClick={() => setShowPlanModal(true)} className="w-full">
+                {locale === 'ru' ? 'Выбрать план' : 'Choose Plan'}
+              </Button>
+            </div>
+          </div>
+        ) : (
         <Tabs defaultValue="history" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 h-auto p-1">
             <TabsTrigger value="history" className="flex items-center gap-2 text-xs sm:text-sm py-2">
@@ -460,6 +587,11 @@ export default function Dashboard() {
           <TabsContent value="history" className="space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <h2 className="text-lg sm:text-xl font-semibold">{t('dashboard.history.title')}</h2>
+              <Button onClick={handleNewRequest} className="flex items-center gap-2 whitespace-nowrap">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">{t('dashboard.history.newRequest')}</span>
+                <span className="sm:hidden">{locale === 'ru' ? 'Новый' : 'New'}</span>
+              </Button>
             </div>
             <div className="space-y-4">
               {loadingHistory ? (
@@ -511,9 +643,7 @@ export default function Dashboard() {
                       }
                     </p>
                     <Button 
-                      onClick={() => {
-                        setChatOpen(true)
-                      }}
+                      onClick={handleNewRequest}
                       className="mt-2"
                     >
                       <Sparkles className="h-4 w-4 mr-2" />
@@ -855,6 +985,7 @@ export default function Dashboard() {
             </Card>
           </TabsContent>
         </Tabs>
+        )}
       </div>
       <ChatInterface 
         open={chatOpen} 

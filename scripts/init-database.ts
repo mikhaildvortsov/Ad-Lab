@@ -58,7 +58,9 @@ async function checkTablesExist(): Promise<boolean> {
       'user_subscriptions',
       'payments',
       'query_history',
-      'usage_statistics'
+      'usage_statistics',
+      'promo_codes',
+      'user_promo_activations'
     ];
 
     const missingTables = requiredTables.filter(table => !tables.includes(table));
@@ -93,10 +95,10 @@ async function seedDefaultData(): Promise<void> {
         (gen_random_uuid(), 'Week', 'Недельный доступ ко всем функциям', 1990, NULL, 'RUB',
          '["Полный доступ на 7 дней", "Неограниченные улучшения", "Все функции приложения", "Поддержка 24/7"]'::jsonb,
          NULL, NULL, true),
-        (gen_random_uuid(), 'Month', 'Месячная подписка со скидкой', 2990, 29900, 'RUB',
+        (gen_random_uuid(), 'Month', 'Месячная подписка со скидкой', 2990, 6990, 'RUB',
          '["Полный доступ на 30 дней", "Неограниченные улучшения", "Все функции приложения", "Приоритетная поддержка", "Экономия 57%"]'::jsonb,
          NULL, NULL, true),
-        (gen_random_uuid(), 'Quarter', 'Квартальная подписка с максимальной экономией', 9990, 99900, 'RUB',
+        (gen_random_uuid(), 'Quarter', 'Квартальная подписка с максимальной экономией', 9990, NULL, 'RUB',
          '["Полный доступ на 90 дней", "Неограниченные улучшения", "Все функции приложения", "VIP поддержка", "Максимальная экономия"]'::jsonb,
          NULL, NULL, true)
       `);
@@ -104,6 +106,26 @@ async function seedDefaultData(): Promise<void> {
       console.log('✅ Default subscription plans created');
     } else {
       console.log('📦 Subscription plans already exist, skipping...');
+    }
+
+    // Create promo codes table
+    const promoCodesResult = await query('SELECT COUNT(*) as count FROM promo_codes');
+    const promoCodesCount = parseInt(promoCodesResult.rows[0].count);
+
+    if (promoCodesCount === 0) {
+      console.log('🎟️ Creating default promo codes...');
+
+      await query(`
+        INSERT INTO promo_codes (code, description, max_uses, access_duration_days, is_active)
+        VALUES 
+        ('WELCOME2024', 'Добро пожаловать! Бесплатный доступ на 7 дней', 1000, 7, true),
+        ('TESTFULL', 'Тестовый код с полным доступом на 30 дней', 100, 30, true),
+        ('BETA2024', 'Бета-тестирование - доступ на 14 дней', 500, 14, true)
+      `);
+
+      console.log('✅ Default promo codes created');
+    } else {
+      console.log('🎟️ Promo codes already exist, skipping...');
     }
 
   } catch (error) {

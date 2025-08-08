@@ -141,6 +141,16 @@ export const ChatInterface = forwardRef<any, {
 
           if (response.status === 429 && data.type === 'rate_limit') {
             errorContent = `⚠️ ${data.error}\n\nЛимиты защищают от злоупотребления API и экономят ваши токены.`;
+          } else if (response.status === 403 && data.type === 'subscription_required') {
+            errorContent = '🔒 Требуется активная подписка для использования чата.';
+            setTimeout(() => {
+              setShowPaywall(true);
+            }, 1000);
+          } else if (response.status === 429 && data.type === 'usage_limit_exceeded') {
+            errorContent = `📊 Превышен лимит запросов для вашего тарифа.\nОсталось запросов: ${data.remainingQueries || 0}`;
+            setTimeout(() => {
+              setShowPaywall(true);
+            }, 1000);
           } else if (data.error) {
             errorContent = data.error;
           }

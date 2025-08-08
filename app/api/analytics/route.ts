@@ -3,6 +3,7 @@ import { getSession } from '@/lib/session';
 import { QueryService } from '@/lib/services/query-service';
 import { BillingService } from '@/lib/services/billing-service';
 import { UserService } from '@/lib/services/user-service';
+import { PromoService } from '@/lib/services/promo-service';
 import { query } from '@/lib/database';
 export async function GET(request: NextRequest) {
   try {
@@ -13,7 +14,39 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
+    
     const userId = session.user.id;
+
+    // Check for active promo access first
+    const promoResult = await PromoService.getUserActivePromoAccess(userId);
+    let hasAccess = false;
+    
+    if (promoResult.success && promoResult.data) {
+      hasAccess = true; // User has active promo access
+    } else {
+      // Check subscription status
+      const subscriptionResult = await BillingService.getUserSubscription(userId);
+      if (subscriptionResult.success) {
+        const subscription = subscriptionResult.data!;
+        const now = new Date();
+        const expiresAt = subscription.current_period_end ? new Date(subscription.current_period_end) : null;
+        const isExpired = expiresAt && expiresAt < now;
+        
+        if (!isExpired && subscription.status === 'active') {
+          hasAccess = true;
+        }
+      }
+    }
+    
+    if (!hasAccess) {
+      return NextResponse.json(
+        { 
+          error: 'Active subscription or promo code required',
+          type: 'subscription_required'
+        },
+        { status: 403 }
+      );
+    }
     const queryStatsResult = await QueryService.getUserQueryStats(userId);
     if (!queryStatsResult.success) {
       return NextResponse.json(

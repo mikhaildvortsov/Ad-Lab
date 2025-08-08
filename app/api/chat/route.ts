@@ -3,6 +3,8 @@ import { getInstruction, createCustomInstruction, type NicheType } from '@/lib/a
 import { checkRateLimit } from '@/lib/rate-limiter';
 import { getSession } from '@/lib/session';
 import { QueryService } from '@/lib/services/query-service';
+import { BillingService } from '@/lib/services/billing-service';
+import { PromoService } from '@/lib/services/promo-service';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const SITE_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
 const SITE_NAME = 'Ad Lab';
@@ -42,7 +44,62 @@ export async function POST(request: NextRequest) {
     });
     const estimatedTokens = Math.ceil((sanitizedMessage.length + (instructions || '').length) / 4) + 1000; 
     const session = await getSession();
-    userId = session?.user?.id;
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { 
+          error: 'Authentication required',
+          type: 'auth_required'
+        },
+        { status: 401 }
+      );
+    }
+    
+    userId = session.user.id;
+
+    // Check for active promo access first
+    const promoResult = await PromoService.getUserActivePromoAccess(userId);
+    let hasAccess = false;
+    
+    if (promoResult.success && promoResult.data) {
+      hasAccess = true; // User has active promo access
+    } else {
+      // Check subscription status
+      const subscriptionResult = await BillingService.getUserSubscription(userId);
+      if (subscriptionResult.success) {
+        const subscription = subscriptionResult.data!;
+        const now = new Date();
+        const expiresAt = subscription.current_period_end ? new Date(subscription.current_period_end) : null;
+        const isExpired = expiresAt && expiresAt < now;
+        
+        if (!isExpired && subscription.status === 'active') {
+          hasAccess = true;
+        }
+      }
+    }
+    
+    if (!hasAccess) {
+      return NextResponse.json(
+        { 
+          error: 'Active subscription or promo code required',
+          type: 'subscription_required'
+        },
+        { status: 403 }
+      );
+    }
+
+    // Check usage limits
+    const usageLimitsResult = await BillingService.checkUsageLimits(userId);
+    if (!usageLimitsResult.success || !usageLimitsResult.data?.withinLimits) {
+      return NextResponse.json(
+        { 
+          error: 'Usage limit exceeded for your plan',
+          type: 'usage_limit_exceeded',
+          remainingQueries: usageLimitsResult.data?.remainingQueries || 0
+        },
+        { status: 429 }
+      );
+    }
+
     const rateLimitResult = await checkRateLimit(request, estimatedTokens, 'chatGPT', userId);
     if (!rateLimitResult.allowed) {
       return NextResponse.json(

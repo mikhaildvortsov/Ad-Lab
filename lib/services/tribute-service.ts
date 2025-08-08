@@ -6,6 +6,7 @@ export interface TributePaymentRequest {
   paymentId: string;
   userId: string;
   planName: string;
+  planId?: string;
   returnUrl?: string;
   webhookUrl?: string;
 }
@@ -34,13 +35,19 @@ export interface TributeStatusResponse {
   error?: string;
 }
 const TRIBUTE_CONFIG = {
-  BOT_USERNAME: '@tribute', 
+  BOT_USERNAME: 'tribute', 
   API_URL: process.env.TRIBUTE_API_URL || 'https://api.tribute.com',
   WEBHOOK_SECRET: process.env.TRIBUTE_WEBHOOK_SECRET,
   PAYMENT_TIMEOUT: 15 * 60 * 1000, 
   MIN_AMOUNT: 100, 
   MAX_AMOUNT: 300000, 
-  COMMISSION_RATE: 0.10, 
+  COMMISSION_RATE: 0.10,
+  // Правильные параметры для разных планов
+  PLAN_CODES: {
+    'week': 'piyL',
+    'month': 'piu3', 
+    'quarter': 'piyM'
+  }
 };
 export class TributeService {
   static async createPayment(request: TributePaymentRequest): Promise<TributePaymentResponse> {
@@ -63,6 +70,7 @@ export class TributeService {
             description: request.description,
             userId: request.userId,
             planName: request.planName,
+            planId: request.planId,
             returnUrl: request.returnUrl || `${process.env.NEXTAUTH_URL}/dashboard`,
             webhookUrl: request.webhookUrl || `${process.env.NEXTAUTH_URL}/api/payments/webhook`
           });
@@ -92,6 +100,7 @@ export class TributeService {
         description: request.description,
         userId: request.userId,
         planName: request.planName,
+        planId: request.planId,
         returnUrl: request.returnUrl || `${process.env.NEXTAUTH_URL}/dashboard`,
         webhookUrl: request.webhookUrl || `${process.env.NEXTAUTH_URL}/api/payments/webhook`,
         expiresAt: expiresAt.toISOString()
@@ -172,7 +181,29 @@ export class TributeService {
     }
   }
   private static generateTributePaymentUrl(paymentData: any): string {
-    return `https://t.me/${TRIBUTE_CONFIG.BOT_USERNAME}?start=pay_${paymentData.orderId}`;
+    // Определяем правильный код плана на основе planName
+    let planCode = 'piu3'; // По умолчанию месяц
+    
+    // Сначала пробуем определить по ID плана, если он есть
+    if (paymentData.planId) {
+      const planId = paymentData.planId.toLowerCase();
+      if (TRIBUTE_CONFIG.PLAN_CODES[planId]) {
+        planCode = TRIBUTE_CONFIG.PLAN_CODES[planId];
+      }
+    }
+    // Если ID нет, определяем по названию плана
+    else if (paymentData.planName) {
+      const planName = paymentData.planName.toLowerCase();
+      if (planName.includes('week') || planName.includes('неделя')) {
+        planCode = TRIBUTE_CONFIG.PLAN_CODES.week;
+      } else if (planName.includes('quarter') || planName.includes('три') || planName.includes('3')) {
+        planCode = TRIBUTE_CONFIG.PLAN_CODES.quarter;
+      } else {
+        planCode = TRIBUTE_CONFIG.PLAN_CODES.month;
+      }
+    }
+    
+    return `https://t.me/${TRIBUTE_CONFIG.BOT_USERNAME}/app?startapp=${planCode}`;
   }
   static async createSubscription(request: TributePaymentRequest): Promise<TributePaymentResponse> {
     try {
@@ -207,16 +238,29 @@ export class TributeService {
     }
   }
   private static generateTributeSubscriptionUrl(subscriptionData: any): string {
-    const encodedData = Buffer.from(JSON.stringify({
-      orderId: subscriptionData.orderId,
-      amount: subscriptionData.amount,
-      currency: subscriptionData.currency,
-      description: subscriptionData.description,
-      userId: subscriptionData.userId,
-      planName: subscriptionData.planName,
-      type: 'subscription'
-    })).toString('base64');
-    return `https://t.me/${TRIBUTE_CONFIG.BOT_USERNAME}?start=sub_${encodedData}`;
+    // Определяем правильный код плана на основе planName
+    let planCode = 'piu3'; // По умолчанию месяц
+    
+    // Сначала пробуем определить по ID плана, если он есть
+    if (subscriptionData.planId) {
+      const planId = subscriptionData.planId.toLowerCase();
+      if (TRIBUTE_CONFIG.PLAN_CODES[planId]) {
+        planCode = TRIBUTE_CONFIG.PLAN_CODES[planId];
+      }
+    }
+    // Если ID нет, определяем по названию плана
+    else if (subscriptionData.planName) {
+      const planName = subscriptionData.planName.toLowerCase();
+      if (planName.includes('week') || planName.includes('неделя')) {
+        planCode = TRIBUTE_CONFIG.PLAN_CODES.week;
+      } else if (planName.includes('quarter') || planName.includes('три') || planName.includes('3')) {
+        planCode = TRIBUTE_CONFIG.PLAN_CODES.quarter;
+      } else {
+        planCode = TRIBUTE_CONFIG.PLAN_CODES.month;
+      }
+    }
+    
+    return `https://t.me/${TRIBUTE_CONFIG.BOT_USERNAME}/app?startapp=${planCode}`;
   }
   static validateWebhookSignature(payload: string, signature: string): boolean {
     try {

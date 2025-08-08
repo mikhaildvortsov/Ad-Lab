@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { BillingService } from '@/lib/services/billing-service';
+import { PromoService } from '@/lib/services/promo-service';
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
@@ -11,6 +12,26 @@ export async function GET(request: NextRequest) {
       );
     }
     const userId = session.user.id;
+    
+    // Check for active promo access first
+    const promoResult = await PromoService.getUserActivePromoAccess(userId);
+    if (promoResult.success && promoResult.data) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          hasActiveSubscription: true,
+          subscription: {
+            id: 'promo-access',
+            planName: 'Промо доступ',
+            status: 'active',
+            expiresAt: promoResult.data.expires_at,
+            isExpired: false,
+            isPromoAccess: true
+          }
+        }
+      });
+    }
+    
     const subscriptionResult = await BillingService.getUserSubscription(userId);
     if (!subscriptionResult.success) {
       return NextResponse.json({

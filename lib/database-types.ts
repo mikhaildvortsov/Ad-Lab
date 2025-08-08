@@ -209,3 +209,24 @@ export const PLAN_NAME_TO_ID: Record<string, string> = {
   'Month': 'month',
   'Quarter': 'quarter'
 };
+
+export interface PromoCode {
+  id: string;
+  code: string;
+  description?: string | null;
+  max_uses: number;
+  current_uses: number;
+  expires_at?: string | null;
+  access_duration_days: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface UserPromoActivation {
+  id: string;
+  user_id: string;
+  promo_code_id: string;
+  activated_at: string;
+  expires_at: string;
+  is_active: boolean;
+}

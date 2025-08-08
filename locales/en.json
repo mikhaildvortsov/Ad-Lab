@@ -358,8 +358,7 @@
           "error": "Payment error"
         },
         "orderNumber": "Order number: {orderId}",
-        "timeRemaining": "Time remaining: {time}",
-        "createNew": "Create New Payment"
+        "timeRemaining": "Time remaining: {time}"
       },
       "card": {
         "title": "Card Payment",
@@ -413,6 +412,7 @@
     },
     "history": {
       "title": "Request History",
+      "newRequest": "Create New Request",
       "requestNumber": "Request #{id}",
       "completed": "Completed",
       "inProgress": "In Progress", 
@@ -592,6 +592,20 @@
     "switchToLogin": "Already have an account? Sign in",
     "backToHome": "← Back to home",
     "userExistsPrompt": "Sign in to existing account →",
+    "forgotPassword": "Forgot password?",
+    "resetPassword": "Reset password",
+    "resetPasswordTitle": "Password Reset",
+    "resetPasswordSubtitle": "Enter your email to receive a password reset link",
+    "sendResetLink": "Send reset link",
+    "resetEmailSent": "Password reset link has been sent to your email",
+    "backToLogin": "← Back to login",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "newPasswordPlaceholder": "Enter new password",
+    "confirmPasswordPlaceholder": "Repeat new password",
+    "setNewPassword": "Set new password",
+    "passwordResetSuccess": "Password successfully changed! You can now login with your new password.",
+    "resetPasswordPageTitle": "Set New Password",
     "errors": {
       "privacyRequired": "Privacy policy agreement is required",
       "sessionError": "Failed to get session data",
@@ -602,7 +616,12 @@
       "oauthNotConfigured": "OAuth not configured. Contact administrator.",
       "invalidUserData": "User data processing error.",
       "noUserData": "Failed to get user data.",
-      "redirectUriMismatch": "OAuth configuration error. Check redirect URI in Google Console."
+      "redirectUriMismatch": "OAuth configuration error. Check redirect URI in Google Console.",
+      "invalidPassword": "Invalid password",
+      "resetPasswordError": "Failed to send reset link. Please try again later.",
+      "passwordMismatch": "Passwords do not match",
+      "invalidResetToken": "Invalid or expired password reset link",
+      "passwordResetFailed": "Failed to reset password. Please try again later."
     }
   }
 } 

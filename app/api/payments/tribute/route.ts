@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
       description: `Оплата плана ${planName}`,
       userId: session.user.id,
       planName: planName,
+      planId: planId,
       returnUrl: `${process.env.NEXTAUTH_URL}/dashboard`,
       webhookUrl: `${process.env.NEXTAUTH_URL}/api/payments/webhook`
     });

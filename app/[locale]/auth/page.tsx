@@ -24,6 +24,9 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
   const [error, setError] = useState("")
   const [privacyConsent, setPrivacyConsent] = useState(false)
   const [userExists, setUserExists] = useState(false)
+  const [showPasswordReset, setShowPasswordReset] = useState(false)
+  const [isResetMode, setIsResetMode] = useState(false)
+  const [resetEmailSent, setResetEmailSent] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
   const { login: googleLogin, updateUser } = useAuth()
@@ -54,6 +57,15 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
     setIsLoading(true)
     setError("")
     setUserExists(false)
+    
+    if (typeof window !== 'undefined') {
+      try {
+        document.cookie = 'logout_flag=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
+        console.log('Cleared logout_flag before auth attempt')
+      } catch (e) {
+        console.warn('Could not clear logout_flag:', e)
+      }
+    }
     if (!isLogin && !privacyConsent) {
       setError(t('auth.errors.privacyRequired'))
       setUserExists(false)
@@ -117,6 +129,12 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
         } else {
           setUserExists(false)
           setError(data.error || t('auth.errors.authError'))
+          // Показываем кнопку сброса пароля при ошибке неверного пароля
+          if (isLogin && data.errorCode === 'INVALID_PASSWORD') {
+            setShowPasswordReset(true)
+          } else {
+            setShowPasswordReset(false)
+          }
         }
       }
     } catch (error) {
@@ -139,6 +157,76 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
     setName('')
     setPrivacyConsent(false)
     setUserExists(false)
+    setShowPasswordReset(false)
+    setIsResetMode(false)
+    setResetEmailSent(false)
+  }
+
+  const handlePasswordReset = async () => {
+    console.log('🚀 handlePasswordReset called with email:', email, 'locale:', locale)
+    
+    if (!email) {
+      console.log('❌ No email provided')
+      setError('Введите email для восстановления пароля')
+      return
+    }
+
+    console.log('⏳ Starting password reset request...')
+    setIsLoading(true)
+    setError('')
+
+    try {
+      // Получаем CSRF токен
+      console.log('🔐 Getting CSRF token...')
+      const csrfResponse = await fetch('/api/csrf-token')
+      const csrfData = await csrfResponse.json()
+      
+      if (!csrfData.csrfToken) {
+        throw new Error('Failed to get CSRF token')
+      }
+
+      console.log('📡 Sending request to /api/auth/reset-password with CSRF token')
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfData.csrfToken,
+        },
+        body: JSON.stringify({ email, locale }),
+      })
+
+      console.log('📥 Response status:', response.status, response.statusText)
+      const data = await response.json()
+      console.log('📊 Response data:', data)
+
+      if (data.success) {
+        setResetEmailSent(true)
+        setError('')
+        
+        // В режиме разработки показываем ссылку для удобства
+        if (data.resetUrl && process.env.NODE_ENV === 'development') {
+          console.log('🔗 Reset URL:', data.resetUrl)
+          // Можно также показать ссылку пользователю
+          if (confirm('В режиме разработки: открыть ссылку для сброса пароля?')) {
+            window.open(data.resetUrl, '_blank')
+          }
+        }
+      } else {
+        setError(data.error || t('auth.errors.resetPasswordError'))
+      }
+    } catch (error) {
+      console.error('Password reset error:', error)
+      setError(t('auth.errors.resetPasswordError'))
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleResetModeToggle = () => {
+    setIsResetMode(!isResetMode)
+    setError('')
+    setShowPasswordReset(false)
+    setResetEmailSent(false)
   }
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
@@ -149,20 +237,21 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
             <span className="text-xl sm:text-2xl font-bold text-gray-900">{t('header.brand')}</span>
           </div>
           <CardTitle className="text-xl sm:text-2xl">
-            {isLogin ? t('auth.loginTitle') : t('auth.registerTitle')}
+            {isResetMode ? t('auth.resetPasswordTitle') : (isLogin ? t('auth.loginTitle') : t('auth.registerTitle'))}
           </CardTitle>
           <CardDescription className="text-sm sm:text-base">
-            {isLogin ? t('auth.loginSubtitle') : t('auth.registerSubtitle')}
+            {isResetMode ? t('auth.resetPasswordSubtitle') : (isLogin ? t('auth.loginSubtitle') : t('auth.registerSubtitle'))}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 px-4 sm:px-6 pb-6">
-          {}
-          <Button 
-            onClick={handleGoogleAuth}
-            disabled={isLoading}
-            variant="outline" 
-            className="w-full h-11 sm:h-12"
-          >
+          {/* Google кнопка только для режимов входа/регистрации */}
+          {!isResetMode && (
+            <Button 
+              onClick={handleGoogleAuth}
+              disabled={isLoading}
+              variant="outline" 
+              className="w-full h-11 sm:h-12"
+            >
             <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -172,49 +261,101 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
             <span className="text-sm sm:text-base">
               {isLoading ? t('auth.loading') : t('auth.continueWithGoogle')}
             </span>
-          </Button>
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
+                      </Button>
+          )}
+          {!isResetMode && (
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  {t('auth.or')}
+                </span>
+              </div>
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                {t('auth.or')}
-              </span>
+          )}
+          {isResetMode ? (
+            // Форма сброса пароля
+            <div className="space-y-4">
+              {resetEmailSent ? (
+                <div className="text-center space-y-4">
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-green-700 text-sm">
+                      {t('auth.resetEmailSent')}
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={handleResetModeToggle}
+                    variant="outline" 
+                    className="w-full"
+                  >
+                    {t('auth.backToLogin')}
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={(e) => { e.preventDefault(); handlePasswordReset(); }} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-email" className="text-sm sm:text-base">{t('auth.email')}</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="reset-email"
+                        type="email"
+                        placeholder={t('auth.emailPlaceholder')}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="pl-10 h-11 sm:h-12"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <Button 
+                    type="submit" 
+                    className="w-full h-11 sm:h-12" 
+                    disabled={isLoading}
+                  >
+                    <span className="text-sm sm:text-base">
+                      {isLoading ? t('auth.loading') : t('auth.sendResetLink')}
+                    </span>
+                  </Button>
+                </form>
+              )}
             </div>
-          </div>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
+          ) : (
+            // Обычная форма входа/регистрации
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {!isLogin && (
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-sm sm:text-base">{t('auth.name')}</Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder={t('auth.namePlaceholder')}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="h-11 sm:h-12"
+                    required={!isLogin}
+                  />
+                </div>
+              )}
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm sm:text-base">{t('auth.name')}</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder={t('auth.namePlaceholder')}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="h-11 sm:h-12"
-                  required={!isLogin}
-                />
+                <Label htmlFor="email" className="text-sm sm:text-base">{t('auth.email')}</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder={t('auth.emailPlaceholder')}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10 h-11 sm:h-12"
+                    required
+                  />
+                </div>
               </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm sm:text-base">{t('auth.email')}</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder={t('auth.emailPlaceholder')}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 h-11 sm:h-12"
-                  required
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm sm:text-base">{t('auth.password')}</Label>
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-sm sm:text-base">{t('auth.password')}</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
@@ -274,6 +415,14 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
                     {t('auth.userExistsPrompt')}
                   </button>
                 )}
+                {showPasswordReset && (
+                  <button
+                    onClick={handleResetModeToggle}
+                    className="text-blue-700 hover:text-blue-900 font-medium underline mt-2 block"
+                  >
+                    {t('auth.forgotPassword')}
+                  </button>
+                )}
               </div>
             )}
             <Button 
@@ -286,29 +435,86 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
               </span>
             </Button>
           </form>
-          <div className="text-center pt-2">
+          )}
+          {!isResetMode && (
+            <div className="text-center pt-4">
             <button
-              onClick={() => {
-                setIsLogin(!isLogin)
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                console.log('Switch button clicked, current isLogin:', isLogin)
+                const newLoginState = !isLogin
+                setIsLogin(newLoginState)
                 setError('')
                 setPassword('')
                 setName('')
                 setPrivacyConsent(false)
                 setUserExists(false)
+                setShowPasswordReset(false)
+                setIsResetMode(false)
+                setResetEmailSent(false)
                 if (isLogin) {
                   setEmail('')
                 }
+                // Обновляем URL для корректного отображения
+                const newMode = newLoginState ? 'login' : 'register'
+                const url = new URL(window.location.href)
+                url.searchParams.set('mode', newMode)
+                window.history.replaceState({}, '', url.toString())
+                console.log('State changed to:', newLoginState ? 'login' : 'register')
               }}
-              className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+
+              className="text-sm text-blue-600 hover:text-blue-800 transition-colors cursor-pointer select-none px-4 py-2 min-h-[44px] inline-flex items-center justify-center rounded-md  active:bg-blue-100 mx-auto"
+              type="button"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  console.log('Switch button activated via keyboard')
+                  const newLoginState = !isLogin
+                  setIsLogin(newLoginState)
+                  setError('')
+                  setPassword('')
+                  setName('')
+                  setPrivacyConsent(false)
+                  setUserExists(false)
+                  setShowPasswordReset(false)
+                  setIsResetMode(false)
+                  setResetEmailSent(false)
+                  if (isLogin) {
+                    setEmail('')
+                  }
+                  const newMode = newLoginState ? 'login' : 'register'
+                  const url = new URL(window.location.href)
+                  url.searchParams.set('mode', newMode)
+                  window.history.replaceState({}, '', url.toString())
+                }
+              }}
             >
               {isLogin ? t('auth.switchToRegister') : t('auth.switchToLogin')}
             </button>
           </div>
-          <div className="text-center pt-2">
-            <Link href={`/${locale}`} className="text-sm text-gray-600 hover:text-gray-800 transition-colors">
+          )}
+          
+          {/* Кнопка возврата к обычному режиму из режима сброса пароля */}
+          {isResetMode && !resetEmailSent && (
+            <div className="text-center pt-4">
+              <button
+                onClick={handleResetModeToggle}
+                className="text-sm text-blue-600 hover:text-blue-800 transition-colors cursor-pointer select-none px-4 py-2 min-h-[44px] inline-flex items-center justify-center rounded-md active:bg-blue-100 mx-auto"
+              >
+                {t('auth.backToLogin')}
+              </button>
+            </div>
+          )}
+          
+          <div className="text-center pt-3">
+            <Link href={`/${locale}`} className="text-sm text-gray-600 hover:text-gray-800 transition-colors inline-block px-2 py-1 rounded hover:bg-gray-50">
               {t('auth.backToHome')}
             </Link>
           </div>
+
         </CardContent>
       </Card>
     </div>

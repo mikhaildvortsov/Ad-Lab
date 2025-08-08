@@ -21,6 +21,16 @@ CREATE TABLE users (
     preferred_language VARCHAR(10) DEFAULT 'ru'
 );
 
+-- Password reset tokens table
+CREATE TABLE password_reset_tokens (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token VARCHAR(255) UNIQUE NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    used_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Subscription plans table
 CREATE TABLE subscription_plans (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -138,8 +148,44 @@ CREATE TRIGGER update_user_subscriptions_updated_at
 -- Insert default subscription plans
 INSERT INTO subscription_plans (name, description, price_monthly, price_yearly, features, max_queries_per_month, max_tokens_per_query) VALUES
 ('Week', 'Недельный доступ ко всем функциям', 1990.00, NULL, '["Полный доступ на 7 дней", "Неограниченные улучшения", "Все функции приложения", "Поддержка 24/7"]', -1, -1),
-('Month', 'Месячный доступ со скидкой', 2990.00, NULL, '["Полный доступ на 30 дней", "Неограниченные улучшения", "Все функции приложения", "Приоритетная поддержка", "Экономия 57%"]', -1, -1),
+('Month', 'Месячный доступ со скидкой', 2990.00, 6990.00, '["Полный доступ на 30 дней", "Неограниченные улучшения", "Все функции приложения", "Приоритетная поддержка", "Экономия 57%"]', -1, -1),
 ('Quarter', 'Максимальная экономия на 3 месяца', 9990.00, NULL, '["Полный доступ на 90 дней", "Неограниченные улучшения", "Все функции приложения", "VIP поддержка", "Максимальная экономия"]', -1, -1);
+
+-- Promo codes table for free access
+CREATE TABLE promo_codes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    code VARCHAR(50) UNIQUE NOT NULL,
+    description TEXT,
+    max_uses INTEGER DEFAULT 1,
+    current_uses INTEGER DEFAULT 0,
+    expires_at TIMESTAMP WITH TIME ZONE,
+    access_duration_days INTEGER DEFAULT 30, -- How many days of access this code provides
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- User promo code activations
+CREATE TABLE user_promo_activations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    promo_code_id UUID NOT NULL REFERENCES promo_codes(id) ON DELETE CASCADE,
+    activated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    UNIQUE(user_id, promo_code_id)
+);
+
+-- Create indexes for promo codes
+CREATE INDEX idx_promo_codes_code ON promo_codes(code);
+CREATE INDEX idx_promo_codes_active ON promo_codes(is_active);
+CREATE INDEX idx_user_promo_activations_user_id ON user_promo_activations(user_id);
+CREATE INDEX idx_user_promo_activations_expires ON user_promo_activations(expires_at);
+
+-- Insert some default promo codes
+INSERT INTO promo_codes (code, description, max_uses, access_duration_days) VALUES
+('WELCOME2024', 'Добро пожаловать! Бесплатный доступ на 7 дней', 1000, 7),
+('TESTFULL', 'Тестовый код с полным доступом на 30 дней', 100, 30),
+('BETA2024', 'Бета-тестирование - доступ на 14 дней', 500, 14);
 
 -- Grant necessary permissions (adjust according to your database user)
 -- GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO your_app_user;

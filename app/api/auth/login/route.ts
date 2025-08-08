@@ -34,14 +34,14 @@ export async function POST(request: NextRequest) {
     const user = userResult.data;
     if (!user.password_hash) {
       return NextResponse.json(
-        { success: false, error: 'Account not properly configured. Please contact support.' },
-        { status: 500 }
+        { success: false, error: 'Неверный пароль', errorCode: 'INVALID_PASSWORD' },
+        { status: 401 }
       );
     }
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
     if (!isPasswordValid) {
       return NextResponse.json(
-        { success: false, error: 'Invalid credentials' },
+        { success: false, error: 'Неверный пароль', errorCode: 'INVALID_PASSWORD' },
         { status: 401 }
       );
     }
