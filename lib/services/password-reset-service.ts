@@ -19,8 +19,9 @@ export class PasswordResetService {
       // Генерируем криптографически безопасный токен
       const token = crypto.randomBytes(32).toString('hex');
       
-      // Токен действует 1 час
-      const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+      // Токен действует 24 часа (конфигурируется через переменную окружения)
+      const resetTokenExpiryHours = parseInt(process.env.PASSWORD_RESET_TOKEN_EXPIRY_HOURS || '24', 10);
+      const expiresAt = new Date(Date.now() + resetTokenExpiryHours * 60 * 60 * 1000);
       
       // УДАЛЯЕМ ВСЕ старые токены для этого пользователя (и использованные, и неиспользованные)
       const deleteResult = await query(
@@ -48,7 +49,7 @@ export class PasswordResetService {
         }
         
         // Логируем успешное создание для мониторинга
-        console.log(`Password reset token created for user ${userId.substring(0, 8)}...`);
+        console.log(`Password reset token created for user ${userId.substring(0, 8)}..., expires in ${resetTokenExpiryHours} hours at ${expiresAt.toISOString()}`);
         
         return {
           success: true,
