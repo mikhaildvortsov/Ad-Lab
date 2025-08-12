@@ -73,8 +73,10 @@ export class PasswordResetService {
 
   /**
    * Проверяет валидность токена сброса пароля
+   * ВАЖНО: Этот метод НИКОГДА не отмечает токен как использованный!
+   * Токен отмечается как использованный только через markTokenAsUsed()
    */
-  static async validateResetToken(token: string, markAsUsed: boolean = false): Promise<{ success: boolean; userId?: string; error?: string }> {
+  static async validateResetToken(token: string): Promise<{ success: boolean; userId?: string; error?: string }> {
     try {
       const result = await query(
         `SELECT user_id, expires_at, used_at 
@@ -108,24 +110,8 @@ export class PasswordResetService {
         };
       }
 
-      // Если запрошено, атомарно отмечаем токен как использованный
-      if (markAsUsed) {
-        const updateResult = await query(
-          `UPDATE password_reset_tokens 
-           SET used_at = CURRENT_TIMESTAMP 
-           WHERE token = $1 AND used_at IS NULL
-           RETURNING user_id`,
-          [token]
-        );
-        
-        // Если токен уже был использован между проверкой и обновлением
-        if (updateResult.rows.length === 0) {
-          return {
-            success: false,
-            error: 'Reset token has already been used'
-          };
-        }
-      }
+      // Метод validateResetToken больше НЕ отмечает токены как использованные
+      // Это делается только в markTokenAsUsed() после успешного сброса пароля
       
       return {
         success: true,
@@ -145,18 +131,22 @@ export class PasswordResetService {
    */
   static async markTokenAsUsed(token: string): Promise<{ success: boolean; error?: string }> {
     try {
+      console.log(`🔍 Attempting to mark token ${token.substring(0, 10)}... as used`);
+      
       const result = await query(
         'UPDATE password_reset_tokens SET used_at = CURRENT_TIMESTAMP WHERE token = $1 AND used_at IS NULL RETURNING token',
         [token]
       );
       
       if (result.rows.length === 0) {
+        console.log(`❌ Failed to mark token ${token.substring(0, 10)}... as used - already used or doesn't exist`);
         return {
           success: false,
           error: 'Token was already used or does not exist'
         };
       }
       
+      console.log(`✅ Successfully marked token ${token.substring(0, 10)}... as used`);
       return { success: true };
     } catch (error) {
       console.error('Error marking token as used:', error);
