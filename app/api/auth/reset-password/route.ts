@@ -61,8 +61,13 @@ export async function POST(request: NextRequest) {
 
     if (!emailResult.success) {
       console.error('Failed to send password reset email:', emailResult.error);
+      
+      // В production возвращаем общую ошибку, но логируем подробности
+      const isProduction = process.env.NODE_ENV === 'production';
+      const userError = isProduction ? 'Failed to send reset email' : emailResult.error;
+      
       return NextResponse.json(
-        { success: false, error: 'Failed to send reset email' },
+        { success: false, error: userError },
         { status: 500 }
       );
     }

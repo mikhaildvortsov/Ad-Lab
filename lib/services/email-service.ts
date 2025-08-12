@@ -63,10 +63,27 @@ export class EmailService {
       return { success: true };
       
     } catch (error) {
-      console.error('❌ Resend email error:', error);
+      console.error('Resend email error:', error);
+      
+      // Более подробная диагностика ошибок
+      let errorMessage = 'Failed to send email';
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Специфичные ошибки Resend
+        if (errorMessage.includes('API key')) {
+          errorMessage = 'Email service configuration error: Invalid API key';
+        } else if (errorMessage.includes('domain')) {
+          errorMessage = 'Email service configuration error: Domain not verified';
+        } else if (errorMessage.includes('from')) {
+          errorMessage = 'Email service configuration error: Invalid sender email';
+        }
+      }
+      
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to send email'
+        error: errorMessage
       };
     }
   }
