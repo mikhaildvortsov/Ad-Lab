@@ -16,39 +16,53 @@ export class PasswordResetService {
    */
   static async createResetToken(userId: string): Promise<{ success: boolean; token?: string; error?: string }> {
     try {
-      
       // Генерируем криптографически безопасный токен
       const token = crypto.randomBytes(32).toString('hex');
       
       // Токен действует 1 час
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
       
-      // Удаляем старые неиспользованные токены для этого пользователя
-      await query(
-        'DELETE FROM password_reset_tokens WHERE user_id = $1 AND used_at IS NULL',
+      // УДАЛЯЕМ ВСЕ старые токены для этого пользователя (и использованные, и неиспользованные)
+      const deleteResult = await query(
+        'DELETE FROM password_reset_tokens WHERE user_id = $1',
         [userId]
       );
       
       // Создаем новый токен
       const result = await query(
         `INSERT INTO password_reset_tokens (user_id, token, expires_at) 
-         VALUES ($1, $2, $3) RETURNING token`,
+         VALUES ($1, $2, $3) RETURNING token, id`,
         [userId, token, expiresAt]
       );
       
       if (result.rows.length > 0) {
+        const createdToken = result.rows[0].token;
+        
+        // Проверка на случай проблем с БД
+        if (createdToken !== token) {
+          console.error('Password reset token mismatch detected');
+          return {
+            success: false,
+            error: 'Token creation error'
+          };
+        }
+        
+        // Логируем успешное создание для мониторинга
+        console.log(`Password reset token created for user ${userId.substring(0, 8)}...`);
+        
         return {
           success: true,
-          token: result.rows[0].token
+          token: createdToken
         };
       } else {
+        console.error('Failed to create password reset token - no result from database');
         return {
           success: false,
           error: 'Failed to create reset token'
         };
       }
     } catch (error) {
-      console.error('Error creating reset token:', error);
+      console.error('Error creating password reset token:', error);
       return {
         success: false,
         error: 'Database error'
@@ -59,7 +73,7 @@ export class PasswordResetService {
   /**
    * Проверяет валидность токена сброса пароля
    */
-  static async validateResetToken(token: string): Promise<{ success: boolean; userId?: string; error?: string }> {
+  static async validateResetToken(token: string, markAsUsed: boolean = false): Promise<{ success: boolean; userId?: string; error?: string }> {
     try {
       const result = await query(
         `SELECT user_id, expires_at, used_at 
@@ -92,6 +106,25 @@ export class PasswordResetService {
           error: 'Reset token has expired'
         };
       }
+
+      // Если запрошено, атомарно отмечаем токен как использованный
+      if (markAsUsed) {
+        const updateResult = await query(
+          `UPDATE password_reset_tokens 
+           SET used_at = CURRENT_TIMESTAMP 
+           WHERE token = $1 AND used_at IS NULL
+           RETURNING user_id`,
+          [token]
+        );
+        
+        // Если токен уже был использован между проверкой и обновлением
+        if (updateResult.rows.length === 0) {
+          return {
+            success: false,
+            error: 'Reset token has already been used'
+          };
+        }
+      }
       
       return {
         success: true,
@@ -107,14 +140,21 @@ export class PasswordResetService {
   }
 
   /**
-   * Отмечает токен как использованный
+   * Отмечает токен как использованный (только если он ещё не использован)
    */
   static async markTokenAsUsed(token: string): Promise<{ success: boolean; error?: string }> {
     try {
-      await query(
-        'UPDATE password_reset_tokens SET used_at = CURRENT_TIMESTAMP WHERE token = $1',
+      const result = await query(
+        'UPDATE password_reset_tokens SET used_at = CURRENT_TIMESTAMP WHERE token = $1 AND used_at IS NULL RETURNING token',
         [token]
       );
+      
+      if (result.rows.length === 0) {
+        return {
+          success: false,
+          error: 'Token was already used or does not exist'
+        };
+      }
       
       return { success: true };
     } catch (error) {

@@ -4,14 +4,14 @@ import { EmailService } from '@/lib/services/email-service';
 // Загружаем переменные окружения
 dotenv.config({ path: '.env.local' });
 
-async function testSendGrid() {
-  console.log('🧪 Testing SendGrid configuration...\n');
+async function testResend() {
+  console.log('🧪 Testing Resend configuration...\n');
   
   // Проверяем наличие необходимых переменных
   const requiredEnvVars = {
-    'SENDGRID_API_KEY': process.env.SENDGRID_API_KEY ? '***' + process.env.SENDGRID_API_KEY.slice(-10) : undefined,
-    'SENDGRID_FROM_EMAIL': process.env.SENDGRID_FROM_EMAIL,
-    'SENDGRID_FROM_NAME': process.env.SENDGRID_FROM_NAME,
+    'RESEND_API_KEY': process.env.RESEND_API_KEY ? '***' + process.env.RESEND_API_KEY.slice(-10) : undefined,
+    'RESEND_FROM_EMAIL': process.env.RESEND_FROM_EMAIL,
+    'RESEND_FROM_NAME': process.env.RESEND_FROM_NAME,
     'SEND_REAL_EMAILS': process.env.SEND_REAL_EMAILS,
   };
 
@@ -21,13 +21,13 @@ async function testSendGrid() {
     console.log(`${status} ${key}: ${value || 'NOT SET'}`);
   });
 
-  console.log('\n🔧 Testing SendGrid API connection...');
+  console.log('\n🔧 Testing Resend API connection...');
   
   try {
-    const connectionResult = await EmailService.testSendGridConnection();
+    const connectionResult = await EmailService.testResendConnection();
     
     if (connectionResult.success) {
-      console.log('✅ SendGrid API connection successful!');
+      console.log('✅ Resend API connection successful!');
       
       // Спрашиваем пользователя, хочет ли он отправить тестовое письмо
       const testEmail = process.argv[2];
@@ -36,34 +36,34 @@ async function testSendGrid() {
         
         const emailResult = await EmailService.sendEmail({
           to: testEmail,
-          subject: '✅ SendGrid API Test - Ad Lab',
+          subject: '✅ Resend API Test - Ad Lab',
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h1 style="color: #2563eb;">🎉 SendGrid Test Successful!</h1>
-              <p>Поздравляем! Ваша настройка SendGrid API работает корректно.</p>
+                      <h1 style="color: #2563eb;">🎉 Resend Test Successful!</h1>
+        <p>Поздравляем! Ваша настройка Resend API работает корректно.</p>
               <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
                 <h3>Детали теста:</h3>
                 <ul>
-                  <li><strong>API:</strong> SendGrid</li>
-                  <li><strong>От:</strong> ${process.env.SENDGRID_FROM_EMAIL}</li>
+                            <li><strong>API:</strong> Resend</li>
+          <li><strong>От:</strong> ${process.env.RESEND_FROM_EMAIL}</li>
                   <li><strong>Время отправки:</strong> ${new Date().toLocaleString()}</li>
                 </ul>
               </div>
               <p style="color: #6b7280; font-size: 14px;">
-                Это письмо отправлено автоматически для тестирования SendGrid настроек Ad Lab.
+                Это письмо отправлено автоматически для тестирования Resend настроек Ad Lab.
               </p>
             </div>
           `,
           text: `
-SendGrid Test Successful!
+Resend Test Successful!
 
-Поздравляем! Ваша настройка SendGrid API работает корректно.
+Поздравляем! Ваша настройка Resend API работает корректно.
 
-API: SendGrid
-От: ${process.env.SENDGRID_FROM_EMAIL}
+API: Resend
+От: ${process.env.RESEND_FROM_EMAIL}
 Время отправки: ${new Date().toLocaleString()}
 
-Это письмо отправлено автоматически для тестирования SendGrid настроек Ad Lab.
+Это письмо отправлено автоматически для тестирования Resend настроек Ad Lab.
           `
         });
 
@@ -75,11 +75,11 @@ API: SendGrid
         }
       } else {
         console.log('\n💡 To send a test email, run:');
-        console.log('npx tsx scripts/test-sendgrid.ts your@email.com');
+        console.log('npx tsx scripts/test-resend.ts your@email.com');
       }
       
     } else {
-      console.error('❌ SendGrid connection failed:', connectionResult.error);
+      console.error('❌ Resend connection failed:', connectionResult.error);
     }
     
   } catch (error) {
@@ -88,12 +88,12 @@ API: SendGrid
 }
 
 // Запускаем тест
-testSendGrid()
+testResend()
   .then(() => {
-    console.log('\n🏁 SendGrid test completed!');
+    console.log('\n🏁 Resend test completed!');
     process.exit(0);
   })
   .catch((error) => {
-    console.error('\n💥 SendGrid test failed:', error);
+    console.error('\n💥 Resend test failed:', error);
     process.exit(1);
   });

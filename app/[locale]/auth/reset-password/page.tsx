@@ -6,10 +6,34 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Sparkles, Lock, Eye, EyeOff } from "lucide-react"
+import { Sparkles, Lock, Eye, EyeOff, Check, X } from "lucide-react"
 import { useLocale } from "@/lib/use-locale"
 import { useTranslation } from "@/lib/translations"
 import type { Locale } from "@/lib/i18n"
+
+// Функция для оценки сложности пароля
+const getPasswordStrength = (password: string) => {
+  let score = 0;
+  const checks = {
+    length: password.length >= 8,
+    lowercase: /[a-z]/.test(password),
+    uppercase: /[A-Z]/.test(password),
+    number: /\d/.test(password),
+    special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+  };
+
+  Object.values(checks).forEach(check => {
+    if (check) score++;
+  });
+
+  if (password.length >= 12) score += 1;
+
+  return {
+    score,
+    level: score <= 2 ? 'weak' : score <= 4 ? 'medium' : 'strong',
+    checks
+  };
+};
 
 export const dynamic = 'force-dynamic'
 
@@ -17,11 +41,11 @@ export default function ResetPasswordPage({ params }: { params: { locale: Locale
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
   const [validToken, setValidToken] = useState<boolean | null>(null)
+  const [passwordStrength, setPasswordStrength] = useState(getPasswordStrength(""))
   
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -31,23 +55,62 @@ export default function ResetPasswordPage({ params }: { params: { locale: Locale
   const token = searchParams.get('token')
 
   useEffect(() => {
-    // Проверяем наличие токена
-    if (!token) {
-      setValidToken(false)
-      setError(t('auth.errors.invalidResetToken'))
-    } else {
-      setValidToken(true)
+    const validateToken = async () => {
+      // Проверяем наличие токена
+      if (!token) {
+        setValidToken(false)
+        setError(t('auth.errors.invalidResetToken'))
+        return
+      }
+
+      try {
+        // Проверяем валидность токена через API
+        const response = await fetch('/api/auth/reset-password/validate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ token }),
+        })
+
+        const data = await response.json()
+
+        if (data.success) {
+          setValidToken(true)
+        } else {
+          setValidToken(false)
+          setError(data.error || t('auth.errors.invalidResetToken'))
+        }
+      } catch (error) {
+        console.error('Token validation error:', error)
+        setValidToken(false)
+        setError(t('auth.errors.invalidResetToken'))
+      }
     }
+
+    validateToken()
   }, [token, t])
+
+  // Обработчик изменения пароля
+  const handlePasswordChange = (newPassword: string) => {
+    setPassword(newPassword)
+    setPasswordStrength(getPasswordStrength(newPassword))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Предотвращаем повторную отправку, если форма уже обрабатывается
+    if (isLoading) {
+      return
+    }
+    
     setIsLoading(true)
     setError("")
 
     // Валидация паролей
-    if (password.length < 8) {
-      setError('Пароль должен содержать минимум 8 символов')
+    if (passwordStrength.score < 3) {
+      setError('Пароль слишком простой. Используйте более сложный пароль.')
       setIsLoading(false)
       return
     }
@@ -81,7 +144,14 @@ export default function ResetPasswordPage({ params }: { params: { locale: Locale
           router.push(`/${locale}/auth?mode=login`)
         }, 3000)
       } else {
-        setError(data.error || t('auth.errors.passwordResetFailed'))
+        // Проверяем специфичные ошибки токена
+        if (data.error === 'Reset token has already been used') {
+          setError('Эта ссылка для сброса пароля уже была использована. Запросите новую ссылку, если нужно изменить пароль снова.')
+        } else if (data.error === 'Reset token has expired') {
+          setError('Срок действия ссылки для сброса пароля истек. Запросите новую ссылку.')
+        } else {
+          setError(data.error || t('auth.errors.passwordResetFailed'))
+        }
       }
     } catch (error) {
       console.error('Password reset error:', error)
@@ -166,7 +236,7 @@ export default function ResetPasswordPage({ params }: { params: { locale: Locale
                     type={showPassword ? "text" : "password"}
                     placeholder={t('auth.newPasswordPlaceholder')}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => handlePasswordChange(e.target.value)}
                     className="pl-10 pr-10 h-11 sm:h-12"
                     required
                   />
@@ -178,9 +248,56 @@ export default function ResetPasswordPage({ params }: { params: { locale: Locale
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                <p className="text-xs text-gray-500">
-                  {t('auth.passwordRequirements')}
-                </p>
+                
+                {/* Индикатор сложности пароля */}
+                {password && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-600">Сложность:</span>
+                      <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                        <div 
+                          className={`h-full transition-all duration-300 ${
+                            passwordStrength.level === 'weak' ? 'bg-red-500 w-1/3' :
+                            passwordStrength.level === 'medium' ? 'bg-yellow-500 w-2/3' :
+                            'bg-green-500 w-full'
+                          }`}
+                        />
+                      </div>
+                      <span className={`text-xs font-medium ${
+                        passwordStrength.level === 'weak' ? 'text-red-600' :
+                        passwordStrength.level === 'medium' ? 'text-yellow-600' :
+                        'text-green-600'
+                      }`}>
+                        {passwordStrength.level === 'weak' ? 'Слабый' :
+                         passwordStrength.level === 'medium' ? 'Средний' : 'Сильный'}
+                      </span>
+                    </div>
+                    
+                    {/* Требования к паролю */}
+                    <div className="grid grid-cols-1 gap-1 text-xs">
+                      <div className={`flex items-center gap-1 ${passwordStrength.checks.length ? 'text-green-600' : 'text-gray-400'}`}>
+                        {passwordStrength.checks.length ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                        <span>Минимум 8 символов</span>
+                      </div>
+                      <div className={`flex items-center gap-1 ${passwordStrength.checks.lowercase ? 'text-green-600' : 'text-gray-400'}`}>
+                        {passwordStrength.checks.lowercase ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                        <span>Строчные буквы (a-z)</span>
+                      </div>
+                      <div className={`flex items-center gap-1 ${passwordStrength.checks.uppercase ? 'text-green-600' : 'text-gray-400'}`}>
+                        {passwordStrength.checks.uppercase ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                        <span>Заглавные буквы (A-Z)</span>
+                      </div>
+                      <div className={`flex items-center gap-1 ${passwordStrength.checks.number ? 'text-green-600' : 'text-gray-400'}`}>
+                        {passwordStrength.checks.number ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                        <span>Цифры (0-9)</span>
+                      </div>
+                      <div className={`flex items-center gap-1 ${passwordStrength.checks.special ? 'text-green-600' : 'text-gray-400'}`}>
+                        {passwordStrength.checks.special ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                        <span>Специальные символы (!@#$%^&*)</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -189,21 +306,25 @@ export default function ResetPasswordPage({ params }: { params: { locale: Locale
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     id="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
+                    type="password"
                     placeholder={t('auth.confirmPasswordPlaceholder')}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-10 pr-10 h-11 sm:h-12"
+                    className="pl-10 h-11 sm:h-12"
                     required
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
                 </div>
+                {/* Индикатор совпадения паролей */}
+                {confirmPassword && (
+                  <div className={`flex items-center gap-1 text-xs ${
+                    password === confirmPassword ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {password === confirmPassword ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                    <span>
+                      {password === confirmPassword ? 'Пароли совпадают' : 'Пароли не совпадают'}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {error && (

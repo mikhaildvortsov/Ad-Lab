@@ -163,21 +163,16 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
   }
 
   const handlePasswordReset = async () => {
-    console.log('🚀 handlePasswordReset called with email:', email, 'locale:', locale)
-    
     if (!email) {
-      console.log('❌ No email provided')
       setError('Введите email для восстановления пароля')
       return
     }
 
-    console.log('⏳ Starting password reset request...')
     setIsLoading(true)
     setError('')
 
     try {
       // Получаем CSRF токен
-      console.log('🔐 Getting CSRF token...')
       const csrfResponse = await fetch('/api/csrf-token')
       const csrfData = await csrfResponse.json()
       
@@ -185,7 +180,6 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
         throw new Error('Failed to get CSRF token')
       }
 
-      console.log('📡 Sending request to /api/auth/reset-password with CSRF token')
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: {
@@ -195,22 +189,11 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
         body: JSON.stringify({ email, locale }),
       })
 
-      console.log('📥 Response status:', response.status, response.statusText)
       const data = await response.json()
-      console.log('📊 Response data:', data)
 
       if (data.success) {
         setResetEmailSent(true)
         setError('')
-        
-        // В режиме разработки показываем ссылку для удобства
-        if (data.resetUrl && process.env.NODE_ENV === 'development') {
-          console.log('🔗 Reset URL:', data.resetUrl)
-          // Можно также показать ссылку пользователю
-          if (confirm('В режиме разработки: открыть ссылку для сброса пароля?')) {
-            window.open(data.resetUrl, '_blank')
-          }
-        }
       } else {
         setError(data.error || t('auth.errors.resetPasswordError'))
       }

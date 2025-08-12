@@ -65,6 +65,7 @@ export async function middleware(request: NextRequest) {
       !pathname.startsWith('/api/auth/register') &&
       !pathname.startsWith('/api/auth/login') &&
       !pathname.startsWith('/api/auth/logout') &&
+      !pathname.startsWith('/api/auth/reset-password') &&
       !pathname.startsWith('/api/history') &&
       !pathname.startsWith('/api/analytics')) {
     if (!pathname.startsWith('/api/auth/') && !checkOrigin(request)) {

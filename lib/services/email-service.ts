@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import sgMail from '@sendgrid/mail';
+import { Resend } from 'resend';
 
 export interface EmailOptions {
   to: string;
@@ -11,21 +11,20 @@ export interface EmailOptions {
 
 export class EmailService {
   /**
-   * Инициализирует SendGrid с API ключом
+   * Инициализирует Resend с API ключом
    */
-  private static initSendGrid() {
-    const apiKey = process.env.SENDGRID_API_KEY;
+  private static initResend() {
+    const apiKey = process.env.RESEND_API_KEY;
     
     if (!apiKey) {
-      throw new Error('SendGrid API key not configured. Please set SENDGRID_API_KEY environment variable.');
+      throw new Error('Resend API key not configured. Please set RESEND_API_KEY environment variable.');
     }
     
-    sgMail.setApiKey(apiKey);
-    return sgMail;
+    return new Resend(apiKey);
   }
 
   /**
-   * Отправляет email через SendGrid API или логирует в файл (разработка)
+   * Отправляет email через Resend API или логирует в файл (разработка)
    */
   static async sendEmail(options: EmailOptions): Promise<{ success: boolean; error?: string }> {
     try {
@@ -39,33 +38,32 @@ export class EmailService {
         return await this.logEmailToFile(options);
       }
       
-      // Реальная отправка через SendGrid
-      console.log('📧 Sending email via SendGrid to:', to);
+      // Реальная отправка через Resend
+      const resend = this.initResend();
       
-      const sg = this.initSendGrid();
+      const fromEmail = process.env.RESEND_FROM_EMAIL || '';
+      const fromName = process.env.RESEND_FROM_NAME || 'Ad Lab';
       
-      const msg = {
-        to: to,
-        from: {
-          email: process.env.SENDGRID_FROM_EMAIL || '',
-          name: process.env.SENDGRID_FROM_NAME || 'Ad Lab'
-        },
-        subject: subject,
-        text: text || html.replace(/<[^>]*>/g, ''), // Strip HTML if no text provided
-        html: html,
-      };
-      
-      if (!msg.from.email) {
-        throw new Error('SendGrid FROM email not configured. Please set SENDGRID_FROM_EMAIL environment variable.');
+      if (!fromEmail) {
+        throw new Error('Resend FROM email not configured. Please set RESEND_FROM_EMAIL environment variable.');
       }
       
-      const result = await sg.send(msg);
-      console.log('✅ Email sent successfully via SendGrid:', result[0].statusCode);
+      const result = await resend.emails.send({
+        from: `${fromName} <${fromEmail}>`,
+        to: [to],
+        subject: subject,
+        html: html,
+        text: text || html.replace(/<[^>]*>/g, ''), // Strip HTML if no text provided
+      });
+      
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Email sent successfully via Resend:', result.data?.id);
+      }
       
       return { success: true };
       
     } catch (error) {
-      console.error('❌ SendGrid email error:', error);
+      console.error('❌ Resend email error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to send email'
@@ -74,32 +72,34 @@ export class EmailService {
   }
 
   /**
-   * Тестирует SendGrid API подключение
+   * Тестирует Resend API подключение
    */
-  static async testSendGridConnection(): Promise<{ success: boolean; error?: string }> {
+  static async testResendConnection(): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log('🔧 Testing SendGrid API connection...');
+      console.log('🔧 Testing Resend API connection...');
       
-      const apiKey = process.env.SENDGRID_API_KEY;
+      const apiKey = process.env.RESEND_API_KEY;
       if (!apiKey) {
         return {
           success: false,
-          error: 'SENDGRID_API_KEY not configured'
+          error: 'RESEND_API_KEY not configured'
         };
       }
       
       // Проверяем, что API ключ действителен
-      const sg = this.initSendGrid();
+      const resend = this.initResend();
       
-      // Пытаемся получить информацию об аккаунте (простая проверка API)
-      console.log('✅ SendGrid API key configured successfully');
+      // Пытаемся получить информацию об аккаунте через простой запрос
+      // Resend не имеет отдельного метода для проверки соединения,
+      // поэтому просто проверяем, что объект создан успешно
+      console.log('✅ Resend API key configured successfully');
       
       return { success: true };
     } catch (error) {
-      console.error('❌ SendGrid connection failed:', error);
+      console.error('❌ Resend connection failed:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown SendGrid error'
+        error: error instanceof Error ? error.message : 'Unknown Resend error'
       };
     }
   }

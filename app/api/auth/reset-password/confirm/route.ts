@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Проверяем валидность токена
+    // Сначала просто проверяем валидность токена
     const tokenValidation = await PasswordResetService.validateResetToken(token);
     if (!tokenValidation.success) {
       return NextResponse.json(
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Отмечаем токен как использованный
+    // Теперь отмечаем токен как использованный (только после успешного обновления пароля)
     await PasswordResetService.markTokenAsUsed(token);
 
     // Очищаем истекшие токены
