@@ -38,3 +38,17 @@ next-env.d.ts
 # scripts folder
 /scripts/
 
+# setup and migration guides
+PRICING_MIGRATION_GUIDE.md
+PRODUCTION_SETUP.md
+RESEND_SETUP.md
+
+# debug and test API routes
+/app/api/debug*/
+/app/api/test*/
+/app/api/fix*/
+/app/api/clear-dev*/
+
+# debug files
+debug-*.html
+
