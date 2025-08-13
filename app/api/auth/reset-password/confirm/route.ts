@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs';
 export async function POST(request: NextRequest) {
   try {
     const { token, password, locale } = await request.json();
+    console.log(`🔍 [CONFIRM API] Received password reset request for token: ${token?.substring(0, 10)}...`);
 
     if (!token || !password) {
       return NextResponse.json(
@@ -21,9 +22,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Сначала просто проверяем валидность токена
+    // Проверяем валидность токена
     const tokenValidation = await PasswordResetService.validateResetToken(token);
     if (!tokenValidation.success) {
+      console.log(`❌ [CONFIRM API] Token validation failed: ${tokenValidation.error}`);
       return NextResponse.json(
         { success: false, error: tokenValidation.error },
         { status: 400 }
@@ -45,17 +47,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Теперь отмечаем токен как использованный (только после успешного обновления пароля)
-    await PasswordResetService.markTokenAsUsed(token);
+    // КРИТИЧЕСКИ ВАЖНО: Отмечаем токен как использованный СРАЗУ после успешного обновления пароля
+    // Это гарантирует, что токен больше никогда не может быть использован
+    const markResult = await PasswordResetService.markTokenAsUsed(token);
+    if (!markResult.success) {
+      console.error(`⚠️ [CONFIRM API] Failed to mark token as used: ${markResult.error}`);
+      // Не возвращаем ошибку, так как пароль уже изменен
+    }
 
     // Очищаем истекшие токены
     await PasswordResetService.cleanupExpiredTokens();
 
-    console.log(`Password successfully reset for user: ${userId}`);
+    console.log(`✅ [CONFIRM API] Password successfully reset for user: ${userId}`);
 
     return NextResponse.json({
       success: true,
-      message: 'Password has been successfully reset.'
+      message: 'Пароль успешно изменен. Теперь вы можете войти с новым паролем.'
     });
 
   } catch (error) {

@@ -1,7 +1,7 @@
 require('dotenv').config({ path: '.env.local' });
 
 async function testTokenValidation() {
-  const testToken = "bdba66d98dba6c41e1797784432e32a13c9a39d427f848aeae45d33bbbbb78c1";
+  const testToken = "f2fe4228073f4da091bd46309e124d9e5efb7610c90e257ecd4d5f62748739bf";
   
   console.log('🧪 Testing token validation API...\n');
   console.log('🔑 Testing token:', testToken.substring(0, 10) + '...\n');

@@ -4,6 +4,7 @@ import { PasswordResetService } from '@/lib/services/password-reset-service';
 export async function POST(request: NextRequest) {
   try {
     const { token } = await request.json();
+    console.log(`🔍 [VALIDATE API] Received request for token: ${token?.substring(0, 10)}...`);
 
     if (!token) {
       return NextResponse.json(
@@ -16,12 +17,14 @@ export async function POST(request: NextRequest) {
     const tokenValidation = await PasswordResetService.validateResetToken(token);
     
     if (!tokenValidation.success) {
+      console.log(`❌ [VALIDATE API] Token validation failed: ${tokenValidation.error}`);
       return NextResponse.json(
         { success: false, error: tokenValidation.error },
         { status: 400 }
       );
     }
 
+    console.log(`✅ [VALIDATE API] Token validation successful for ${token?.substring(0, 10)}...`);
     return NextResponse.json({
       success: true,
       message: 'Token is valid'
