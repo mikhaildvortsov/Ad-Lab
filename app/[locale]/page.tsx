@@ -836,6 +836,11 @@ function HomePageContent({ params }: { params: { locale: Locale } }) {
                 <CardHeader className="text-center pb-6">
                   <CardTitle className="text-xl sm:text-2xl mb-2">{plan.name}</CardTitle>
                   <div className="text-3xl sm:text-4xl font-bold text-gray-900">
+                    {plan.originalPrice && (
+                      <div className="text-lg text-gray-500 line-through mb-1">
+                        ₽{plan.originalPrice}
+                      </div>
+                    )}
                     ₽{plan.price}
                     <span className="text-sm sm:text-base font-normal text-gray-500">/месяц</span>
                   </div>
