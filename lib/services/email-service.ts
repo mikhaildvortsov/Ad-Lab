@@ -26,97 +26,53 @@ export class EmailService {
   /**
    * Отправляет email через Resend API или логирует в файл (разработка)
    */
-  static async sendEmail(options: EmailOptions): Promise<{ success: boolean; error?: string }> {
-    try {
-      const { to, subject, html, text } = options;
-      
-      // В режиме разработки можем либо отправлять реально, либо логировать
-      const shouldSendRealEmail = process.env.SEND_REAL_EMAILS === 'true';
-      
-      if (process.env.NODE_ENV === 'development' && !shouldSendRealEmail) {
-        console.log('📧 DEV MODE: Logging email to file instead of sending');
-        return await this.logEmailToFile(options);
-      }
-      
-      // Реальная отправка через Resend
-      const resend = this.initResend();
-      
-      const fromEmail = process.env.RESEND_FROM_EMAIL || '';
-      const fromName = process.env.RESEND_FROM_NAME || 'Ad Lab';
-      
-      if (!fromEmail) {
-        throw new Error('Resend FROM email not configured. Please set RESEND_FROM_EMAIL environment variable.');
-      }
-      
-      const result = await resend.emails.send({
-        from: `${fromName} <${fromEmail}>`,
-        to: [to],
-        subject: subject,
-        html: html,
-        text: text || html.replace(/<[^>]*>/g, ''), // Strip HTML if no text provided
-      });
-      
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('Email sent successfully via Resend:', result.data?.id);
-      }
-      
-      return { success: true };
-      
-    } catch (error) {
-      console.error('Resend email error:', error);
-      
-      // Более подробная диагностика ошибок
-      let errorMessage = 'Failed to send email';
-      
-      if (error instanceof Error) {
-        errorMessage = error.message;
-        
-        // Специфичные ошибки Resend
-        if (errorMessage.includes('API key')) {
-          errorMessage = 'Email service configuration error: Invalid API key';
-        } else if (errorMessage.includes('domain')) {
-          errorMessage = 'Email service configuration error: Domain not verified';
-        } else if (errorMessage.includes('from')) {
-          errorMessage = 'Email service configuration error: Invalid sender email';
-        }
-      }
-      
-      return {
-        success: false,
-        error: errorMessage
-      };
+  static async sendEmail(options: EmailOptions): Promise<{ success: boolean; error?: string; messageId?: string }> {
+    const shouldSendRealEmails = process.env.SEND_REAL_EMAILS === 'true';
+    
+    if (shouldSendRealEmails) {
+      return this.sendRealEmail(options);
+    } else {
+      return this.logEmailToFile(options);
     }
   }
 
   /**
-   * Тестирует Resend API подключение
+   * Отправляет реальный email через Resend
    */
-  static async testResendConnection(): Promise<{ success: boolean; error?: string }> {
+  private static async sendRealEmail(options: EmailOptions): Promise<{ success: boolean; error?: string; messageId?: string }> {
     try {
-      console.log('🔧 Testing Resend API connection...');
-      
-      const apiKey = process.env.RESEND_API_KEY;
-      if (!apiKey) {
-        return {
-          success: false,
-          error: 'RESEND_API_KEY not configured'
-        };
-      }
-      
-      // Проверяем, что API ключ действителен
       const resend = this.initResend();
       
-      // Пытаемся получить информацию об аккаунте через простой запрос
-      // Resend не имеет отдельного метода для проверки соединения,
-      // поэтому просто проверяем, что объект создан успешно
-      console.log('✅ Resend API key configured successfully');
+      const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@adlab.guru';
+      const fromName = process.env.RESEND_FROM_NAME || 'Ad Lab';
       
-      return { success: true };
+      const { data, error } = await resend.emails.send({
+        from: `${fromName} <${fromEmail}>`,
+        to: [options.to],
+        subject: options.subject,
+        html: options.html,
+        text: options.text,
+      });
+
+      if (error) {
+        console.error('Resend email error:', error);
+        return {
+          success: false,
+          error: error.message || 'Failed to send email via Resend'
+        };
+      }
+
+      console.log('Email sent successfully via Resend:', data?.id);
+      return {
+        success: true,
+        messageId: data?.id
+      };
+
     } catch (error) {
-      console.error('❌ Resend connection failed:', error);
+      console.error('Error sending email via Resend:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown Resend error'
+        error: error instanceof Error ? error.message : 'Unknown error occurred while sending email'
       };
     }
   }
@@ -126,54 +82,59 @@ export class EmailService {
    */
   private static async logEmailToFile(options: EmailOptions): Promise<{ success: boolean; error?: string }> {
     try {
-      const { to, subject, html } = options;
-      
-      const emailContent = `
-========================================
-📧 EMAIL LOG - ${new Date().toISOString()}
-========================================
-To: ${to}
-Subject: ${subject}
-----------------------------------------
-${html}
-========================================
+      const timestamp = new Date().toISOString();
+      const logData = {
+        timestamp,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        text: options.text
+      };
 
-`;
-
-      // Создаем папку logs если её нет
+      // Создаем директорию для логов если её нет
       const logsDir = path.join(process.cwd(), 'logs');
       if (!fs.existsSync(logsDir)) {
         fs.mkdirSync(logsDir, { recursive: true });
       }
 
       // Записываем в файл
-      const logFile = path.join(logsDir, 'emails.log');
-      fs.appendFileSync(logFile, emailContent);
+      const logFile = path.join(logsDir, `email-${new Date().toISOString().split('T')[0]}.json`);
+      
+      let existingLogs = [];
+      if (fs.existsSync(logFile)) {
+        const existingContent = fs.readFileSync(logFile, 'utf8');
+        try {
+          existingLogs = JSON.parse(existingContent);
+        } catch (e) {
+          existingLogs = [];
+        }
+      }
 
-      // Также выводим в консоль
-      console.log('📧 EMAIL SENT (logged to file):', {
-        to,
-        subject,
-        logFile
-      });
+      existingLogs.push(logData);
+      fs.writeFileSync(logFile, JSON.stringify(existingLogs, null, 2));
+
+      console.log(`📧 Email logged to file: ${logFile}`);
+      console.log(`📨 Subject: ${options.subject}`);
+      console.log(`📬 To: ${options.to}`);
 
       return { success: true };
+
     } catch (error) {
-      console.error('Error logging email:', error);
+      console.error('Error logging email to file:', error);
       return {
         success: false,
-        error: 'Failed to log email'
+        error: error instanceof Error ? error.message : 'Unknown error occurred while logging email'
       };
     }
   }
 
   /**
-   * Создает HTML для сброса пароля
+   * Создает HTML для сброса пароля с кодом
    */
-  static createPasswordResetEmail(resetUrl: string, locale: string = 'ru'): { html: string; text: string; subject: string } {
+  static createPasswordResetEmail(resetCode: string, locale: string = 'ru'): { html: string; text: string; subject: string } {
     const isRussian = locale === 'ru';
     
-    const subject = isRussian ? 'Сброс пароля - Ad Lab' : 'Password Reset - Ad Lab';
+    const subject = isRussian ? 'Код для сброса пароля - Ad Lab' : 'Password Reset Code - Ad Lab';
     
     const html = `
       <!DOCTYPE html>
@@ -187,17 +148,20 @@ ${html}
           .header { text-align: center; margin-bottom: 30px; }
           .logo { font-size: 24px; font-weight: bold; color: #2563eb; }
           .content { background: #f8fafc; padding: 30px; border-radius: 8px; margin: 20px 0; }
-          .button { 
-            display: inline-block; 
+          .code-box { 
             background: #2563eb; 
             color: white; 
-            padding: 12px 24px; 
-            text-decoration: none; 
-            border-radius: 6px; 
-            margin: 20px 0;
+            padding: 20px; 
+            border-radius: 8px; 
+            text-align: center; 
+            margin: 25px 0;
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 4px;
           }
           .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 14px; }
           .warning { background: #fef3c7; padding: 15px; border-radius: 6px; margin: 20px 0; }
+          .instructions { background: #e0f2fe; padding: 15px; border-radius: 6px; margin: 20px 0; }
         </style>
       </head>
       <body>
@@ -207,35 +171,33 @@ ${html}
           </div>
           
           <div class="content">
-            <h2>${isRussian ? 'Сброс пароля' : 'Password Reset'}</h2>
+            <h2>${isRussian ? 'Код для сброса пароля' : 'Password Reset Code'}</h2>
             <p>
               ${isRussian 
-                ? 'Вы запросили сброс пароля для своего аккаунта. Нажмите на кнопку ниже, чтобы создать новый пароль. <strong>Ссылка может быть использована только один раз.</strong>'
-                : 'You requested a password reset for your account. Click the button below to create a new password. <strong>This link can only be used once.</strong>'
+                ? 'Вы запросили сброс пароля для своего аккаунта. Используйте этот код:'
+                : 'You requested a password reset for your account. Use this code:'
               }
             </p>
             
-            <div style="text-align: center;">
-              <a href="${resetUrl}" class="button">
-                ${isRussian ? 'Сбросить пароль' : 'Reset Password'}
-              </a>
+            <div class="code-box">
+              ${resetCode}
+            </div>
+            
+            <div class="instructions">
+              <strong>${isRussian ? '📋 Инструкция:' : '📋 Instructions:'}</strong><br>
+              ${isRussian 
+                ? '1. Перейдите на страницу сброса пароля<br>2. Введите ваш email и этот код<br>3. Создайте новый пароль'
+                : '1. Go to the password reset page<br>2. Enter your email and this code<br>3. Create a new password'
+              }
             </div>
             
             <div class="warning">
               <strong>${isRussian ? '⚠️ Важно:' : '⚠️ Important:'}</strong><br>
               ${isRussian 
-                ? 'Ссылка может быть использована только один раз. После успешной смены пароля ссылка становится недействительной. Если вы не запрашивали сброс пароля, просто проигнорируйте это письмо.'
-                : 'This link can be used only once. After successfully changing your password, the link becomes invalid. If you did not request a password reset, simply ignore this email.'
+                ? 'Код действителен 15 минут и может быть использован только один раз. Если вы не запрашивали сброс пароля, просто проигнорируйте это письмо.'
+                : 'This code is valid for 15 minutes and can only be used once. If you did not request a password reset, simply ignore this email.'
               }
             </div>
-            
-            <p style="margin-top: 20px; font-size: 14px; color: #6b7280;">
-              ${isRussian 
-                ? 'Если кнопка не работает, скопируйте и вставьте эту ссылку в браузер:'
-                : 'If the button doesn\'t work, copy and paste this link into your browser:'
-              }<br>
-              <span style="word-break: break-all;">${resetUrl}</span>
-            </p>
           </div>
           
           <div class="footer">
@@ -252,28 +214,35 @@ ${html}
     `;
 
     const text = `
-${isRussian ? 'Сброс пароля - Ad Lab' : 'Password Reset - Ad Lab'}
+${subject}
 
 ${isRussian 
-  ? 'Вы запросили сброс пароля для своего аккаунта.'
-  : 'You requested a password reset for your account.'
+  ? 'Вы запросили сброс пароля для своего аккаунта в Ad Lab.'
+  : 'You requested a password reset for your Ad Lab account.'
 }
 
-${isRussian ? 'Перейдите по ссылке:' : 'Click this link:'}
-${resetUrl}
+${isRussian 
+  ? 'Ваш код для сброса пароля:'
+  : 'Your password reset code:'
+}
+
+${resetCode}
 
 ${isRussian 
-  ? 'Эта ссылка действительна в течение 1 часа.'
-  : 'This link is valid for 1 hour.'
+  ? 'Код действителен 15 минут. Введите его на странице сброса пароля вместе с вашим email.'
+  : 'This code is valid for 15 minutes. Enter it on the password reset page along with your email.'
 }
 
 ${isRussian 
   ? 'Если вы не запрашивали сброс пароля, просто проигнорируйте это письмо.'
-  : 'If you did not request a password reset, simply ignore this email.'
+  : 'If you did not request a password reset, please ignore this email.'
 }
 
-${isRussian ? 'С уважением, Команда Ad Lab' : 'Best regards, Ad Lab Team'}
-    `;
+${isRussian 
+  ? 'С уважением, команда Ad Lab'
+  : 'Best regards, Ad Lab Team'
+}
+`;
 
     return { html, text, subject };
   }

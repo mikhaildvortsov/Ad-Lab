@@ -35,21 +35,18 @@ export async function POST(request: NextRequest) {
 
     const user = userResult.data;
 
-    // Создаем токен для сброса пароля
-    const tokenResult = await PasswordResetService.createResetToken(user.id);
-    if (!tokenResult.success) {
-      console.error('Failed to create reset token:', tokenResult.error);
+    // Создаем код для сброса пароля
+    const codeResult = await PasswordResetService.createResetCode(email);
+    if (!codeResult.success) {
+      console.error('Failed to create reset code:', codeResult.error);
       return NextResponse.json(
-        { success: false, error: 'Failed to create reset token' },
+        { success: false, error: 'Failed to create reset code' },
         { status: 500 }
       );
     }
 
-    // Формируем URL для сброса пароля
-    const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
-    const resetUrl = `${baseUrl}/${locale || 'ru'}/auth/reset-password?token=${tokenResult.token}`;
-    // Создаем email
-    const emailData = EmailService.createPasswordResetEmail(resetUrl, locale || 'ru');
+    // Создаем email с кодом
+    const emailData = EmailService.createPasswordResetEmail(codeResult.code!, locale || 'ru');
 
     // Отправляем email
     const emailResult = await EmailService.sendEmail({
@@ -73,11 +70,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Логируем успешную отправку для мониторинга
-    console.log(`Password reset email sent to ${email}`);
+    console.log(`Password reset code sent to ${email}`);
     
     return NextResponse.json({
       success: true,
-      message: 'Password reset link has been sent to your email.'
+      message: 'Код для сброса пароля отправлен на ваш email.'
     });
 
   } catch (error) {

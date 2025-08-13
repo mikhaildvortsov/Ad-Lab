@@ -5,12 +5,12 @@ import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
-    const { token, password, locale } = await request.json();
-    console.log(`🔍 [CONFIRM API] Received password reset request for token: ${token?.substring(0, 10)}...`);
+    const { email, code, password, locale } = await request.json();
+    console.log(`🔍 [CONFIRM API] Received password reset request for email: ${email}, code: ${code}`);
 
-    if (!token || !password) {
+    if (!email || !code || !password) {
       return NextResponse.json(
-        { success: false, error: 'Token and password are required' },
+        { success: false, error: 'Email, code and password are required' },
         { status: 400 }
       );
     }
@@ -22,17 +22,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Проверяем валидность токена
-    const tokenValidation = await PasswordResetService.validateResetToken(token);
-    if (!tokenValidation.success) {
-      console.log(`❌ [CONFIRM API] Token validation failed: ${tokenValidation.error}`);
+    // Проверяем валидность кода
+    const codeValidation = await PasswordResetService.validateResetCode(email, code);
+    if (!codeValidation.success) {
+      console.log(`❌ [CONFIRM API] Code validation failed: ${codeValidation.error}`);
       return NextResponse.json(
-        { success: false, error: tokenValidation.error },
+        { success: false, error: codeValidation.error },
         { status: 400 }
       );
     }
 
-    const userId = tokenValidation.userId!;
+    // Получаем пользователя по email
+    const userResult = await UserService.getUserByEmail(email);
+    if (!userResult.success || !userResult.data) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    const userId = userResult.data.id;
 
     // Хешируем новый пароль
     const saltRounds = 12;
@@ -48,15 +57,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Только после успешной смены пароля отмечаем токен как использованный
-    const markResult = await PasswordResetService.markTokenAsUsed(token);
+    // Только после успешной смены пароля отмечаем код как использованный
+    const markResult = await PasswordResetService.markCodeAsUsed(email, code);
     if (!markResult.success) {
-      console.error(`⚠️ [CONFIRM API] Failed to mark token as used: ${markResult.error}`);
+      console.error(`⚠️ [CONFIRM API] Failed to mark code as used: ${markResult.error}`);
       // НЕ возвращаем ошибку, так как пароль уже изменен успешно
     }
 
-    // Очищаем истекшие токены
-    await PasswordResetService.cleanupExpiredTokens();
+    // Очищаем истекшие коды
+    await PasswordResetService.cleanupExpiredCodes();
 
     console.log(`✅ [CONFIRM API] Password successfully reset for user: ${userId}`);
 

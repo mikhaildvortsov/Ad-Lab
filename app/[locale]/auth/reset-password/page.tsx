@@ -1,12 +1,12 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Sparkles, Lock, Eye, EyeOff, Check, X } from "lucide-react"
+import { Sparkles, Lock, Eye, EyeOff, Check, X, Mail, Shield } from "lucide-react"
 import { useLocale } from "@/lib/use-locale"
 import { useTranslation } from "@/lib/translations"
 import type { Locale } from "@/lib/i18n"
@@ -38,58 +38,19 @@ const getPasswordStrength = (password: string) => {
 export const dynamic = 'force-dynamic'
 
 export default function ResetPasswordPage({ params }: { params: { locale: Locale } }) {
+  const [email, setEmail] = useState("")
+  const [code, setCode] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
-  const [validToken, setValidToken] = useState<boolean | null>(null)
   const [passwordStrength, setPasswordStrength] = useState(getPasswordStrength(""))
   
   const router = useRouter()
-  const searchParams = useSearchParams()
   const { locale } = useLocale()
   const { t } = useTranslation(locale)
-  
-  const token = searchParams.get('token')
-
-  useEffect(() => {
-    const validateToken = async () => {
-      // Проверяем наличие токена
-      if (!token) {
-        setValidToken(false)
-        setError(t('auth.errors.invalidResetToken'))
-        return
-      }
-
-      try {
-        // Проверяем валидность токена через API
-        const response = await fetch('/api/auth/reset-password/validate', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ token }),
-        })
-
-        const data = await response.json()
-
-        if (data.success) {
-          setValidToken(true)
-        } else {
-          setValidToken(false)
-          setError(data.error || t('auth.errors.invalidResetToken'))
-        }
-      } catch (error) {
-        console.error('Token validation error:', error)
-        setValidToken(false)
-        setError(t('auth.errors.invalidResetToken'))
-      }
-    }
-
-    validateToken()
-  }, [token, t])
 
   // Обработчик изменения пароля
   const handlePasswordChange = (newPassword: string) => {
@@ -100,7 +61,6 @@ export default function ResetPasswordPage({ params }: { params: { locale: Locale
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Предотвращаем повторную отправку, если форма уже обрабатывается
     if (isLoading) {
       return
     }
@@ -108,7 +68,19 @@ export default function ResetPasswordPage({ params }: { params: { locale: Locale
     setIsLoading(true)
     setError("")
 
-    // Валидация паролей
+    // Валидация
+    if (!email || !code || !password) {
+      setError('Заполните все поля')
+      setIsLoading(false)
+      return
+    }
+
+    if (code.length !== 6) {
+      setError('Код должен содержать 6 цифр')
+      setIsLoading(false)
+      return
+    }
+
     if (passwordStrength.score < 3) {
       setError('Пароль слишком простой. Используйте более сложный пароль.')
       setIsLoading(false)
@@ -128,7 +100,8 @@ export default function ResetPasswordPage({ params }: { params: { locale: Locale
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          token, 
+          email,
+          code,
           password,
           locale 
         }),
@@ -144,53 +117,14 @@ export default function ResetPasswordPage({ params }: { params: { locale: Locale
           router.push(`/${locale}/auth?mode=login`)
         }, 3000)
       } else {
-        // Проверяем специфичные ошибки токена
-        if (data.error === 'Reset token has already been used') {
-          setError('Эта ссылка для сброса пароля уже была использована. Запросите новую ссылку, если нужно изменить пароль снова.')
-        } else if (data.error === 'Reset token has expired') {
-          setError('Срок действия ссылки для сброса пароля истек. Запросите новую ссылку.')
-        } else {
-          setError(data.error || t('auth.errors.passwordResetFailed'))
-        }
+        setError(data.error || 'Произошла ошибка при смене пароля')
       }
     } catch (error) {
       console.error('Password reset error:', error)
-      setError(t('auth.errors.passwordResetFailed'))
+      setError('Произошла ошибка при смене пароля')
     } finally {
       setIsLoading(false)
     }
-  }
-
-  if (validToken === false) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-sm sm:max-w-md">
-          <CardHeader className="text-center pb-6">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
-              <span className="text-xl sm:text-2xl font-bold text-gray-900">{t('header.brand')}</span>
-            </div>
-            <CardTitle className="text-xl sm:text-2xl text-red-600">
-              Ошибка
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 px-4 sm:px-6 pb-6">
-            <div className="text-center space-y-4">
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-700 text-sm">
-                  {error}
-                </p>
-              </div>
-              <Link href={`/${locale}/auth`}>
-                <Button variant="outline" className="w-full">
-                  {t('auth.backToLogin')}
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
   }
 
   return (
@@ -202,10 +136,10 @@ export default function ResetPasswordPage({ params }: { params: { locale: Locale
             <span className="text-xl sm:text-2xl font-bold text-gray-900">{t('header.brand')}</span>
           </div>
           <CardTitle className="text-xl sm:text-2xl">
-            {t('auth.resetPasswordPageTitle')}
+            Сброс пароля
           </CardTitle>
           <CardDescription className="text-sm sm:text-base">
-            Введите новый пароль для вашего аккаунта
+            Введите код из email и новый пароль
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 px-4 sm:px-6 pb-6">
@@ -213,7 +147,7 @@ export default function ResetPasswordPage({ params }: { params: { locale: Locale
             <div className="text-center space-y-4">
               <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                 <p className="text-green-700 text-sm">
-                  {t('auth.passwordResetSuccess')}
+                  Пароль успешно изменен! Теперь вы можете войти с новым паролем.
                 </p>
                 <p className="text-green-600 text-xs mt-2">
                   Перенаправление через 3 секунды...
@@ -228,13 +162,47 @@ export default function ResetPasswordPage({ params }: { params: { locale: Locale
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm sm:text-base">{t('auth.newPassword')}</Label>
+                <Label htmlFor="email" className="text-sm sm:text-base">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Введите ваш email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10 h-11 sm:h-12"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="code" className="text-sm sm:text-base">Код из email</Label>
+                <div className="relative">
+                  <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="code"
+                    type="text"
+                    placeholder="123456"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    className="pl-10 h-11 sm:h-12 text-center text-lg tracking-widest"
+                    maxLength={6}
+                    required
+                  />
+                </div>
+                <p className="text-xs text-gray-500">Введите 6-значный код из письма</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-sm sm:text-base">Новый пароль</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder={t('auth.newPasswordPlaceholder')}
+                    placeholder="Введите новый пароль"
                     value={password}
                     onChange={(e) => handlePasswordChange(e.target.value)}
                     className="pl-10 pr-10 h-11 sm:h-12"
@@ -272,42 +240,18 @@ export default function ResetPasswordPage({ params }: { params: { locale: Locale
                          passwordStrength.level === 'medium' ? 'Средний' : 'Сильный'}
                       </span>
                     </div>
-                    
-                    {/* Требования к паролю */}
-                    <div className="grid grid-cols-1 gap-1 text-xs">
-                      <div className={`flex items-center gap-1 ${passwordStrength.checks.length ? 'text-green-600' : 'text-gray-400'}`}>
-                        {passwordStrength.checks.length ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
-                        <span>Минимум 8 символов</span>
-                      </div>
-                      <div className={`flex items-center gap-1 ${passwordStrength.checks.lowercase ? 'text-green-600' : 'text-gray-400'}`}>
-                        {passwordStrength.checks.lowercase ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
-                        <span>Строчные буквы (a-z)</span>
-                      </div>
-                      <div className={`flex items-center gap-1 ${passwordStrength.checks.uppercase ? 'text-green-600' : 'text-gray-400'}`}>
-                        {passwordStrength.checks.uppercase ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
-                        <span>Заглавные буквы (A-Z)</span>
-                      </div>
-                      <div className={`flex items-center gap-1 ${passwordStrength.checks.number ? 'text-green-600' : 'text-gray-400'}`}>
-                        {passwordStrength.checks.number ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
-                        <span>Цифры (0-9)</span>
-                      </div>
-                      <div className={`flex items-center gap-1 ${passwordStrength.checks.special ? 'text-green-600' : 'text-gray-400'}`}>
-                        {passwordStrength.checks.special ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
-                        <span>Специальные символы (!@#$%^&*)</span>
-                      </div>
-                    </div>
                   </div>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-sm sm:text-base">{t('auth.confirmPassword')}</Label>
+                <Label htmlFor="confirmPassword" className="text-sm sm:text-base">Подтвердите пароль</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     id="confirmPassword"
                     type="password"
-                    placeholder={t('auth.confirmPasswordPlaceholder')}
+                    placeholder="Повторите новый пароль"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="pl-10 h-11 sm:h-12"
@@ -339,7 +283,7 @@ export default function ResetPasswordPage({ params }: { params: { locale: Locale
                 disabled={isLoading}
               >
                 <span className="text-sm sm:text-base">
-                  {isLoading ? t('auth.loading') : t('auth.setNewPassword')}
+                  {isLoading ? 'Загрузка...' : 'Изменить пароль'}
                 </span>
               </Button>
             </form>

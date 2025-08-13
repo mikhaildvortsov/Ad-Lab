@@ -1,10 +1,9 @@
 import { query } from '@/lib/database';
-import crypto from 'crypto';
 
-export interface PasswordResetToken {
+export interface PasswordResetCode {
   id: string;
-  user_id: string;
-  token: string;
+  email: string;
+  code: string;
   expires_at: string;
   used_at?: string;
   created_at: string;
@@ -12,61 +11,49 @@ export interface PasswordResetToken {
 
 export class PasswordResetService {
   /**
-   * Создает токен для сброса пароля
-   * Генерируется ТОЛЬКО при отправке email
+   * Создает 6-значный код для сброса пароля
    */
-  static async createResetToken(userId: string): Promise<{ success: boolean; token?: string; error?: string }> {
+  static async createResetCode(email: string): Promise<{ success: boolean; code?: string; error?: string }> {
     try {
-      // Генерируем криптографически безопасный токен (32 байта = 64 символа hex - оптимально для URL)
-      const token = crypto.randomBytes(32).toString('hex');
+      // Генерируем 6-значный код
+      const code = Math.random().toString().slice(2, 8).padStart(6, '0');
       
-      // Токен действует 1 час
-      const resetTokenExpiryHours = parseInt(process.env.PASSWORD_RESET_TOKEN_EXPIRY_HOURS || '1', 10);
-      const expiresAt = new Date(Date.now() + resetTokenExpiryHours * 60 * 60 * 1000);
+      // Код действует 15 минут
+      const resetCodeExpiryMinutes = parseInt(process.env.PASSWORD_RESET_CODE_EXPIRY_MINUTES || '15', 10);
+      const expiresAt = new Date(Date.now() + resetCodeExpiryMinutes * 60 * 1000);
       
-      // Убеждаемся, что время корректно сохраняется в UTC
-      console.log(`Creating token with expiry: ${expiresAt.toISOString()} (UTC)`);
+      console.log(`Creating reset code for ${email}, expires at: ${expiresAt.toISOString()}`);
       
-      // УДАЛЯЕМ ВСЕ старые токены для этого пользователя (для предотвращения спама)
+      // УДАЛЯЕМ ВСЕ старые коды для этого email
       await query(
-        'DELETE FROM password_reset_tokens WHERE user_id = $1',
-        [userId]
+        'DELETE FROM password_reset_codes WHERE email = $1',
+        [email.toLowerCase()]
       );
       
-      // Создаем новый токен
+      // Создаем новый код
       const result = await query(
-        `INSERT INTO password_reset_tokens (user_id, token, expires_at) 
-         VALUES ($1, $2, $3) RETURNING token, id, expires_at`,
-        [userId, token, expiresAt]
+        `INSERT INTO password_reset_codes (email, code, expires_at) 
+         VALUES ($1, $2, $3) RETURNING code, id, expires_at`,
+        [email.toLowerCase(), code, expiresAt]
       );
       
       if (result.rows.length > 0) {
-        const createdToken = result.rows[0].token;
+        const createdCode = result.rows[0].code;
         
-        // Проверка целостности
-        if (createdToken !== token) {
-          console.error('Password reset token mismatch detected');
-          return {
-            success: false,
-            error: 'Token creation error'
-          };
-        }
-        
-        // Логируем создание токена
-        console.log(`🔑 Password reset token created for user ${userId.substring(0, 8)}..., expires in ${resetTokenExpiryHours} hour(s) at ${expiresAt.toISOString()}`);
+        console.log(`Password reset code created for ${email}, expires in ${resetCodeExpiryMinutes} minutes`);
         
         return {
           success: true,
-          token: createdToken
+          code: createdCode
         };
       } else {
         return {
           success: false,
-          error: 'Failed to create reset token'
+          error: 'Failed to create reset code'
         };
       }
     } catch (error) {
-      console.error('Error creating password reset token:', error);
+      console.error('Error creating password reset code:', error);
       return {
         success: false,
         error: 'Database error'
@@ -75,98 +62,77 @@ export class PasswordResetService {
   }
 
   /**
-   * Проверяет валидность токена сброса пароля
-   * ВАЖНО: Этот метод НИКОГДА не отмечает токен как использованный!
-   * Токен отмечается как использованный только через markTokenAsUsed()
+   * Проверяет валидность кода сброса пароля
    */
-  static async validateResetToken(token: string): Promise<{ success: boolean; userId?: string; error?: string }> {
+  static async validateResetCode(email: string, code: string): Promise<{ success: boolean; error?: string }> {
     try {
       const result = await query(
-        `SELECT user_id, expires_at, used_at, created_at 
-         FROM password_reset_tokens 
-         WHERE token = $1`,
-        [token]
+        `SELECT email, expires_at, used_at, created_at 
+         FROM password_reset_codes 
+         WHERE email = $1 AND code = $2`,
+        [email.toLowerCase(), code]
       );
       
       if (result.rows.length === 0) {
         return {
           success: false,
-          error: 'Ссылка для сброса пароля недействительна. Запросите новую ссылку.'
+          error: 'Неверный код или email. Проверьте правильность ввода.'
         };
       }
       
-      const tokenData = result.rows[0];
+      const codeData = result.rows[0];
       
-      // Проверяем, не был ли токен уже использован
-      if (tokenData.used_at) {
+      // Проверяем, не был ли код уже использован
+      if (codeData.used_at) {
         return {
           success: false,
-          error: 'Эта ссылка уже была использована. Если вам нужно снова сбросить пароль, запросите новую ссылку.'
+          error: 'Этот код уже был использован. Запросите новый код.'
         };
       }
       
-      // Проверяем, не истек ли токен - используем UTC время для надежности
+      // Проверяем, не истек ли код
       const now = new Date();
-      const expiresAt = new Date(tokenData.expires_at);
+      const expiresAt = new Date(codeData.expires_at);
       
-      // Убеждаемся, что сравнение происходит в UTC
-      const nowUTC = now.getTime();
-      const expiresAtUTC = expiresAt.getTime();
-      
-      // Логируем для диагностики проблем с временем в production
-      const timeDifferenceMinutes = (expiresAtUTC - nowUTC) / (1000 * 60);
-      console.log(`Token validation: now=${now.toISOString()}, expires=${expiresAt.toISOString()}, diff=${timeDifferenceMinutes.toFixed(1)} minutes`);
-      
-      if (nowUTC > expiresAtUTC) {
-        console.log(`Token expired: ${timeDifferenceMinutes.toFixed(1)} minutes ago`);
+      if (now > expiresAt) {
         return {
           success: false,
-          error: 'Срок действия ссылки истек. Запросите новую ссылку для сброса пароля.'
+          error: 'Срок действия кода истек. Запросите новый код.'
         };
       }
       
       return {
-        success: true,
-        userId: tokenData.user_id
+        success: true
       };
     } catch (error) {
-      console.error('Error validating reset token:', error);
+      console.error('Error validating reset code:', error);
       return {
         success: false,
-        error: 'Произошла ошибка при проверке ссылки. Попробуйте снова.'
+        error: 'Произошла ошибка при проверке кода. Попробуйте снова.'
       };
     }
   }
 
   /**
-   * Отмечает токен как использованный (только если он ещё не использован)
-   * Токен МОМЕНТАЛЬНО истекает после успешной смены пароля
+   * Отмечает код как использованный
    */
-  static async markTokenAsUsed(token: string): Promise<{ success: boolean; error?: string }> {
+  static async markCodeAsUsed(email: string, code: string): Promise<{ success: boolean; error?: string }> {
     try {
       const result = await query(
-        'UPDATE password_reset_tokens SET used_at = CURRENT_TIMESTAMP WHERE token = $1 AND used_at IS NULL RETURNING token, user_id',
-        [token]
+        'UPDATE password_reset_codes SET used_at = CURRENT_TIMESTAMP WHERE email = $1 AND code = $2 AND used_at IS NULL RETURNING code',
+        [email.toLowerCase(), code]
       );
       
       if (result.rows.length === 0) {
         return {
           success: false,
-          error: 'Token was already used or does not exist'
+          error: 'Code was already used or does not exist'
         };
       }
       
-      const { user_id } = result.rows[0];
-      
-      // Дополнительная очистка: удаляем ВСЕ токены для этого пользователя (для безопасности)
-      await query(
-        'DELETE FROM password_reset_tokens WHERE user_id = $1 AND token != $2',
-        [user_id, token]
-      );
-      
       return { success: true };
     } catch (error) {
-      console.error('Error marking token as used:', error);
+      console.error('Error marking code as used:', error);
       return {
         success: false,
         error: 'Database error'
@@ -175,17 +141,17 @@ export class PasswordResetService {
   }
 
   /**
-   * Очищает истекшие токены (можно вызывать периодически)
+   * Очищает истекшие коды
    */
-  static async cleanupExpiredTokens(): Promise<{ success: boolean; error?: string }> {
+  static async cleanupExpiredCodes(): Promise<{ success: boolean; error?: string }> {
     try {
       await query(
-        'DELETE FROM password_reset_tokens WHERE expires_at < CURRENT_TIMESTAMP'
+        'DELETE FROM password_reset_codes WHERE expires_at < CURRENT_TIMESTAMP'
       );
       
       return { success: true };
     } catch (error) {
-      console.error('Error cleaning up expired tokens:', error);
+      console.error('Error cleaning up expired codes:', error);
       return {
         success: false,
         error: 'Database error'
