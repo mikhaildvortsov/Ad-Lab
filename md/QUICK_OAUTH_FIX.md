@@ -15,7 +15,7 @@ Set these for **Production** environment:
 ```env
 GOOGLE_CLIENT_ID=38102037146-ikecsi9jgp6e3pdsan4dl88t0qsrbjdi.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=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
-NEXTAUTH_URL=https://ad-lab.vercel.app
+NEXTAUTH_URL=https://adlab.guru
 NEXTAUTH_SECRET=20aa9c6d279bf2f25489f06eb7ac6382
 JWT_SECRET=lCge2+hcSycRAISvyXvmqLQNYlLpVcTIO/IuG4NYnBw=
 ```
@@ -27,7 +27,7 @@ JWT_SECRET=lCge2+hcSycRAISvyXvmqLQNYlLpVcTIO/IuG4NYnBw=
 3. Click on your OAuth 2.0 Client ID
 4. In **Authorized redirect URIs**, add:
    ```
-   https://ad-lab.vercel.app/api/auth/google
+   https://adlab.guru/api/auth/google
    ```
 5. Click **Save**
 
@@ -55,7 +55,7 @@ curl -H "x-debug-auth: true" https://ad-lab.vercel.app/api/auth/debug
 
 - [ ] Set GOOGLE_CLIENT_ID in Vercel
 - [ ] Set GOOGLE_CLIENT_SECRET in Vercel  
-- [ ] Set NEXTAUTH_URL to https://ad-lab.vercel.app
+- [ ] Set NEXTAUTH_URL to https://adlab.guru
 - [ ] Set NEXTAUTH_SECRET in Vercel
 - [ ] Set JWT_SECRET in Vercel
 - [ ] Add redirect URI in Google Console
@@ -64,7 +64,7 @@ curl -H "x-debug-auth: true" https://ad-lab.vercel.app/api/auth/debug
 
 ## **🎯 MOST LIKELY ISSUES**
 
-1. **NEXTAUTH_URL** is still set to `localhost:3000` instead of `https://ad-lab.vercel.app`
+1. **NEXTAUTH_URL** is still set to `localhost:3000` instead of `https://adlab.guru`
 2. **Missing redirect URI** in Google Console for production domain
 3. **Environment variables not set** in Vercel production environment
 

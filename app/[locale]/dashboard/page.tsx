@@ -33,6 +33,69 @@ interface Request {
   date: string
   status: string
 }
+// Функция для определения типа периода подписки
+function getSubscriptionPeriodType(planName: string): 'week' | 'month' | 'quarter' {
+  const planNameLower = planName?.toLowerCase();
+  
+  if (planNameLower?.includes('week') || planNameLower?.includes('недел')) {
+    return 'week';
+  } else if (planNameLower?.includes('quarter') || planNameLower?.includes('квартал') || planNameLower?.includes('3')) {
+    return 'quarter';
+  } else {
+    return 'month';
+  }
+}
+
+// Функция для получения текста кнопки продления
+function getRenewalButtonText(planName: string, locale: string): string {
+  const periodType = getSubscriptionPeriodType(planName);
+  
+  if (locale === 'ru') {
+    switch (periodType) {
+      case 'week':
+        return 'Продлить на неделю';
+      case 'quarter':
+        return 'Продлить на 3 месяца';
+      default:
+        return 'Продлить на месяц';
+    }
+  } else {
+    switch (periodType) {
+      case 'week':
+        return 'Extend for 1 week';
+      case 'quarter':
+        return 'Extend for 3 months';
+      default:
+        return 'Extend for 1 month';
+    }
+  }
+}
+
+// Функция для получения описания типа подписки
+function getSubscriptionTypeDescription(planName: string, locale: string): string {
+  const periodType = getSubscriptionPeriodType(planName);
+  
+  if (locale === 'ru') {
+    switch (periodType) {
+      case 'week':
+        return 'Недельная подписка';
+      case 'quarter':
+        return 'Трёхмесячная подписка';
+      default:
+        return 'Месячная подписка';
+    }
+  } else {
+    switch (periodType) {
+      case 'week':
+        return 'Weekly subscription';
+      case 'quarter':
+        return '3-month subscription';
+      default:
+        return 'Monthly subscription';
+    }
+  }
+}
+
 export default function Dashboard() {
   const { locale } = useLocale()
   const { t } = useTranslation(locale)
@@ -569,8 +632,12 @@ export default function Dashboard() {
             </div>
           </div>
         ) : (
-        <Tabs defaultValue="history" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 h-auto p-1">
+        <Tabs defaultValue="subscription" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4 h-auto p-1">
+            <TabsTrigger value="subscription" className="flex items-center gap-2 text-xs sm:text-sm py-2">
+              <User className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">{locale === 'ru' ? 'Подписка' : 'Subscription'}</span>
+            </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center gap-2 text-xs sm:text-sm py-2">
               <History className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">{t('dashboard.tabs.history')}</span>
@@ -584,6 +651,154 @@ export default function Dashboard() {
               <span className="hidden sm:inline">{t('dashboard.tabs.analytics')}</span>
             </TabsTrigger>
           </TabsList>
+          <TabsContent value="subscription" className="space-y-4">
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Текущая подписка */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    {locale === 'ru' ? 'Текущая подписка' : 'Current Subscription'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {subscriptionData?.subscription ? (
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">{locale === 'ru' ? 'План:' : 'Plan:'}</span>
+                        <div className="text-right">
+                          <Badge variant={subscriptionData.subscription.status === 'active' ? 'default' : 'secondary'}>
+                            {subscriptionData.subscription.planName}
+                          </Badge>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {getSubscriptionTypeDescription(subscriptionData.subscription.planName, locale)}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">{locale === 'ru' ? 'Статус:' : 'Status:'}</span>
+                        <Badge variant={subscriptionData.subscription.status === 'active' ? 'default' : 'destructive'}>
+                          {subscriptionData.subscription.status === 'active' ? 
+                            (locale === 'ru' ? 'Активна' : 'Active') : 
+                            (locale === 'ru' ? 'Неактивна' : 'Inactive')
+                          }
+                        </Badge>
+                      </div>
+
+                      {subscriptionData.subscription.expiresAt && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">
+                            {locale === 'ru' ? 'Действует до:' : 'Valid until:'}
+                          </span>
+                          <span className="text-sm font-medium">
+                            {new Date(subscriptionData.subscription.expiresAt).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US')}
+                          </span>
+                        </div>
+                      )}
+
+                      {subscriptionData.subscription.daysUntilExpiry !== null && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">
+                            {locale === 'ru' ? 'Дней осталось:' : 'Days remaining:'}
+                          </span>
+                          <span className={`text-sm font-medium ${
+                            subscriptionData.subscription.daysUntilExpiry <= 7 ? 'text-red-600' : 
+                            subscriptionData.subscription.daysUntilExpiry <= 30 ? 'text-yellow-600' : 'text-green-600'
+                          }`}>
+                            {subscriptionData.subscription.daysUntilExpiry}
+                          </span>
+                        </div>
+                      )}
+
+                      {subscriptionData.subscription.maxQueriesPerMonth && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">
+                            {locale === 'ru' ? 'Запросов в месяц:' : 'Queries per month:'}
+                          </span>
+                          <span className="text-sm font-medium">
+                            {subscriptionData.subscription.maxQueriesPerMonth}
+                          </span>
+                        </div>
+                      )}
+
+                      {subscriptionData.subscription.canRenew && (
+                        <div className="pt-4 border-t">
+                          <Button 
+                            onClick={() => setShowPlanModal(true)} 
+                            className="w-full"
+                            variant="outline"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            {getRenewalButtonText(subscriptionData.subscription.planName, locale)}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">
+                        {locale === 'ru' ? 'Загрузка информации о подписке...' : 'Loading subscription information...'}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Статистика использования */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    {locale === 'ru' ? 'Использование' : 'Usage Statistics'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {currentUsage ? (
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">
+                          {locale === 'ru' ? 'Запросов использовано:' : 'Queries used:'}
+                        </span>
+                        <span className="text-sm font-medium">
+                          {currentUsage.queries_count || 0}
+                          {subscriptionData?.subscription?.maxQueriesPerMonth && 
+                            ` / ${subscriptionData.subscription.maxQueriesPerMonth}`
+                          }
+                        </span>
+                      </div>
+                      
+                      {subscriptionData?.subscription?.maxQueriesPerMonth && (
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{ 
+                              width: `${Math.min(100, (currentUsage.queries_count || 0) / subscriptionData.subscription.maxQueriesPerMonth * 100)}%` 
+                            }}
+                          ></div>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">
+                          {locale === 'ru' ? 'Токенов использовано:' : 'Tokens used:'}
+                        </span>
+                        <span className="text-sm font-medium">
+                          {currentUsage.tokens_used || 0}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">
+                        {locale === 'ru' ? 'Загрузка статистики...' : 'Loading usage statistics...'}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
           <TabsContent value="history" className="space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <h2 className="text-lg sm:text-xl font-semibold">{t('dashboard.history.title')}</h2>

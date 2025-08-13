@@ -25,6 +25,14 @@ export async function GET(request: NextRequest) {
   }
   if (error) {
     console.error('Google OAuth error:', error)
+    // Специальная обработка ошибки redirect_uri_mismatch
+    if (error === 'redirect_uri_mismatch') {
+      console.error('🚨 REDIRECT URI MISMATCH ERROR:')
+      console.error('Expected redirect URI in Google Console:', `${nextAuthUrl}/api/auth/google`)
+      console.error('Current NEXTAUTH_URL:', nextAuthUrl)
+      console.error('💡 Solution: Add this URI to Google Console Authorized redirect URIs')
+      return NextResponse.redirect(new URL('/auth?error=redirect_uri_mismatch', request.url))
+    }
     return NextResponse.redirect(new URL('/auth?error=google_auth_failed', request.url))
   }
   if (!code) {

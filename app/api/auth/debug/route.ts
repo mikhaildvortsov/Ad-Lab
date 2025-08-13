@@ -28,7 +28,12 @@ export async function GET(request: NextRequest) {
       redirect_uri: `${nextAuthUrl || 'http://localhost:3000'}/api/auth/google`,
       google_auth_url: googleClientId ? 
         `https://accounts.google.com/o/oauth2/auth?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(`${nextAuthUrl || 'http://localhost:3000'}/api/auth/google`)}&response_type=code&scope=openid%20email%20profile&access_type=offline&prompt=select_account`
-        : 'GOOGLE_CLIENT_ID not set'
+        : 'GOOGLE_CLIENT_ID not set',
+      required_google_console_uris: [
+        'http://localhost:3000/api/auth/google',
+        'https://adlab.guru/api/auth/google',
+        `${nextAuthUrl || 'https://adlab.guru'}/api/auth/google`
+      ]
     },
     validation: {
       ready_for_oauth: !!(googleClientId && googleClientSecret && nextAuthUrl),
@@ -46,6 +51,27 @@ export async function GET(request: NextRequest) {
   }
   if (nextAuthUrl?.includes('localhost') && process.env.NODE_ENV === 'production') {
     config.validation.issues.push('NEXTAUTH_URL is set to localhost in production')
+  }
+  if (!nextAuthSecret) {
+    config.validation.issues.push('NEXTAUTH_SECRET is missing')
+  }
+  if (!jwtSecret) {
+    config.validation.issues.push('JWT_SECRET is missing')
+  }
+  
+  // Добавляем инструкции для Google Console
+  config.validation.google_console_setup = {
+    step1: 'Go to https://console.cloud.google.com/',
+    step2: 'Navigate to APIs & Services → Credentials',
+    step3: 'Click on your OAuth 2.0 Client ID',
+    step4: 'Add these URIs to Authorized redirect URIs:',
+    uris_to_add: [
+      'http://localhost:3000/api/auth/google',
+      'https://adlab.guru/api/auth/google',
+      `${nextAuthUrl || 'https://adlab.guru'}/api/auth/google`
+    ],
+    step5: 'Click Save',
+    step6: 'Wait a few minutes for changes to propagate'
   }
   return NextResponse.json(config, { 
     headers: {

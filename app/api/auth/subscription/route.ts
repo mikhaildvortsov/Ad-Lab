@@ -46,6 +46,9 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const expiresAt = subscription.current_period_end ? new Date(subscription.current_period_end) : null;
     const isExpired = expiresAt && expiresAt < now;
+    // Вычисляем дни до истечения
+    const daysUntilExpiry = expiresAt ? Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null;
+    
     return NextResponse.json({
       success: true,
       data: {
@@ -54,8 +57,15 @@ export async function GET(request: NextRequest) {
           id: subscription.id,
           planName: subscription.plan_name,
           status: subscription.status,
+          startsAt: subscription.current_period_start,
           expiresAt: subscription.current_period_end,
-          isExpired: isExpired
+          isExpired: isExpired,
+          daysUntilExpiry: daysUntilExpiry,
+          maxQueriesPerMonth: subscription.max_queries_per_month,
+          maxTokensPerQuery: subscription.max_tokens_per_query,
+          priceMonthly: subscription.price_monthly,
+          currency: subscription.currency || 'RUB',
+          canRenew: !isExpired && subscription.status === 'active' // Можно продлить если активна
         }
       }
     });

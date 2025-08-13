@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       paymentId: payment.id,
       amount: amount,
       currency: 'RUB',
-      description: ``,
+      description: `Подписка ${planName} - ${amount} руб.`,
       userId: session.user.id,
       planName: planName,
       planId: planId,

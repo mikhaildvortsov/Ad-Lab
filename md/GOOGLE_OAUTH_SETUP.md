@@ -15,10 +15,10 @@
    - **Name**: Ad Lab
    - **Authorized JavaScript origins**:
      - `http://localhost:3000` (для разработки)
-     - `https://ad-lab.vercel.app` (для продакшена)
+     - `https://adlab.guru` (для продакшена)
    - **Authorized redirect URIs**:
      - `http://localhost:3000/api/auth/google` (для разработки)
-     - `https://ad-lab.vercel.app/api/auth/google` (для продакшена)
+     - `https://adlab.guru/api/auth/google` (для продакшена)
 
 ## Шаг 3: Получение учетных данных
 
