@@ -621,7 +621,8 @@
       "resetPasswordError": "Failed to send reset link. Please try again later.",
       "passwordMismatch": "Passwords do not match",
       "invalidResetToken": "Invalid or expired password reset link",
-      "passwordResetFailed": "Failed to reset password. Please try again later."
+      "passwordResetFailed": "Failed to reset password. Please try again later.",
+      "samePassword": "New password cannot be the same as the current password. Please enter a different password."
     }
   }
 } 

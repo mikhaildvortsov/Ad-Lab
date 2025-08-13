@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { UserService } from '@/lib/services/user-service';
 import { PasswordResetService } from '@/lib/services/password-reset-service';
+import { getTranslation } from '@/lib/translations';
+import type { Locale } from '@/lib/i18n';
 import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
@@ -42,6 +44,19 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = userResult.data.id;
+    const user = userResult.data;
+
+    // Проверяем, не совпадает ли новый пароль со старым
+    if (user.password_hash) {
+      const isSamePassword = await bcrypt.compare(password, user.password_hash);
+      if (isSamePassword) {
+        const errorMessage = getTranslation(locale as Locale || 'ru', 'auth.errors.samePassword');
+        return NextResponse.json(
+          { success: false, error: errorMessage },
+          { status: 400 }
+        );
+      }
+    }
 
     // Хешируем новый пароль
     const saltRounds = 12;
