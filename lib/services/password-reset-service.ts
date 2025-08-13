@@ -79,7 +79,8 @@ export class PasswordResetService {
    */
   static async validateResetToken(token: string): Promise<{ success: boolean; userId?: string; error?: string }> {
     try {
-      console.log(`🔍 Validating reset token: ${token.substring(0, 16)}...`);
+      console.log(`🔍 [VALIDATE] Validating reset token: ${token.substring(0, 16)}...`);
+      console.log(`🕒 [VALIDATE] Current time: ${new Date().toISOString()}`);
       
       const result = await query(
         `SELECT user_id, expires_at, used_at, created_at 
@@ -89,7 +90,7 @@ export class PasswordResetService {
       );
       
       if (result.rows.length === 0) {
-        console.log(`❌ Token not found: ${token.substring(0, 16)}...`);
+        console.log(`❌ [VALIDATE] Token not found in database: ${token.substring(0, 16)}...`);
         return {
           success: false,
           error: 'Ссылка для сброса пароля недействительна. Запросите новую ссылку.'
@@ -101,9 +102,15 @@ export class PasswordResetService {
       const expiresAt = new Date(tokenData.expires_at);
       const createdAt = new Date(tokenData.created_at);
       
+      console.log(`📊 [VALIDATE] Token details:`);
+      console.log(`   📅 Created: ${createdAt.toISOString()}`);
+      console.log(`   ⏰ Expires: ${expiresAt.toISOString()}`);
+      console.log(`   🕒 Now:     ${now.toISOString()}`);
+      console.log(`   ✅ Used:    ${tokenData.used_at ? 'YES at ' + tokenData.used_at : 'NO'}`);
+      
       // Проверяем, не был ли токен уже использован
       if (tokenData.used_at) {
-        console.log(`❌ Token already used: ${token.substring(0, 16)}... at ${tokenData.used_at}`);
+        console.log(`❌ [VALIDATE] Token already used: ${token.substring(0, 16)}... at ${tokenData.used_at}`);
         return {
           success: false,
           error: 'Эта ссылка уже была использована. Если вам нужно снова сбросить пароль, запросите новую ссылку.'
@@ -112,7 +119,10 @@ export class PasswordResetService {
       
       // Проверяем, не истек ли токен
       if (now > expiresAt) {
-        console.log(`❌ Token expired: ${token.substring(0, 16)}... expired at ${expiresAt.toISOString()}, now is ${now.toISOString()}`);
+        const timeDiff = (now.getTime() - expiresAt.getTime()) / (1000 * 60); // минуты
+        console.log(`❌ [VALIDATE] Token expired ${timeDiff.toFixed(1)} minutes ago`);
+        console.log(`   Expected: ${expiresAt.toISOString()}`);
+        console.log(`   Current:  ${now.toISOString()}`);
         return {
           success: false,
           error: 'Срок действия ссылки истек. Запросите новую ссылку для сброса пароля.'
@@ -120,14 +130,14 @@ export class PasswordResetService {
       }
       
       const timeRemaining = Math.round((expiresAt.getTime() - now.getTime()) / (1000 * 60)); // минуты
-      console.log(`✅ Token valid: ${token.substring(0, 16)}... for user ${tokenData.user_id.substring(0, 8)}..., ${timeRemaining} minutes remaining`);
+      console.log(`✅ [VALIDATE] Token valid: ${token.substring(0, 16)}... for user ${tokenData.user_id.substring(0, 8)}..., ${timeRemaining} minutes remaining`);
       
       return {
         success: true,
         userId: tokenData.user_id
       };
     } catch (error) {
-      console.error('❌ Error validating reset token:', error);
+      console.error('❌ [VALIDATE] Error validating reset token:', error);
       return {
         success: false,
         error: 'Произошла ошибка при проверке ссылки. Попробуйте снова.'
