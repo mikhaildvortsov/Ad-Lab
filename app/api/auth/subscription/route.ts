@@ -16,6 +16,10 @@ export async function GET(request: NextRequest) {
     // Check for active promo access first
     const promoResult = await PromoService.getUserActivePromoAccess(userId);
     if (promoResult.success && promoResult.data) {
+      const now = new Date();
+      const promoExpiresAt = new Date(promoResult.data.expires_at);
+      const promoDaysUntilExpiry = Math.ceil((promoExpiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      
       return NextResponse.json({
         success: true,
         data: {
@@ -26,7 +30,8 @@ export async function GET(request: NextRequest) {
             status: 'active',
             expiresAt: promoResult.data.expires_at,
             isExpired: false,
-            isPromoAccess: true
+            isPromoAccess: true,
+            daysUntilExpiry: promoDaysUntilExpiry
           }
         }
       });
