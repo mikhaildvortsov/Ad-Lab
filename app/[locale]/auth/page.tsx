@@ -194,6 +194,10 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
       if (data.success) {
         setResetEmailSent(true)
         setError('')
+        // Автоматически перенаправляем через 2 секунды
+        setTimeout(() => {
+          router.push(`/${locale}/auth/reset-password`)
+        }, 2000)
       } else {
         setError(data.error || t('auth.errors.resetPasswordError'))
       }
@@ -265,9 +269,18 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
                 <div className="text-center space-y-4">
                   <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                     <p className="text-green-700 text-sm">
-                      {t('auth.resetEmailSent')}
+                      Код для сброса пароля отправлен на ваш email!
+                    </p>
+                    <p className="text-green-600 text-xs mt-2">
+                      Перенаправление на страницу ввода кода через 2 секунды...
                     </p>
                   </div>
+                  <Button 
+                    onClick={() => router.push(`/${locale}/auth/reset-password`)}
+                    className="w-full"
+                  >
+                    Ввести код
+                  </Button>
                   <Button 
                     onClick={handleResetModeToggle}
                     variant="outline" 
