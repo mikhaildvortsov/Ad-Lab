@@ -196,7 +196,7 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
         setError('')
         // Автоматически перенаправляем через 2 секунды
         setTimeout(() => {
-          router.push(`/${locale}/auth/reset-password`)
+          router.push(`/${locale}/auth/reset-password/verify?email=${encodeURIComponent(email)}`)
         }, 2000)
       } else {
         setError(data.error || t('auth.errors.resetPasswordError'))
@@ -276,7 +276,7 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
                     </p>
                   </div>
                   <Button 
-                    onClick={() => router.push(`/${locale}/auth/reset-password`)}
+                    onClick={() => router.push(`/${locale}/auth/reset-password/verify?email=${encodeURIComponent(email)}`)}
                     className="w-full"
                   >
                     Ввести код
