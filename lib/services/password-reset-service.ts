@@ -57,14 +57,13 @@ export class PasswordResetService {
           token: createdToken
         };
       } else {
-        console.error('❌ Failed to create password reset token - no result from database');
         return {
           success: false,
           error: 'Failed to create reset token'
         };
       }
     } catch (error) {
-      console.error('❌ Error creating password reset token:', error);
+      console.error('Error creating password reset token:', error);
       return {
         success: false,
         error: 'Database error'
@@ -79,9 +78,6 @@ export class PasswordResetService {
    */
   static async validateResetToken(token: string): Promise<{ success: boolean; userId?: string; error?: string }> {
     try {
-      console.log(`🔍 [VALIDATE] Validating reset token: ${token.substring(0, 16)}...`);
-      console.log(`🕒 [VALIDATE] Current time: ${new Date().toISOString()}`);
-      
       const result = await query(
         `SELECT user_id, expires_at, used_at, created_at 
          FROM password_reset_tokens 
@@ -90,7 +86,6 @@ export class PasswordResetService {
       );
       
       if (result.rows.length === 0) {
-        console.log(`❌ [VALIDATE] Token not found in database: ${token.substring(0, 16)}...`);
         return {
           success: false,
           error: 'Ссылка для сброса пароля недействительна. Запросите новую ссылку.'
@@ -100,17 +95,9 @@ export class PasswordResetService {
       const tokenData = result.rows[0];
       const now = new Date();
       const expiresAt = new Date(tokenData.expires_at);
-      const createdAt = new Date(tokenData.created_at);
-      
-      console.log(`📊 [VALIDATE] Token details:`);
-      console.log(`   📅 Created: ${createdAt.toISOString()}`);
-      console.log(`   ⏰ Expires: ${expiresAt.toISOString()}`);
-      console.log(`   🕒 Now:     ${now.toISOString()}`);
-      console.log(`   ✅ Used:    ${tokenData.used_at ? 'YES at ' + tokenData.used_at : 'NO'}`);
       
       // Проверяем, не был ли токен уже использован
       if (tokenData.used_at) {
-        console.log(`❌ [VALIDATE] Token already used: ${token.substring(0, 16)}... at ${tokenData.used_at}`);
         return {
           success: false,
           error: 'Эта ссылка уже была использована. Если вам нужно снова сбросить пароль, запросите новую ссылку.'
@@ -119,25 +106,18 @@ export class PasswordResetService {
       
       // Проверяем, не истек ли токен
       if (now > expiresAt) {
-        const timeDiff = (now.getTime() - expiresAt.getTime()) / (1000 * 60); // минуты
-        console.log(`❌ [VALIDATE] Token expired ${timeDiff.toFixed(1)} minutes ago`);
-        console.log(`   Expected: ${expiresAt.toISOString()}`);
-        console.log(`   Current:  ${now.toISOString()}`);
         return {
           success: false,
           error: 'Срок действия ссылки истек. Запросите новую ссылку для сброса пароля.'
         };
       }
       
-      const timeRemaining = Math.round((expiresAt.getTime() - now.getTime()) / (1000 * 60)); // минуты
-      console.log(`✅ [VALIDATE] Token valid: ${token.substring(0, 16)}... for user ${tokenData.user_id.substring(0, 8)}..., ${timeRemaining} minutes remaining`);
-      
       return {
         success: true,
         userId: tokenData.user_id
       };
     } catch (error) {
-      console.error('❌ [VALIDATE] Error validating reset token:', error);
+      console.error('Error validating reset token:', error);
       return {
         success: false,
         error: 'Произошла ошибка при проверке ссылки. Попробуйте снова.'
@@ -151,15 +131,12 @@ export class PasswordResetService {
    */
   static async markTokenAsUsed(token: string): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log(`🔒 Marking token ${token.substring(0, 16)}... as used`);
-      
       const result = await query(
         'UPDATE password_reset_tokens SET used_at = CURRENT_TIMESTAMP WHERE token = $1 AND used_at IS NULL RETURNING token, user_id',
         [token]
       );
       
       if (result.rows.length === 0) {
-        console.log(`❌ Failed to mark token ${token.substring(0, 16)}... as used - already used or doesn't exist`);
         return {
           success: false,
           error: 'Token was already used or does not exist'
@@ -167,7 +144,6 @@ export class PasswordResetService {
       }
       
       const { user_id } = result.rows[0];
-      console.log(`✅ Token ${token.substring(0, 16)}... marked as used for user ${user_id.substring(0, 8)}...`);
       
       // Дополнительная очистка: удаляем ВСЕ токены для этого пользователя (для безопасности)
       await query(
@@ -175,11 +151,9 @@ export class PasswordResetService {
         [user_id, token]
       );
       
-      console.log(`🧹 Cleaned up other tokens for user ${user_id.substring(0, 8)}...`);
-      
       return { success: true };
     } catch (error) {
-      console.error('❌ Error marking token as used:', error);
+      console.error('Error marking token as used:', error);
       return {
         success: false,
         error: 'Database error'

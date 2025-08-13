@@ -210,8 +210,8 @@ ${html}
             <h2>${isRussian ? 'Сброс пароля' : 'Password Reset'}</h2>
             <p>
               ${isRussian 
-                ? 'Вы запросили сброс пароля для своего аккаунта. Нажмите на кнопку ниже, чтобы создать новый пароль. <strong>Ссылка действительна в течение 1 часа и может быть использована только один раз.</strong>'
-                : 'You requested a password reset for your account. Click the button below to create a new password. <strong>This link is valid for 1 hour and can only be used once.</strong>'
+                ? 'Вы запросили сброс пароля для своего аккаунта. Нажмите на кнопку ниже, чтобы создать новый пароль. <strong>Ссылка может быть использована только один раз.</strong>'
+                : 'You requested a password reset for your account. Click the button below to create a new password. <strong>This link can only be used once.</strong>'
               }
             </p>
             
@@ -224,8 +224,8 @@ ${html}
             <div class="warning">
               <strong>${isRussian ? '⚠️ Важно:' : '⚠️ Important:'}</strong><br>
               ${isRussian 
-                ? 'Ссылка действительна только 1 час и может быть использована только один раз. После успешной смены пароля ссылка становится недействительной. Если вы не запрашивали сброс пароля, просто проигнорируйте это письмо.'
-                : 'This link is valid for only 1 hour and can be used only once. After successfully changing your password, the link becomes invalid. If you did not request a password reset, simply ignore this email.'
+                ? 'Ссылка может быть использована только один раз. После успешной смены пароля ссылка становится недействительной. Если вы не запрашивали сброс пароля, просто проигнорируйте это письмо.'
+                : 'This link can be used only once. After successfully changing your password, the link becomes invalid. If you did not request a password reset, simply ignore this email.'
               }
             </div>
             
