@@ -1,45 +1,26 @@
-import dotenv from 'dotenv';
-import { UserService } from '@/lib/services/user-service';
-
-// Загружаем переменные окружения
-dotenv.config({ path: '.env.local' });
+require('dotenv').config({ path: '.env.local' });
+import { query } from '@/lib/database';
 
 async function checkUsers() {
-  console.log('👥 Checking users in database...\n');
-  
-  const testEmail = 'dvortsov.mish@yandex.ru';
-  
   try {
-    // Проверяем пользователя
-    console.log('🔍 Looking for user:', testEmail);
-    const userResult = await UserService.getUserByEmail(testEmail);
+    console.log('👥 Checking users...\n');
     
-    if (userResult.success && userResult.data) {
-      console.log('✅ User found!');
-      console.log('📊 User data:', {
-        id: userResult.data.id,
-        email: userResult.data.email,
-        role: userResult.data.role,
-        created_at: userResult.data.created_at
-      });
-    } else {
-      console.log('❌ User not found in database');
-      console.log('💡 You need to register this user first');
-      console.log('🔗 Go to: http://localhost:3000/auth and register');
+    const result = await query(
+      'SELECT id, email, created_at FROM users ORDER BY created_at DESC LIMIT 5'
+    );
+    
+    console.log(`Found ${result.rows.length} users:\n`);
+    
+    for (const user of result.rows) {
+      console.log(`👤 ID: ${user.id}`);
+      console.log(`📧 Email: ${user.email}`);
+      console.log(`📅 Created: ${new Date(user.created_at).toLocaleString()}`);
+      console.log('─'.repeat(50));
     }
     
   } catch (error) {
-    console.error('💥 Error checking user:', error);
+    console.error('❌ Error:', error);
   }
 }
 
-// Запускаем проверку
-checkUsers()
-  .then(() => {
-    console.log('\n🏁 User check completed!');
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error('\n💥 User check failed:', error);
-    process.exit(1);
-  });
+checkUsers();

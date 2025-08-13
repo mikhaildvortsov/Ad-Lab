@@ -20,9 +20,12 @@ export class PasswordResetService {
       // Генерируем криптографически безопасный токен (увеличил до 64 байт для большей безопасности)
       const token = crypto.randomBytes(64).toString('hex');
       
-      // Токен действует 1 час (сокращено время для большей безопасности)
+      // Токен действует 1 час
       const resetTokenExpiryHours = parseInt(process.env.PASSWORD_RESET_TOKEN_EXPIRY_HOURS || '1', 10);
       const expiresAt = new Date(Date.now() + resetTokenExpiryHours * 60 * 60 * 1000);
+      
+      // Убеждаемся, что время корректно сохраняется в UTC
+      console.log(`Creating token with expiry: ${expiresAt.toISOString()} (UTC)`);
       
       // УДАЛЯЕМ ВСЕ старые токены для этого пользователя (для предотвращения спама)
       await query(
@@ -93,8 +96,6 @@ export class PasswordResetService {
       }
       
       const tokenData = result.rows[0];
-      const now = new Date();
-      const expiresAt = new Date(tokenData.expires_at);
       
       // Проверяем, не был ли токен уже использован
       if (tokenData.used_at) {
@@ -104,8 +105,20 @@ export class PasswordResetService {
         };
       }
       
-      // Проверяем, не истек ли токен
-      if (now > expiresAt) {
+      // Проверяем, не истек ли токен - используем UTC время для надежности
+      const now = new Date();
+      const expiresAt = new Date(tokenData.expires_at);
+      
+      // Убеждаемся, что сравнение происходит в UTC
+      const nowUTC = now.getTime();
+      const expiresAtUTC = expiresAt.getTime();
+      
+      // Логируем для диагностики проблем с временем в production
+      const timeDifferenceMinutes = (expiresAtUTC - nowUTC) / (1000 * 60);
+      console.log(`Token validation: now=${now.toISOString()}, expires=${expiresAt.toISOString()}, diff=${timeDifferenceMinutes.toFixed(1)} minutes`);
+      
+      if (nowUTC > expiresAtUTC) {
+        console.log(`Token expired: ${timeDifferenceMinutes.toFixed(1)} minutes ago`);
         return {
           success: false,
           error: 'Срок действия ссылки истек. Запросите новую ссылку для сброса пароля.'

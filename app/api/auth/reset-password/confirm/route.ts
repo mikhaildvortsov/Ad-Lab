@@ -34,6 +34,16 @@ export async function POST(request: NextRequest) {
 
     const userId = tokenValidation.userId!;
 
+    // КРИТИЧЕСКИ ВАЖНО: Сначала отмечаем токен как использованный, чтобы предотвратить race conditions
+    const markResult = await PasswordResetService.markTokenAsUsed(token);
+    if (!markResult.success) {
+      console.error(`⚠️ [CONFIRM API] Failed to mark token as used: ${markResult.error}`);
+      return NextResponse.json(
+        { success: false, error: 'Токен уже был использован или недействителен' },
+        { status: 400 }
+      );
+    }
+
     // Хешируем новый пароль
     const saltRounds = 12;
     const passwordHash = await bcrypt.hash(password, saltRounds);
@@ -45,14 +55,6 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Failed to update password' },
         { status: 500 }
       );
-    }
-
-    // КРИТИЧЕСКИ ВАЖНО: Отмечаем токен как использованный СРАЗУ после успешного обновления пароля
-    // Это гарантирует, что токен больше никогда не может быть использован
-    const markResult = await PasswordResetService.markTokenAsUsed(token);
-    if (!markResult.success) {
-      console.error(`⚠️ [CONFIRM API] Failed to mark token as used: ${markResult.error}`);
-      // Не возвращаем ошибку, так как пароль уже изменен
     }
 
     // Очищаем истекшие токены
