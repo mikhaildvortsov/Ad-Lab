@@ -17,8 +17,8 @@ export class PasswordResetService {
    */
   static async createResetToken(userId: string): Promise<{ success: boolean; token?: string; error?: string }> {
     try {
-      // Генерируем криптографически безопасный токен (увеличил до 64 байт для большей безопасности)
-      const token = crypto.randomBytes(64).toString('hex');
+      // Генерируем криптографически безопасный токен (32 байта = 64 символа hex - оптимально для URL)
+      const token = crypto.randomBytes(32).toString('hex');
       
       // Токен действует 1 час
       const resetTokenExpiryHours = parseInt(process.env.PASSWORD_RESET_TOKEN_EXPIRY_HOURS || '1', 10);
