@@ -665,58 +665,61 @@ export default function Dashboard() {
             </TabsTrigger>
           </TabsList>
           <TabsContent value="subscription" className="space-y-4">
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Текущая подписка */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
-                    {locale === 'ru' ? 'Текущая подписка' : 'Current Subscription'}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {loadingSubscription ? (
-                    <div className="text-center py-8">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                      <p className="text-gray-500">
-                        {locale === 'ru' ? 'Загрузка информации о подписке...' : 'Loading subscription information...'}
-                      </p>
-                    </div>
-                  ) : subscriptionError ? (
-                    <div className="text-center py-8">
-                      <AlertCircle className="h-8 w-8 text-red-400 mx-auto mb-3" />
-                      <h3 className="text-sm font-medium text-gray-900 mb-2">
-                        {locale === 'ru' ? 'Ошибка загрузки подписки' : 'Subscription Loading Error'}
-                      </h3>
-                      <p className="text-sm text-red-600 mb-4">{subscriptionError}</p>
-                      <Button 
-                        onClick={() => {
-                          setSubscriptionError(null)
-                          fetchSubscriptionData()
-                        }}
-                        variant="outline" 
-                        size="sm"
-                      >
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        {locale === 'ru' ? 'Повторить' : 'Retry'}
-                      </Button>
-                    </div>
-                  ) : subscriptionData?.subscription ? (
+            {/* Единая компактная карточка подписки */}
+            <Card className="max-w-5xl mx-auto">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <User className="h-4 w-4 sm:h-5 sm:w-5" />
+                  {locale === 'ru' ? 'Текущая подписка' : 'Current Subscription'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 sm:px-6">
+                {loadingSubscription ? (
+                  <div className="text-center py-6">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-500 text-sm">
+                      {locale === 'ru' ? 'Загрузка информации о подписке...' : 'Loading subscription information...'}
+                    </p>
+                  </div>
+                ) : subscriptionError ? (
+                  <div className="text-center py-6">
+                    <AlertCircle className="h-8 w-8 text-red-400 mx-auto mb-3" />
+                    <h3 className="text-sm font-medium text-gray-900 mb-2">
+                      {locale === 'ru' ? 'Ошибка загрузки подписки' : 'Subscription Loading Error'}
+                    </h3>
+                    <p className="text-sm text-red-600 mb-4">{subscriptionError}</p>
+                    <Button 
+                      onClick={() => {
+                        setSubscriptionError(null)
+                        fetchSubscriptionData()
+                      }}
+                      variant="outline" 
+                      size="sm"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      {locale === 'ru' ? 'Повторить' : 'Retry'}
+                    </Button>
+                  </div>
+                ) : subscriptionData?.subscription ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+                    {/* Информация о подписке */}
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">{locale === 'ru' ? 'План:' : 'Plan:'}</span>
+                      <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        {locale === 'ru' ? 'Детали подписки' : 'Subscription Details'}
+                      </h3>
+                      
+                      <div className="flex justify-between items-center py-1.5 border-b border-gray-100">
+                        <span className="text-sm text-gray-600">{locale === 'ru' ? 'План' : 'Plan'}</span>
                         <div className="text-right">
                           <Badge variant={subscriptionData.subscription.status === 'active' ? 'default' : 'secondary'}>
                             {subscriptionData.subscription.planName}
                           </Badge>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {getSubscriptionTypeDescription(subscriptionData.subscription.planName, locale)}
-                          </div>
                         </div>
                       </div>
                       
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">{locale === 'ru' ? 'Статус:' : 'Status:'}</span>
+                      <div className="flex justify-between items-center py-1.5 border-b border-gray-100">
+                        <span className="text-sm text-gray-600">{locale === 'ru' ? 'Статус' : 'Status'}</span>
                         <Badge variant={subscriptionData.subscription.status === 'active' ? 'default' : 'destructive'}>
                           {subscriptionData.subscription.status === 'active' ? 
                             (locale === 'ru' ? 'Активна' : 'Active') : 
@@ -726,9 +729,9 @@ export default function Dashboard() {
                       </div>
 
                       {subscriptionData.subscription.expiresAt && (
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center py-1.5 border-b border-gray-100">
                           <span className="text-sm text-gray-600">
-                            {locale === 'ru' ? 'Действует до:' : 'Valid until:'}
+                            {locale === 'ru' ? 'Действует до' : 'Valid until'}
                           </span>
                           <span className="text-sm font-medium">
                             {new Date(subscriptionData.subscription.expiresAt).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US')}
@@ -737,9 +740,9 @@ export default function Dashboard() {
                       )}
 
                       {subscriptionData.subscription.daysUntilExpiry !== null && (
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center py-1.5">
                           <span className="text-sm text-gray-600">
-                            {locale === 'ru' ? 'Дней осталось:' : 'Days remaining:'}
+                            {locale === 'ru' ? 'Дней осталось' : 'Days remaining'}
                           </span>
                           <span className={`text-sm font-medium ${
                             subscriptionData.subscription.daysUntilExpiry <= 7 ? 'text-red-600' : 
@@ -749,107 +752,117 @@ export default function Dashboard() {
                           </span>
                         </div>
                       )}
+                    </div>
 
-                      {subscriptionData.subscription.maxQueriesPerMonth && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600">
-                            {locale === 'ru' ? 'Запросов в месяц:' : 'Queries per month:'}
-                          </span>
-                          <span className="text-sm font-medium">
-                            {subscriptionData.subscription.maxQueriesPerMonth}
-                          </span>
-                        </div>
-                      )}
+                    {/* Статистика использования */}
+                    <div className="space-y-3">
+                      <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4" />
+                        {locale === 'ru' ? 'Использование' : 'Usage'}
+                      </h3>
+                      
+                      {currentUsage ? (
+                        <>
+                          <div className="flex justify-between items-center py-1.5 border-b border-gray-100">
+                            <span className="text-sm text-gray-600">
+                              {locale === 'ru' ? 'Запросов использовано' : 'Queries used'}
+                            </span>
+                            <span className="text-sm font-medium">
+                              {currentUsage.queries_count || 0}
+                              {subscriptionData?.subscription?.maxQueriesPerMonth && 
+                                ` / ${subscriptionData.subscription.maxQueriesPerMonth}`
+                              }
+                            </span>
+                          </div>
+                          
+                          {subscriptionData?.subscription?.maxQueriesPerMonth && (
+                            <div className="py-1.5 border-b border-gray-100">
+                              <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                <span>{locale === 'ru' ? 'Прогресс' : 'Progress'}</span>
+                                <span>
+                                  {Math.round((currentUsage.queries_count || 0) / subscriptionData.subscription.maxQueriesPerMonth * 100)}%
+                                </span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                  style={{ 
+                                    width: `${Math.min(100, (currentUsage.queries_count || 0) / subscriptionData.subscription.maxQueriesPerMonth * 100)}%` 
+                                  }}
+                                ></div>
+                              </div>
+                            </div>
+                          )}
 
-                      {subscriptionData.subscription.canRenew && (
-                        <div className="pt-4 border-t">
-                          <Button 
-                            onClick={() => setShowPlanModal(true)} 
-                            className="w-full"
-                            variant="outline"
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            {getRenewalButtonText(subscriptionData.subscription.planName, locale)}
-                          </Button>
+                          <div className="flex justify-between items-center py-1.5">
+                            <span className="text-sm text-gray-600">
+                              {locale === 'ru' ? 'Токенов использовано' : 'Tokens used'}
+                            </span>
+                            <span className="text-sm font-medium">
+                              {(currentUsage.tokens_used || 0).toLocaleString()}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center py-4">
+                          <p className="text-gray-500 text-sm">
+                            {locale === 'ru' ? 'Загрузка статистики...' : 'Loading usage statistics...'}
+                          </p>
                         </div>
                       )}
                     </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <User className="h-8 w-8 text-gray-400 mx-auto mb-3" />
-                      <h3 className="text-sm font-medium text-gray-900 mb-2">
-                        {locale === 'ru' ? 'Нет активной подписки' : 'No Active Subscription'}
-                      </h3>
-                      <p className="text-sm text-gray-500 mb-4">
-                        {locale === 'ru' 
-                          ? 'У вас нет активной подписки. Приобретите план для доступа к возможностям сервиса.'
-                          : 'You do not have an active subscription. Purchase a plan to access service features.'
-                        }
-                      </p>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <User className="h-8 w-8 text-gray-400 mx-auto mb-3" />
+                    <h3 className="text-sm font-medium text-gray-900 mb-2">
+                      {locale === 'ru' ? 'Нет активной подписки' : 'No Active Subscription'}
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                      {locale === 'ru' 
+                        ? 'У вас нет активной подписки. Приобретите план для доступа к возможностям сервиса.'
+                        : 'You do not have an active subscription. Purchase a plan to access service features.'
+                      }
+                    </p>
+                    <Button 
+                      onClick={() => setShowPlanModal(true)} 
+                      size="sm"
+                    >
+                      {locale === 'ru' ? 'Выбрать план' : 'Choose Plan'}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Кнопки действий */}
+                {subscriptionData?.subscription && (
+                  <div className="border-t pt-3 mt-4">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                      {subscriptionData.subscription.canRenew && (
+                        <Button 
+                          onClick={() => setShowPlanModal(true)} 
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          <span className="hidden sm:inline">{getRenewalButtonText(subscriptionData.subscription.planName, locale)}</span>
+                          <span className="sm:hidden">{locale === 'ru' ? 'Продлить' : 'Extend'}</span>
+                        </Button>
+                      )}
                       <Button 
-                        onClick={() => setShowPlanModal(true)} 
+                        onClick={() => setShowPlanModal(true)}
                         size="sm"
+                        className="flex-1"
                       >
-                        {locale === 'ru' ? 'Выбрать план' : 'Choose Plan'}
+                        <CreditCard className="h-4 w-4 mr-2" />
+                        <span className="hidden sm:inline">{locale === 'ru' ? 'Изменить план' : 'Change Plan'}</span>
+                        <span className="sm:hidden">{locale === 'ru' ? 'План' : 'Plan'}</span>
                       </Button>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Статистика использования */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    {locale === 'ru' ? 'Использование' : 'Usage Statistics'}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {currentUsage ? (
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">
-                          {locale === 'ru' ? 'Запросов использовано:' : 'Queries used:'}
-                        </span>
-                        <span className="text-sm font-medium">
-                          {currentUsage.queries_count || 0}
-                          {subscriptionData?.subscription?.maxQueriesPerMonth && 
-                            ` / ${subscriptionData.subscription.maxQueriesPerMonth}`
-                          }
-                        </span>
-                      </div>
-                      
-                      {subscriptionData?.subscription?.maxQueriesPerMonth && (
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                            style={{ 
-                              width: `${Math.min(100, (currentUsage.queries_count || 0) / subscriptionData.subscription.maxQueriesPerMonth * 100)}%` 
-                            }}
-                          ></div>
-                        </div>
-                      )}
-
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">
-                          {locale === 'ru' ? 'Токенов использовано:' : 'Tokens used:'}
-                        </span>
-                        <span className="text-sm font-medium">
-                          {currentUsage.tokens_used || 0}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-gray-500">
-                        {locale === 'ru' ? 'Загрузка статистики...' : 'Loading usage statistics...'}
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
           <TabsContent value="history" className="space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
