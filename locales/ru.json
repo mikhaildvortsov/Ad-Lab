@@ -358,8 +358,7 @@
           "error": "Ошибка платежа"
         },
         "orderNumber": "Номер заказа: {orderId}",
-        "timeRemaining": "Осталось времени: {time}",
-        "createNew": "Создать новый платеж"
+        "timeRemaining": "Осталось времени: {time}"
       },
       "card": {
         "title": "Оплата картой",
@@ -607,6 +606,8 @@
     "setNewPassword": "Установить новый пароль",
     "passwordResetSuccess": "Пароль успешно изменен! Теперь вы можете войти с новым паролем.",
     "resetPasswordPageTitle": "Установка нового пароля",
+    "resetEmailPlaceholder": "Email для сброса пароля",
+    "resetEmailNote": "Код будет отправлен на email, который вы использовали для входа",
     "errors": {
       "privacyRequired": "Необходимо согласие с политикой конфиденциальности",
       "sessionError": "Не удалось получить данные сессии",

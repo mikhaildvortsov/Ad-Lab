@@ -606,6 +606,8 @@
     "setNewPassword": "Set new password",
     "passwordResetSuccess": "Password successfully changed! You can now login with your new password.",
     "resetPasswordPageTitle": "Set New Password",
+    "resetEmailPlaceholder": "Email for password reset",
+    "resetEmailNote": "Code will be sent to the email you used to log in",
     "errors": {
       "privacyRequired": "Privacy policy agreement is required",
       "sessionError": "Failed to get session data",

@@ -27,6 +27,7 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
   const [showPasswordReset, setShowPasswordReset] = useState(false)
   const [isResetMode, setIsResetMode] = useState(false)
   const [resetEmailSent, setResetEmailSent] = useState(false)
+  const [failedLoginEmail, setFailedLoginEmail] = useState("")
   const router = useRouter()
   const searchParams = useSearchParams()
   const { login: googleLogin, updateUser } = useAuth()
@@ -132,8 +133,10 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
           // Показываем кнопку сброса пароля при ошибке неверного пароля
           if (isLogin && data.errorCode === 'INVALID_PASSWORD') {
             setShowPasswordReset(true)
+            setFailedLoginEmail(email) // Сохраняем email для сброса пароля
           } else {
             setShowPasswordReset(false)
+            setFailedLoginEmail("")
           }
         }
       }
@@ -160,6 +163,7 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
     setShowPasswordReset(false)
     setIsResetMode(false)
     setResetEmailSent(false)
+    setFailedLoginEmail("")
   }
 
   const handlePasswordReset = async () => {
@@ -210,10 +214,16 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
   }
 
   const handleResetModeToggle = () => {
-    setIsResetMode(!isResetMode)
+    const newResetMode = !isResetMode
+    setIsResetMode(newResetMode)
     setError('')
     setShowPasswordReset(false)
     setResetEmailSent(false)
+    
+    // При переходе в режим сброса пароля автоматически заполняем email
+    if (newResetMode && failedLoginEmail) {
+      setEmail(failedLoginEmail)
+    }
   }
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
@@ -298,13 +308,19 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
                       <Input
                         id="reset-email"
                         type="email"
-                        placeholder={t('auth.emailPlaceholder')}
+                        placeholder={failedLoginEmail ? t('auth.resetEmailPlaceholder') : t('auth.emailPlaceholder')}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="pl-10 h-11 sm:h-12"
+                        className={`pl-10 h-11 sm:h-12 ${failedLoginEmail ? 'bg-gray-100 text-gray-700' : ''}`}
+                        readOnly={!!failedLoginEmail}
                         required
                       />
                     </div>
+                    {failedLoginEmail && (
+                      <p className="text-xs text-gray-600 mt-1">
+                        {t('auth.resetEmailNote')}
+                      </p>
+                    )}
                   </div>
                   <Button 
                     type="submit" 
@@ -449,6 +465,7 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
                 setShowPasswordReset(false)
                 setIsResetMode(false)
                 setResetEmailSent(false)
+                setFailedLoginEmail("")
                 if (isLogin) {
                   setEmail('')
                 }
@@ -478,6 +495,7 @@ export default function AuthPage({ params }: { params: { locale: Locale } }) {
                   setShowPasswordReset(false)
                   setIsResetMode(false)
                   setResetEmailSent(false)
+                  setFailedLoginEmail("")
                   if (isLogin) {
                     setEmail('')
                   }
