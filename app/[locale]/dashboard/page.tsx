@@ -115,6 +115,8 @@ export default function Dashboard() {
   const [copySuccess, setCopySuccess] = useState<number | null>(null)
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null)
   const [subscriptionData, setSubscriptionData] = useState<any>(null)
+  const [loadingSubscription, setLoadingSubscription] = useState(false)
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null)
   const [loadingPlans, setLoadingPlans] = useState(false)
   const [currentUsage, setCurrentUsage] = useState<any>(null)
   const [showDeletePaymentModal, setShowDeletePaymentModal] = useState(false)
@@ -131,43 +133,68 @@ export default function Dashboard() {
   const [errorAnalytics, setErrorAnalytics] = useState<string | null>(null)
   const [errorPayments, setErrorPayments] = useState<string | null>(null)
   const [csrfToken, setCsrfToken] = useState<string | null>(null)
-  useEffect(() => {
-    const checkSubscription = async () => {
-      if (user) {
-        if (process.env.NEXT_PUBLIC_TEST_MODE === 'true') {
-          setHasActiveSubscription(true)
-          setSubscriptionData({
-            hasActiveSubscription: true,
-            subscription: {
-              id: 'test-subscription',
-              planName: 'Test Plan',
-              status: 'active',
-              expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-              isExpired: false
-            }
-          })
-          return
+  
+  // Function to fetch subscription data
+  const fetchSubscriptionData = async () => {
+    if (!user) return
+    
+    setLoadingSubscription(true)
+    setSubscriptionError(null)
+    
+    if (process.env.NEXT_PUBLIC_TEST_MODE === 'true') {
+      setHasActiveSubscription(true)
+      setSubscriptionData({
+        hasActiveSubscription: true,
+        subscription: {
+          id: 'test-subscription',
+          planName: 'Test Plan',
+          status: 'active',
+          expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          isExpired: false
         }
-        try {
-          const response = await fetch('/api/auth/subscription')
-          if (response.ok) {
-            const data = await response.json()
-            if (data.success) {
-              setHasActiveSubscription(data.data.hasActiveSubscription)
-              setSubscriptionData(data.data)
-            }
-          } else {
-            setHasActiveSubscription(false)
-            setSubscriptionData(null)
-          }
-        } catch (error) {
-          console.error('Error checking subscription:', error)
+      })
+      setLoadingSubscription(false)
+      return
+    }
+    
+    try {
+      const response = await fetch('/api/auth/subscription')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setHasActiveSubscription(data.data.hasActiveSubscription)
+          setSubscriptionData(data.data)
+          setSubscriptionError(null)
+        } else {
+          setSubscriptionError(data.error || 'Ошибка получения данных подписки')
           setHasActiveSubscription(false)
           setSubscriptionData(null)
         }
+      } else {
+        setSubscriptionError(`HTTP ошибка: ${response.status}`)
+        setHasActiveSubscription(false)
+        setSubscriptionData(null)
       }
+    } catch (error) {
+      console.error('Error checking subscription:', error)
+      setSubscriptionError('Ошибка сети при загрузке данных подписки')
+      setHasActiveSubscription(false)
+      setSubscriptionData(null)
+    } finally {
+      setLoadingSubscription(false)
     }
-    checkSubscription()
+  }
+
+  useEffect(() => {
+    if (user) {
+      fetchSubscriptionData()
+    } else {
+      // Reset state when user is not available
+      setHasActiveSubscription(null)
+      setSubscriptionData(null)
+      setSubscriptionError(null)
+      setLoadingSubscription(false)
+    }
   }, [user])
   useEffect(() => {
     if (!loading && !user) {
@@ -458,21 +485,7 @@ export default function Dashboard() {
         setPromoCodeInput('')
         setHasActiveSubscription(true)
         // Refresh subscription data
-        const checkSubscription = async () => {
-          try {
-            const response = await fetch('/api/auth/subscription')
-            if (response.ok) {
-              const data = await response.json()
-              if (data.success) {
-                setHasActiveSubscription(data.data.hasActiveSubscription)
-                setSubscriptionData(data.data)
-              }
-            }
-          } catch (error) {
-            console.error('Error checking subscription:', error)
-          }
-        }
-        checkSubscription()
+        fetchSubscriptionData()
       } else {
         setPromoError(data.error || t('promoCode.errors.activationFailed'))
       }
@@ -662,7 +675,33 @@ export default function Dashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {subscriptionData?.subscription ? (
+                  {loadingSubscription ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                      <p className="text-gray-500">
+                        {locale === 'ru' ? 'Загрузка информации о подписке...' : 'Loading subscription information...'}
+                      </p>
+                    </div>
+                  ) : subscriptionError ? (
+                    <div className="text-center py-8">
+                      <AlertCircle className="h-8 w-8 text-red-400 mx-auto mb-3" />
+                      <h3 className="text-sm font-medium text-gray-900 mb-2">
+                        {locale === 'ru' ? 'Ошибка загрузки подписки' : 'Subscription Loading Error'}
+                      </h3>
+                      <p className="text-sm text-red-600 mb-4">{subscriptionError}</p>
+                      <Button 
+                        onClick={() => {
+                          setSubscriptionError(null)
+                          fetchSubscriptionData()
+                        }}
+                        variant="outline" 
+                        size="sm"
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        {locale === 'ru' ? 'Повторить' : 'Retry'}
+                      </Button>
+                    </div>
+                  ) : subscriptionData?.subscription ? (
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-600">{locale === 'ru' ? 'План:' : 'Plan:'}</span>
@@ -737,9 +776,22 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     <div className="text-center py-8">
-                      <p className="text-gray-500">
-                        {locale === 'ru' ? 'Загрузка информации о подписке...' : 'Loading subscription information...'}
+                      <User className="h-8 w-8 text-gray-400 mx-auto mb-3" />
+                      <h3 className="text-sm font-medium text-gray-900 mb-2">
+                        {locale === 'ru' ? 'Нет активной подписки' : 'No Active Subscription'}
+                      </h3>
+                      <p className="text-sm text-gray-500 mb-4">
+                        {locale === 'ru' 
+                          ? 'У вас нет активной подписки. Приобретите план для доступа к возможностям сервиса.'
+                          : 'You do not have an active subscription. Purchase a plan to access service features.'
+                        }
                       </p>
+                      <Button 
+                        onClick={() => setShowPlanModal(true)} 
+                        size="sm"
+                      >
+                        {locale === 'ru' ? 'Выбрать план' : 'Choose Plan'}
+                      </Button>
                     </div>
                   )}
                 </CardContent>

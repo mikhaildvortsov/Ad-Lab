@@ -34,6 +34,10 @@ export async function GET(request: NextRequest) {
     
     const subscriptionResult = await BillingService.getUserSubscription(userId);
     if (!subscriptionResult.success) {
+      // Log the actual error for debugging
+      console.log('BillingService.getUserSubscription failed:', subscriptionResult.error);
+      
+      // Return that no subscription exists (this is normal for users without subscriptions)
       return NextResponse.json({
         success: true,
         data: {
