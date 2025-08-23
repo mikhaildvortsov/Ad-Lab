@@ -293,7 +293,12 @@
     "welcomeDescription": "I'll help you with advertising campaign analysis, creative creation and DKCP methodology application.",
     "tryExamples": "Try:",
     "placeholder": "Write your question...",
-    "processing": "Typing..."
+    "processing": "Typing...",
+    "aiAssistant": "AI Assistant",
+    "specialization": "Specialization",
+    "universalAssistant": "Universal Assistant",
+    "workMode": "Work Mode",
+    "niche": "Niche"
   },
   "paywallModal": {
     "plans": {
@@ -626,5 +631,16 @@
       "passwordResetFailed": "Failed to reset password. Please try again later.",
       "samePassword": "New password cannot be the same as the current password. Please enter a different password."
     }
+  },
+  "aiInstructions": {
+    "marketing": "Marketing",
+    "copywriting": "Copywriting",
+    "audience": "Audience",
+    "creative": "Creative",
+    "analytics": "Analytics",
+    "dkcp": "DKCP Analysis",
+    "creative_script": "Creative Script",
+    "goal_reformulation": "Goal Reformulation",
+    "conversion_analysis": "Conversion Analysis"
   }
 } 

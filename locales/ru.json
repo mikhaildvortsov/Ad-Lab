@@ -293,7 +293,12 @@
     "welcomeDescription": "Я помогу вам с анализом рекламных кампаний, созданием креативов и применением ДКЦП методологии.",
     "tryExamples": "Попробуйте:",
     "placeholder": "Напишите ваш вопрос...",
-    "processing": "Печатаю..."
+    "processing": "Печатаю...",
+    "aiAssistant": "AI Помощник",
+    "specialization": "Специализация",
+    "universalAssistant": "Универсальный помощник",
+    "workMode": "Режим работы",
+    "niche": "Ниша"
   },
   "paywallModal": {
     "plans": {
@@ -644,5 +649,16 @@
       "alreadyUsed": "Вы уже использовали этот промо-код",
       "activationFailed": "Не удалось активировать промо-код"
     }
+  },
+  "aiInstructions": {
+    "marketing": "Маркетинг",
+    "copywriting": "Копирайтинг",
+    "audience": "Аудитория",
+    "creative": "Креатив",
+    "analytics": "Аналитика",
+    "dkcp": "ДКЦП анализ",
+    "creative_script": "Креативный скрипт",
+    "goal_reformulation": "Переформулировка целей",
+    "conversion_analysis": "Анализ конверсии"
   }
 } 

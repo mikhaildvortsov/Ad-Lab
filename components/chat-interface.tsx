@@ -218,9 +218,9 @@ export const ChatInterface = forwardRef<any, {
                 <div className="flex items-center gap-3">
                   <Bot className="h-6 w-6" />
                   <div>
-                    <h2 className="text-lg font-semibold">AI Помощник</h2>
+                    <h2 className="text-lg font-semibold">{t('chatInterface.aiAssistant')}</h2>
                     <p className="text-blue-100 text-sm">
-                      {selectedNiche !== 'all' ? `Специализация: ${selectedNiche}` : 'Универсальный помощник'}
+                      {selectedNiche !== 'all' ? `${t('chatInterface.specialization')}: ${t(`niche.types.${selectedNiche}`)}` : t('chatInterface.universalAssistant')}
                     </p>
                   </div>
                 </div>
@@ -232,22 +232,22 @@ export const ChatInterface = forwardRef<any, {
                   <div className="flex-1">
                     <label className="text-xs font-medium text-gray-700 mb-1 block">
                       <Settings className="h-3 w-3 inline mr-1" />
-                      Режим работы
+                      {t('chatInterface.workMode')}
                     </label>
                     <Select value={instructionType} onValueChange={(value) => setInstructionType(value as any)}>
                       <SelectTrigger className="h-8 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="marketing">🎯 Маркетинг</SelectItem>
-                        <SelectItem value="copywriting">✍️ Копирайтинг</SelectItem>
-                        <SelectItem value="audience">👥 Аудитория</SelectItem>
-                        <SelectItem value="creative">🎨 Креатив</SelectItem>
-                        <SelectItem value="analytics">📊 Аналитика</SelectItem>
-                        <SelectItem value="dkcp">🏛️ ДКЦП Анализ</SelectItem>
-                        <SelectItem value="creative_script">📝 Создание Креативов</SelectItem>
-                        <SelectItem value="goal_reformulation">{t('chatInterface.goalReformulationMode')}</SelectItem>
-                        <SelectItem value="conversion_analysis">📈 Анализ конверсии</SelectItem>
+                        <SelectItem value="marketing">🎯 {t('aiInstructions.marketing')}</SelectItem>
+                        <SelectItem value="copywriting">✍️ {t('aiInstructions.copywriting')}</SelectItem>
+                        <SelectItem value="audience">👥 {t('aiInstructions.audience')}</SelectItem>
+                        <SelectItem value="creative">🎨 {t('aiInstructions.creative')}</SelectItem>
+                        <SelectItem value="analytics">📊 {t('aiInstructions.analytics')}</SelectItem>
+                        <SelectItem value="dkcp">🏛️ {t('aiInstructions.dkcp')}</SelectItem>
+                        <SelectItem value="creative_script">📝 {t('aiInstructions.creative_script')}</SelectItem>
+                        <SelectItem value="goal_reformulation">🎯 {t('aiInstructions.goal_reformulation')}</SelectItem>
+                        <SelectItem value="conversion_analysis">📈 {t('aiInstructions.conversion_analysis')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -255,14 +255,14 @@ export const ChatInterface = forwardRef<any, {
                   <div className="flex-1">
                     <label className="text-xs font-medium text-gray-700 mb-1 block">
                       <Target className="h-3 w-3 inline mr-1" />
-                      Ниша
+                      {t('chatInterface.niche')}
                     </label>
                     <Select value={selectedNiche} onValueChange={(value) => setSelectedNiche(value as NicheType | 'all')}>
                       <SelectTrigger className="h-8 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Все ниши</SelectItem>
+                        <SelectItem value="all">{t('niche.all')}</SelectItem>
                         {getAvailableNiches().map((niche) => (
                           <SelectItem key={niche.value} value={niche.value}>
                             {niche.label}
