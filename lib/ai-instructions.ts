@@ -24,7 +24,7 @@ export const NICHE_SPECIFIC_INSTRUCTIONS = {
 - Подчеркивание надежности и поддержки
 - Case studies и референсы
 - Долгий цикл продаж и nurture campaigns`,
-  local_business: `Специализация: Локальный бизнес и услуги
+  local_business: `Специализация: Малый бизнес и услуги
 - Фокус на местном сообществе и доверии
 - Работа с отзывами и рекомендациями
 - Подчеркивание качества и персонализированного подхода
@@ -460,10 +460,9 @@ Always suggest A/B tests to verify hypotheses.`
 };
 
 export function getInstruction(type: keyof typeof AI_INSTRUCTIONS = 'marketing', locale: string = 'ru'): string {
-  if (locale === 'en') {
-    return AI_INSTRUCTIONS_EN[type] || AI_INSTRUCTIONS_EN['marketing'];
-  }
-  return AI_INSTRUCTIONS[type];
+  return locale === 'en'
+    ? (AI_INSTRUCTIONS_EN[type as keyof typeof AI_INSTRUCTIONS_EN] || AI_INSTRUCTIONS_EN['marketing'])
+    : (AI_INSTRUCTIONS[type] || AI_INSTRUCTIONS['marketing']);
 }
 
 export function getNicheInstruction(niche: NicheType, locale: string = 'ru'): string {
@@ -498,7 +497,7 @@ export function getAvailableNiches(): Array<{value: NicheType, label: string}> {
     { value: 'saas', label: 'SaaS' },
     { value: 'infoproducts', label: 'Инфопродукты' },
     { value: 'b2b', label: 'B2B' },
-    { value: 'local_business', label: 'Локальный бизнес' },
+    { value: 'local_business', label: 'Малый бизнес' },
     { value: 'healthcare', label: 'Здравоохранение' },
     { value: 'education', label: 'Образование' },
     { value: 'finance', label: 'Финансы' },

@@ -3,6 +3,8 @@ import './globals.css'
 import { Toaster } from "@/components/ui/toaster"
 import { LocaleProvider } from '@/components/locale-provider'
 import { AuthProvider } from '@/lib/auth-context'
+import { ZoomDetectionProvider } from '@/components/zoom-detection-provider'
+
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
   title: 'Ad Lab - Профессиональные инструменты для рекламных текстов',
@@ -25,11 +27,13 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <body className="antialiased">
-        <AuthProvider>
-          <LocaleProvider>
-            {children}
-          </LocaleProvider>
-        </AuthProvider>
+        <ZoomDetectionProvider>
+          <AuthProvider>
+            <LocaleProvider>
+              {children}
+            </LocaleProvider>
+          </AuthProvider>
+        </ZoomDetectionProvider>
         <Toaster />
       </body>
     </html>

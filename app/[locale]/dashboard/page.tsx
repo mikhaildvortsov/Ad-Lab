@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Sparkles, History, CreditCard, Settings, LogOut, FileText, Calendar, TrendingUp, User, Check, X, RefreshCw, Copy, Download, AlertCircle, Trash2, Lock, Plus } from "lucide-react"
+import { Sparkles, History, CreditCard, Settings, LogOut, FileText, Calendar, TrendingUp, User, Check, X, RefreshCw, Copy, Download, AlertCircle, Trash2, Lock, Plus, Monitor } from "lucide-react"
 import { MobileNav } from "@/components/ui/mobile-nav"
 import { useAuth } from "@/lib/auth-context"
 import { ChatInterface } from "@/components/chat-interface"
@@ -102,6 +102,7 @@ export default function Dashboard() {
   const { user, loading, error, login, logout, clearError } = useAuth()
   const router = useRouter()
   const [showPlanModal, setShowPlanModal] = useState(false)
+
   
   // Promo code state
   const [promoCodeInput, setPromoCodeInput] = useState('')
@@ -545,6 +546,8 @@ export default function Dashboard() {
       setIsDeletingPayment(false)
     }
   }
+
+
   const openDeletePaymentModal = (paymentId: string) => {
     setPaymentToDelete(paymentId)
     setShowDeletePaymentModal(true)
@@ -572,6 +575,9 @@ export default function Dashboard() {
               )}
               <span className="text-sm font-medium text-gray-700">{user.name}</span>
             </div>
+            
+
+            
             <LanguageSelector />
             <Link href={`/${locale}`}>
               <Button variant="ghost" size="sm">{t('dashboard.header.home')}</Button>

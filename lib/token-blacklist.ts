@@ -10,9 +10,12 @@ let cacheInitialized = false;
 function initializeBlacklist(): void {
   if (cacheInitialized) return;
   try {
-    const envBlacklist = process.env.BLACKLIST_DATA;
-    if (envBlacklist) {
-      blacklistCache = JSON.parse(envBlacklist);
+    // Skip environment access in Edge Runtime
+    if (typeof process !== 'undefined' && process.env) {
+      const envBlacklist = process.env.BLACKLIST_DATA;
+      if (envBlacklist) {
+        blacklistCache = JSON.parse(envBlacklist);
+      }
     }
   } catch (error) {
     console.warn('Could not parse BLACKLIST_DATA from environment:', error);
@@ -90,6 +93,11 @@ export function cleanOldBlacklistEntries(days: number = 30): number {
   return 0;
 }
 export async function persistToFile(): Promise<void> {
+  // Skip file operations in Edge Runtime - only use in-memory cache
+  if (typeof process === 'undefined' || !process.cwd) {
+    return;
+  }
+  
   try {
     const { writeFileSync } = await import('fs');
     const { join } = await import('path');
@@ -102,6 +110,11 @@ export async function persistToFile(): Promise<void> {
   }
 }
 export async function loadFromFile(): Promise<void> {
+  // Skip file operations in Edge Runtime - only use in-memory cache
+  if (typeof process === 'undefined' || !process.cwd) {
+    return;
+  }
+  
   try {
     const { readFileSync, existsSync } = await import('fs');
     const { join } = await import('path');

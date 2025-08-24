@@ -2,194 +2,50 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-  
-  .text-responsive-xs {
-    @apply text-xs sm:text-sm;
-  }
-  
-  .text-responsive-sm {
-    @apply text-sm sm:text-base;
-  }
-  
-  .text-responsive-base {
-    @apply text-base sm:text-lg;
-  }
-  
-  .text-responsive-lg {
-    @apply text-lg sm:text-xl;
-  }
-  
-  .text-responsive-xl {
-    @apply text-xl sm:text-2xl;
-  }
-  
-  .text-responsive-2xl {
-    @apply text-2xl sm:text-3xl;
-  }
-  
-  .text-responsive-3xl {
-    @apply text-3xl sm:text-4xl lg:text-5xl;
-  }
-  
-  .touch-target {
-    @apply min-h-[44px] min-w-[44px];
-  }
-  
-  .container-responsive {
-    @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
-  }
-  
-  .grid-responsive-1 {
-    @apply grid-cols-1;
-  }
-  
-  .grid-responsive-2 {
-    @apply grid-cols-1 sm:grid-cols-2;
-  }
-  
-  .grid-responsive-3 {
-    @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-3;
-  }
-  
-  .grid-responsive-4 {
-    @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-4;
-  }
-}
-
-@keyframes smoothFadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes smoothSlideIn {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-
-@keyframes smoothSlideOut {
-  from {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.9);
-  }
-}
-
-.dialog-smooth-enter {
-  animation: smoothSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.dialog-smooth-exit {
-  animation: smoothSlideOut 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.overlay-smooth-enter {
-  animation: smoothFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@media (max-width: 640px) {
-  button, a, [role="button"] {
-    @apply touch-target;
-  }
-  
-  .mobile-spacing {
-    @apply space-y-4;
-  }
-  
-  body {
-    @apply text-base leading-relaxed;
-  }
-  
-  input, textarea, select {
-    @apply text-base;
-  }
-}
-
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
+    --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
+    --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 84% 4.9%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215.20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 94.1%;
   }
 }
 
@@ -199,20 +55,783 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-  
-  *:focus-visible {
-    @apply outline-2 outline-offset-2 outline-blue-500;
-  }
-  
-  html {
-    scroll-behavior: smooth;
-  }
-  
-  body {
-    overflow-x: hidden;
   }
 }
+
+/* Предотвращение наслоения блоков при высоких масштабах */
+@layer utilities {
+  /* Увеличиваем отступы между блоками для всех масштабов */
+  .space-y-4 > * + * {
+    margin-top: 2rem !important;
+  }
+  
+  .space-y-6 > * + * {
+    margin-top: 3rem !important;
+  }
+  
+  .space-y-8 > * + * {
+    margin-top: 4rem !important;
+  }
+  
+  /* Увеличиваем отступы в карточках */
+  .card {
+    margin-bottom: 2rem !important;
+  }
+  
+  /* Увеличиваем отступы в заголовках */
+  h1, h2, h3, h4, h5, h6 {
+    margin-bottom: 1.5rem !important;
+  }
+  
+  /* Увеличиваем отступы в параграфах */
+  p {
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Увеличиваем отступы в кнопках */
+  .btn + .btn {
+    margin-left: 1rem !important;
+  }
+  
+  /* Увеличиваем отступы в flex контейнерах */
+  .flex > * + * {
+    margin-left: 1.5rem !important;
+  }
+  
+  /* Увеличиваем отступы в grid контейнерах */
+  .grid {
+    gap: 2rem !important;
+  }
+  
+  /* Увеличиваем отступы в контейнерах */
+  .container {
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+  }
+  
+  /* Увеличиваем отступы в модальных окнах */
+  .modal-content {
+    padding: 2rem !important;
+  }
+  
+  /* Увеличиваем отступы в формах */
+  .form-group {
+    margin-bottom: 2rem !important;
+  }
+  
+  /* Увеличиваем отступы в списках */
+  .list-item {
+    padding: 1.5rem !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Увеличиваем отступы в tabs */
+  .tabs-content {
+    padding: 1.5rem !important;
+  }
+  
+  .tabs-list {
+    margin-bottom: 2rem !important;
+  }
+  
+  /* Увеличиваем отступы в навигации */
+  .nav-item {
+    margin-bottom: 1rem !important;
+    padding: 1rem !important;
+  }
+  
+  /* Увеличиваем отступы в sidebar */
+  .sidebar-item {
+    margin-bottom: 1rem !important;
+    padding: 1rem !important;
+  }
+  
+  /* Увеличиваем отступы в footer */
+  .footer {
+    margin-top: 3rem !important;
+    padding: 2rem !important;
+  }
+  
+  /* Увеличиваем отступы в hero секциях */
+  .hero-section {
+    margin-bottom: 3rem !important;
+    padding: 2rem !important;
+  }
+  
+  /* Увеличиваем отступы в feature карточках */
+  .feature-card {
+    margin-bottom: 2rem !important;
+    padding: 1.5rem !important;
+  }
+  
+  .feature-grid {
+    gap: 2rem !important;
+  }
+  
+  /* Увеличиваем отступы в pricing карточках */
+  .pricing-card {
+    margin-bottom: 2rem !important;
+    padding: 2rem !important;
+  }
+  
+  .pricing-grid {
+    gap: 2rem !important;
+  }
+  
+  /* Увеличиваем отступы в testimonial секциях */
+  .testimonial {
+    margin-bottom: 2rem !important;
+    padding: 1.5rem !important;
+  }
+  
+  /* Увеличиваем отступы в CTA секциях */
+  .cta-section {
+    margin: 3rem 0 !important;
+    padding: 2rem !important;
+  }
+  
+  /* Увеличиваем отступы в FAQ секциях */
+  .faq-item {
+    margin-bottom: 1.5rem !important;
+    padding: 1rem !important;
+  }
+  
+  /* Увеличиваем отступы в contact формах */
+  .contact-field {
+    margin-bottom: 1.5rem !important;
+  }
+  
+  /* Увеличиваем отступы в blog секциях */
+  .blog-post {
+    margin-bottom: 3rem !important;
+  }
+  
+  .blog-meta {
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Увеличиваем отступы в search результатах */
+  .search-result {
+    margin-bottom: 1.5rem !important;
+    padding: 1rem !important;
+  }
+  
+  /* Увеличиваем отступы в filter секциях */
+  .filter-section {
+    margin-bottom: 2rem !important;
+  }
+  
+  .filter-option {
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Увеличиваем отступы в pagination */
+  .pagination {
+    margin-top: 2rem !important;
+  }
+  
+  .pagination-item {
+    margin: 0 0.5rem !important;
+  }
+  
+  /* Увеличиваем отступы в breadcrumbs */
+  .breadcrumb {
+    margin-bottom: 2rem !important;
+  }
+  
+  .breadcrumb-item {
+    margin-right: 1rem !important;
+  }
+  
+  /* Увеличиваем отступы в progress bars */
+  .progress-container {
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Увеличиваем отступы в alerts */
+  .alert {
+    margin-bottom: 1rem !important;
+    padding: 1rem !important;
+  }
+  
+  /* Увеличиваем отступы в badges */
+  .badge {
+    padding: 0.5rem 1rem !important;
+  }
+  
+  /* Увеличиваем отступы в avatars */
+  .avatar {
+    margin-right: 1rem !important;
+  }
+  
+  /* Увеличиваем отступы в icons */
+  .icon {
+    margin-right: 0.5rem !important;
+  }
+  
+  /* Увеличиваем отступы в dividers */
+  .divider {
+    margin: 2rem 0 !important;
+  }
+  
+  /* Увеличиваем отступы в spacers */
+  .spacer-sm {
+    height: 1.5rem !important;
+  }
+  
+  .spacer-md {
+    height: 2.5rem !important;
+  }
+  
+  .spacer-lg {
+    height: 3.5rem !important;
+  }
+  
+  .spacer-xl {
+    height: 4.5rem !important;
+  }
+}
+
+/* Дополнительные стили для предотвращения наслоения */
+@layer components {
+  /* Безопасные отступы для всех элементов */
+  .safe-spacing {
+    margin-bottom: 1.5rem !important;
+  }
+  
+  .safe-spacing-lg {
+    margin-bottom: 2.5rem !important;
+  }
+  
+  .safe-spacing-xl {
+    margin-bottom: 3.5rem !important;
+  }
+  
+  /* Предотвращение наслоения в карточках */
+  .card {
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* Предотвращение наслоения в модальных окнах */
+  .modal {
+    z-index: 1000;
+  }
+  
+  /* Предотвращение наслоения в выпадающих меню */
+  .dropdown {
+    z-index: 100;
+  }
+  
+  /* Предотвращение наслоения в тултипах */
+  .tooltip {
+    z-index: 200;
+  }
+  
+  /* Специальные стили для dashboard */
+  .dashboard-tab {
+    margin-bottom: 2.5rem !important;
+  }
+  
+  .dashboard-card {
+    margin-bottom: 2rem !important;
+    position: relative;
+    z-index: 1;
+  }
+  
+  .dashboard-header {
+    margin-bottom: 2.5rem !important;
+    position: relative;
+    z-index: 10;
+  }
+  
+  .dashboard-content {
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* Стили для предотвращения наслоения в tabs */
+  .tabs-content {
+    position: relative;
+    z-index: 1;
+  }
+  
+  .tabs-list {
+    position: relative;
+    z-index: 5;
+    margin-bottom: 2rem !important;
+  }
+  
+  /* Стили для предотвращения наслоения в формах */
+  .form-field {
+    margin-bottom: 2rem !important;
+  }
+  
+  .form-group {
+    margin-bottom: 2.5rem !important;
+  }
+  
+  /* Стили для предотвращения наслоения в списках */
+  .list-container {
+    position: relative;
+    z-index: 1;
+  }
+  
+  .list-item {
+    margin-bottom: 1.5rem !important;
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* Стили для предотвращения наслоения в кнопках */
+  .button-group {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  
+  .button-group > * {
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Стили для предотвращения наслоения в модальных окнах */
+  .modal-overlay {
+    z-index: 999;
+  }
+  
+  .modal-content {
+    z-index: 1000;
+    position: relative;
+  }
+  
+  /* Стили для предотвращения наслоения в навигации */
+  .nav-container {
+    position: relative;
+    z-index: 20;
+  }
+  
+  .nav-item {
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* Стили для предотвращения наслоения в sidebar */
+  .sidebar {
+    position: relative;
+    z-index: 15;
+  }
+  
+  .sidebar-item {
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* Стили для предотвращения наслоения в footer */
+  .footer {
+    position: relative;
+    z-index: 1;
+    margin-top: 3rem !important;
+  }
+  
+  /* Стили для предотвращения наслоения в hero секциях */
+  .hero-section {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 3rem !important;
+  }
+  
+  /* Стили для предотвращения наслоения в feature карточках */
+  .feature-card {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 2rem !important;
+  }
+  
+  .feature-grid {
+    gap: 2rem !important;
+  }
+  
+  /* Стили для предотвращения наслоения в pricing секциях */
+  .pricing-card {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 2rem !important;
+  }
+  
+  .pricing-grid {
+    gap: 2rem !important;
+  }
+  
+  /* Стили для предотвращения наслоения в testimonial секциях */
+  .testimonial {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 2rem !important;
+  }
+  
+  /* Стили для предотвращения наслоения в CTA секциях */
+  .cta-section {
+    position: relative;
+    z-index: 1;
+    margin: 3rem 0 !important;
+  }
+  
+  /* Стили для предотвращения наслоения в FAQ секциях */
+  .faq-item {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 1.5rem !important;
+  }
+  
+  /* Стили для предотвращения наслоения в contact формах */
+  .contact-form {
+    position: relative;
+    z-index: 1;
+  }
+  
+  .contact-field {
+    margin-bottom: 1.5rem !important;
+  }
+  
+  /* Стили для предотвращения наслоения в blog секциях */
+  .blog-post {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 3rem !important;
+  }
+  
+  .blog-meta {
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Стили для предотвращения наслоения в search результатах */
+  .search-result {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 1.5rem !important;
+  }
+  
+  /* Стили для предотвращения наслоения в filter секциях */
+  .filter-section {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 2rem !important;
+  }
+  
+  .filter-option {
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Стили для предотвращения наслоения в pagination */
+  .pagination {
+    position: relative;
+    z-index: 1;
+    margin-top: 2rem !important;
+  }
+  
+  .pagination-item {
+    margin: 0 0.5rem !important;
+  }
+  
+  /* Стили для предотвращения наслоения в breadcrumbs */
+  .breadcrumb {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 2rem !important;
+  }
+  
+  .breadcrumb-item {
+    margin-right: 1rem !important;
+  }
+  
+  /* Стили для предотвращения наслоения в progress bars */
+  .progress-container {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Стили для предотвращения наслоения в alerts */
+  .alert {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Стили для предотвращения наслоения в badges */
+  .badge {
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* Стили для предотвращения наслоения в avatars */
+  .avatar {
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* Стили для предотвращения наслоения в icons */
+  .icon {
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* Стили для предотвращения наслоения в dividers */
+  .divider {
+    position: relative;
+    z-index: 1;
+    margin: 2rem 0 !important;
+  }
+  
+  /* Стили для предотвращения наслоения в spacers */
+  .spacer {
+    position: relative;
+    z-index: 1;
+  }
+  
+  .spacer-sm {
+    height: 1.5rem !important;
+  }
+  
+  .spacer-md {
+    height: 2.5rem !important;
+  }
+  
+  .spacer-lg {
+    height: 3.5rem !important;
+  }
+  
+  .spacer-xl {
+    height: 4.5rem !important;
+  }
+}
+
+/* Специальные стили для высоких масштабов */
+@layer utilities {
+  /* Для масштаба 200% и выше */
+  .zoom-high .space-y-4 > * + * {
+    margin-top: 3rem !important;
+  }
+  
+  .zoom-high .space-y-6 > * + * {
+    margin-top: 4rem !important;
+  }
+  
+  .zoom-high .space-y-8 > * + * {
+    margin-top: 5rem !important;
+  }
+  
+  .zoom-high .card {
+    margin-bottom: 3rem !important;
+  }
+  
+  .zoom-high .container {
+    padding-left: 3rem !important;
+    padding-right: 3rem !important;
+  }
+  
+  /* Для масштаба 250% и выше */
+  .zoom-very-high .space-y-4 > * + * {
+    margin-top: 4rem !important;
+  }
+  
+  .zoom-very-high .space-y-6 > * + * {
+    margin-top: 5rem !important;
+  }
+  
+  .zoom-very-high .space-y-8 > * + * {
+    margin-top: 6rem !important;
+  }
+  
+  .zoom-very-high .card {
+    margin-bottom: 4rem !important;
+  }
+  
+  .zoom-very-high .container {
+    padding-left: 4rem !important;
+    padding-right: 4rem !important;
+  }
+  
+  .zoom-very-high .dashboard-card {
+    margin-bottom: 3rem !important;
+  }
+  
+  .zoom-very-high .dashboard-header {
+    margin-bottom: 3.5rem !important;
+  }
+  
+  .zoom-very-high .tabs-content {
+    padding: 2.5rem !important;
+  }
+  
+  .zoom-very-high .tabs-list {
+    margin-bottom: 3rem !important;
+  }
+  
+  .zoom-very-high .form-field {
+    margin-bottom: 3rem !important;
+  }
+  
+  .zoom-very-high .form-group {
+    margin-bottom: 3.5rem !important;
+  }
+  
+  .zoom-very-high .list-item {
+    margin-bottom: 2.5rem !important;
+    padding: 2rem !important;
+  }
+  
+  .zoom-very-high .nav-item {
+    margin-bottom: 1.5rem !important;
+    padding: 1.5rem !important;
+  }
+  
+  .zoom-very-high .sidebar-item {
+    margin-bottom: 1.5rem !important;
+    padding: 1.5rem !important;
+  }
+  
+  .zoom-very-high .hero-section {
+    margin-bottom: 4rem !important;
+    padding: 3rem !important;
+  }
+  
+  .zoom-very-high .feature-card {
+    margin-bottom: 3rem !important;
+    padding: 2.5rem !important;
+  }
+  
+  .zoom-very-high .feature-grid {
+    gap: 3rem !important;
+  }
+  
+  .zoom-very-high .pricing-card {
+    margin-bottom: 3rem !important;
+    padding: 3rem !important;
+  }
+  
+  .zoom-very-high .pricing-grid {
+    gap: 3rem !important;
+  }
+  
+  .zoom-very-high .testimonial {
+    margin-bottom: 3rem !important;
+    padding: 2.5rem !important;
+  }
+  
+  .zoom-very-high .cta-section {
+    margin: 4rem 0 !important;
+    padding: 3rem !important;
+  }
+  
+  .zoom-very-high .faq-item {
+    margin-bottom: 2.5rem !important;
+    padding: 1.5rem !important;
+  }
+  
+  .zoom-very-high .contact-field {
+    margin-bottom: 2.5rem !important;
+  }
+  
+  .zoom-very-high .blog-post {
+    margin-bottom: 4rem !important;
+  }
+  
+  .zoom-very-high .blog-meta {
+    margin-bottom: 1.5rem !important;
+  }
+  
+  .zoom-very-high .search-result {
+    margin-bottom: 2.5rem !important;
+    padding: 1.5rem !important;
+  }
+  
+  .zoom-very-high .filter-section {
+    margin-bottom: 3rem !important;
+  }
+  
+  .zoom-very-high .filter-option {
+    margin-bottom: 1.5rem !important;
+  }
+  
+  .zoom-very-high .pagination {
+    margin-top: 3rem !important;
+  }
+  
+  .zoom-very-high .pagination-item {
+    margin: 0 1rem !important;
+  }
+  
+  .zoom-very-high .breadcrumb {
+    margin-bottom: 3rem !important;
+  }
+  
+  .zoom-very-high .breadcrumb-item {
+    margin-right: 1.5rem !important;
+  }
+  
+  .zoom-very-high .progress-container {
+    margin-bottom: 1.5rem !important;
+  }
+  
+  .zoom-very-high .alert {
+    margin-bottom: 1.5rem !important;
+    padding: 1.5rem !important;
+  }
+  
+  .zoom-very-high .badge {
+    padding: 1rem 1.5rem !important;
+  }
+  
+  .zoom-very-high .avatar {
+    margin-right: 1.5rem !important;
+  }
+  
+  .zoom-very-high .icon {
+    margin-right: 1rem !important;
+  }
+  
+  .zoom-very-high .divider {
+    margin: 3rem 0 !important;
+  }
+  
+  .zoom-very-high .spacer-sm {
+    height: 2.5rem !important;
+  }
+  
+  .zoom-very-high .spacer-md {
+    height: 3.5rem !important;
+  }
+  
+  .zoom-very-high .spacer-lg {
+    height: 4.5rem !important;
+  }
+  
+  .zoom-very-high .spacer-xl {
+    height: 5.5rem !important;
+  }
+  
+  /* Для экстремальных масштабов */
+  .zoom-extreme .space-y-4 > * + * {
+    margin-top: 5rem !important;
+  }
+  
+  .zoom-extreme .space-y-6 > * + * {
+    margin-top: 6rem !important;
+  }
+  
+  .zoom-extreme .space-y-8 > * + * {
+    margin-top: 7rem !important;
+  }
+  
+  .zoom-extreme .card {
+    margin-bottom: 5rem !important;
+  }
+  
+  .zoom-extreme .container {
+    padding-left: 5rem !important;
+    padding-right: 5rem !important;
+  }
+}
+
+
